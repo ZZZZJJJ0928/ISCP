@@ -236,7 +236,7 @@ func (b *ControlBackend) Execute(ctx context.Context, r control.Request, actor i
 	if token != "" {
 		var valid bool
 		hash := c.SHA256([]byte(token))
-		e = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM iscp_relay.refresh_tokens WHERE domain_id=$1 AND device_id=$2 AND refresh_hash=$3 AND revoked_at IS NULL AND expires_at>$4)", a.cfg.DomainID, actor.DeviceID, hash, a.now()).Scan(&valid)
+		e = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM iscp_relay.refresh_tokens WHERE domain_id=$1 AND device_id=$2 AND refresh_hash=$3 AND revoked_at IS NULL AND expires_at>$4 AND credential_generation=$5)", a.cfg.DomainID, actor.DeviceID, hash, a.now(), string(current.Generation)).Scan(&valid)
 		if e != nil {
 			return out, e
 		}
@@ -306,6 +306,9 @@ func (b *ControlBackend) Execute(ctx context.Context, r control.Request, actor i
 		return out, &control.Failure{Code: "generation_conflict"}
 	}
 	if p := intent.Predecessor; p != nil {
+		if p.Key.DomainID != r.Key.DomainID || p.Key.DeviceID != r.Key.DeviceID || p.Key.Namespace != r.Key.Namespace {
+			return out, &control.Failure{Code: "generation_conflict"}
+		}
 		old, e := b.read(ctx, tx, p.Key)
 		if e != nil {
 			return out, e
@@ -365,4 +368,47 @@ func (b *ControlBackend) Execute(ctx context.Context, r control.Request, actor i
 	}
 	out.Result = &res
 	return out, nil
+}
+
+func (b *ControlBackend) Disclose(ctx context.Context, r control.Request, actor identity.DeviceIdentity, emit func() error) error {
+	prior, err := b.read(ctx, nil, r.Key)
+	if err != nil {
+		return err
+	}
+	// A status without a retained record reveals no credentials; Execute already
+	// checked that actor's registration. For retained data lock the target too.
+	subject := actor.DeviceID
+	if prior != nil {
+		subject = prior.Intent.SubjectBinding.DeviceID
+	} else if r.Intent != nil {
+		subject = r.Intent.SubjectBinding.DeviceID
+	}
+	tx, err := b.adapter.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(context.Background())
+	snapshot, err := b.lock(ctx, tx, actor.DeviceID, subject, &r.Key, false)
+	if err != nil {
+		return err
+	}
+	if prior != nil {
+		current, err := b.current(ctx, tx, actor, prior.Intent.SubjectBinding, prior.Intent.Target, snapshot)
+		if err != nil {
+			return err
+		}
+		if prior.Intent.TaskAuthorization.AuthorizationRevision != current.AuthorizationRevision {
+			return &control.Failure{Code: "scope_denied"}
+		}
+	} else {
+		for _, id := range []string{actor.DeviceID, subject} {
+			if snapshot.Devices[id].State != "active" {
+				return &control.Failure{Code: "authorization_unavailable"}
+			}
+		}
+	}
+	if err = ctx.Err(); err != nil {
+		return err
+	}
+	return emit()
 }

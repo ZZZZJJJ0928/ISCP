@@ -435,3 +435,27 @@ func (i *Issuer) advanceControlParent(ctx context.Context, id string, r control.
 	}
 	return out, control.ErrUnknown
 }
+
+func (i *Issuer) Disclose(ctx context.Context, r control.Request, actor identity.DeviceIdentity, emit func() error) error {
+	initial, err := i.findControlState(ctx, actor.DomainID, actor.DeviceID)
+	if err != nil {
+		return err
+	}
+	// The issuer's durable closing transition and this local write share the
+	// aggregate row lock. Management/network authorization was checked before it.
+	return i.store.Update(ctx, initial.Credential.InvitationID, func(s *State) error {
+		intent := r.Intent
+		if s.Control != nil {
+			if record := s.Control.Records[r.Key.StorageKey()]; record != nil {
+				intent = &record.Intent
+			}
+		}
+		if err := i.controlAuthority(s, actor, intent); err != nil {
+			return err
+		}
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		return emit()
+	})
+}

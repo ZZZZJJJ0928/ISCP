@@ -108,6 +108,15 @@ func CheckPredecessor(intent Intent, records map[string]*Record) error {
 		if old == nil || old.Result == nil || old.Disposition == nil || old.Result.ResultDigest != p.ResultDigest || old.Disposition.DispositionDigest != p.DispositionDigest || !(old.Disposition.Ack.Disposition == "acknowledged_expired" || old.Disposition.Ack.Disposition == "acknowledged_superseded") || old.Intent.SubjectBinding != intent.SubjectBinding || old.Intent.Target != intent.Target {
 			return &Failure{Code: "generation_conflict"}
 		}
+		if intent.Parent != nil {
+			if old.Intent.Parent == nil || old.Intent.Parent.Key != intent.Parent.Key || old.Intent.Parent.SemanticDigest != intent.Parent.SemanticDigest || old.Intent.Parent.Step != intent.Parent.Step {
+				return &Failure{Code: "generation_conflict"}
+			}
+			next, err := old.Intent.Parent.ChildIndex.Next()
+			if err != nil || intent.Parent.ChildIndex != next {
+				return &Failure{Code: "generation_conflict"}
+			}
+		}
 	}
 	return nil
 }

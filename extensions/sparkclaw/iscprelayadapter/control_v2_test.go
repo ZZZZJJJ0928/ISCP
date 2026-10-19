@@ -3,6 +3,8 @@ package iscprelayadapter
 import (
 	"bytes"
 	"context"
+	"errors"
+	"github.com/Infinimesh-ai/ISCP/pkg/server/authority"
 	"testing"
 	"time"
 
@@ -119,6 +121,24 @@ func TestControlSnapshotRefreshRaceSupersededChildAndLostACKRestart(t *testing.T
 	if e != nil || succeeded.Result == nil || succeeded.Result.Payload.CredentialGeneration != "3" {
 		t.Fatal("linked successor failed", e)
 	}
+	// A correctly authenticated issuer still cannot invent IDs or skip a
+	// retained predecessor index, even with the current CAS generation.
+	for _, mutate := range []func(*control.Intent){
+		func(v *control.Intent) { v.OperationID = "arbitrary-child-operation" },
+		func(v *control.Intent) { p := *v.Parent; p.ChildIndex = "0"; v.Parent = &p },
+		func(v *control.Intent) {
+			p := *v.Parent
+			p.ChildIndex = "3"
+			v.Parent = &p
+			v.OperationID, _ = control.ChildOperationID(p.Key, p.SemanticDigest, v.Target.ServiceID, p.ChildIndex, &v.Predecessor.DispositionDigest)
+		},
+	} {
+		forged := successor
+		mutate(&forged)
+		if _, err := restarted.Execute(ctx, controlRequestUnchecked(t, actor, forged), actor.Identity, ""); err == nil {
+			t.Fatal("accepted forged child chain")
+		}
+	}
 	token := succeeded.Result.Payload.Body.RelayCredentials.Access.Token
 	var stored string
 	var ciphertext []byte
@@ -130,6 +150,65 @@ func TestControlSnapshotRefreshRaceSupersededChildAndLostACKRestart(t *testing.T
 	if e != nil || bytes.Contains(ciphertext, []byte(token)) {
 		t.Fatal("credential result not encrypted")
 	}
+	disclosure := controlRequest(t, actor, successor, "lookup", nil)
+	started, release := make(chan struct{}), make(chan struct{})
+	disclosed := make(chan error, 1)
+	go func() {
+		disclosed <- restarted.Disclose(ctx, disclosure, actor.Identity, func() error { close(started); <-release; return nil })
+	}()
+	<-started
+	revoked := make(chan error, 1)
+	go func() {
+		tx, err := pool.Begin(ctx)
+		if err != nil {
+			revoked <- err
+			return
+		}
+		defer tx.Rollback(ctx)
+		_, err = authority.Lock(ctx, tx, authority.Request{ScopeID: "test-relay", DomainID: "test-domain", ExpectedWriterEpoch: "1", Devices: []authority.DeviceLock{{ID: client.Identity.DeviceID, Exclusive: true}}, AllowInactiveDevices: true})
+		if err == nil {
+			_, err = tx.Exec(ctx, "UPDATE iscp_relay.device_authority SET state='revoked',authorization_revision=2,state_version=state_version+1 WHERE scope_id='test-relay' AND domain_id='test-domain' AND device_id=$1", client.Identity.DeviceID)
+		}
+		if err == nil {
+			err = tx.Commit(ctx)
+		}
+		revoked <- err
+	}()
+	select {
+	case err := <-revoked:
+		t.Fatalf("revocation passed in-progress disclosure: %v", err)
+	case <-time.After(40 * time.Millisecond):
+	}
+	close(release)
+	if err := <-disclosed; err != nil {
+		t.Fatal(err)
+	}
+	if err := <-revoked; err != nil {
+		t.Fatal(err)
+	}
+	emitted := false
+	err := restarted.Disclose(ctx, disclosure, actor.Identity, func() error { emitted = true; return nil })
+	var failure *control.Failure
+	if emitted || !errors.As(err, &failure) || failure.Code != "authorization_revoked" {
+		t.Fatalf("post-revoke result disclosed: %v %v", emitted, err)
+	}
+	// Restore only the synthetic test authority under the same ordered lock so
+	// subsequent exact-result assertions can inspect the original record.
+	tx, e = pool.Begin(ctx)
+	if e != nil {
+		t.Fatal(e)
+	}
+	_, e = authority.Lock(ctx, tx, authority.Request{ScopeID: "test-relay", DomainID: "test-domain", ExpectedWriterEpoch: "1", Devices: []authority.DeviceLock{{ID: client.Identity.DeviceID, Exclusive: true}}, AllowInactiveDevices: true})
+	if e != nil {
+		t.Fatal(e)
+	}
+	_, e = tx.Exec(ctx, "UPDATE iscp_relay.device_authority SET state='active',authorization_revision=1,state_version=state_version+1 WHERE scope_id='test-relay' AND domain_id='test-domain' AND device_id=$1", client.Identity.DeviceID)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if e = tx.Commit(ctx); e != nil {
+		t.Fatal(e)
+	}
 	// A raw operation replay remains exactly the failed result, not another issue.
 	replay, e := restarted.Execute(ctx, request, actor.Identity, "")
 	if e != nil || replay.Result.ResultDigest != failed.Result.ResultDigest {
@@ -139,4 +218,24 @@ func TestControlSnapshotRefreshRaceSupersededChildAndLostACKRestart(t *testing.T
 	if e = pool.QueryRow(ctx, "SELECT count(*) FROM iscp_relay.control_operations").Scan(&count); e != nil || count != 3 {
 		t.Fatalf("expected durable three records, got %d %v", count, e)
 	}
+}
+
+func controlRequestUnchecked(t *testing.T, actor identity.Device, intent control.Intent) control.Request {
+	t.Helper()
+	digest, err := control.Digest("ISCP-OPERATION-INTENT-V2\x00", intent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := control.Request{Type: "iscp.operation.request.v2", Protocol: control.Protocol, AttemptID: "test-" + control.RandomID(), Action: "recover", Key: control.Key{DomainID: actor.Identity.DomainID, DeviceID: actor.Identity.DeviceID, Namespace: intent.Namespace, OperationID: intent.OperationID}, SemanticDigest: digest, Intent: &intent}
+	d, _, _ := control.NewDelivery()
+	r.Delivery = &d
+	// Reuse a valid proof-shaped authentication; Execute is after the HTTP proof
+	// boundary and must independently enforce the semantic parent-child checks.
+	base := intent
+	base.Parent = nil
+	base.Predecessor = nil
+	base.SubjectBinding.DeviceID = actor.Identity.DeviceID
+	valid := controlRequest(t, actor, base, "recover", nil)
+	r.Authentication = valid.Authentication
+	return r
 }

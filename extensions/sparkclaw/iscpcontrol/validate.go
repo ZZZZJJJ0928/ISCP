@@ -107,6 +107,20 @@ func (v Intent) Validate() error {
 	if v.Parent != nil && (v.Kind != "relay.recover" || v.Parent.Step != "relay.credentials.recover" || v.Parent.Key.Namespace != CredentialNamespace || v.Parent.Key.DomainID != v.SubjectBinding.DomainID || v.Parent.Key.DeviceID != v.SubjectBinding.DeviceID) {
 		return ErrInvalid
 	}
+	if v.Parent != nil {
+		initial := v.Parent.ChildIndex == "0"
+		if initial != (v.Predecessor == nil) {
+			return ErrInvalid
+		}
+		var prior *string
+		if v.Predecessor != nil {
+			prior = &v.Predecessor.DispositionDigest
+		}
+		id, err := ChildOperationID(v.Parent.Key, v.Parent.SemanticDigest, v.Target.ServiceID, v.Parent.ChildIndex, prior)
+		if err != nil || id != v.OperationID {
+			return ErrInvalid
+		}
+	}
 	return nil
 }
 func validateSchema(value any, schema, root map[string]any) error {

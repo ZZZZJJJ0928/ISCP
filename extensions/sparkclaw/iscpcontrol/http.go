@@ -23,6 +23,13 @@ type Backend interface {
 	ResolveActor(context.Context, string, string) (identity.DeviceIdentity, error)
 	Execute(context.Context, Request, identity.DeviceIdentity, string) (Outcome, error)
 }
+
+// DisclosureGuard linearizes the final current-authority check with bounded
+// local response emission. Implementations must not call another service here.
+type DisclosureGuard interface {
+	Disclose(context.Context, Request, identity.DeviceIdentity, func() error) error
+}
+
 type Failure struct {
 	Code     string
 	Revision *Counter
@@ -118,24 +125,47 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	var response any
 	switch {
 	case outcome.Result != nil:
 		if outcome.Result.Payload.Key != req.Key || outcome.Result.Payload.SemanticDigest != req.SemanticDigest {
 			h.failure(w, "invalid_request", &req, nil)
 			return
 		}
-		sealed, e := Seal(*outcome.Result, req)
-		if e != nil {
+		sealed, err := Seal(*outcome.Result, req)
+		if err != nil {
 			h.failure(w, "invalid_request", &req, nil)
 			return
 		}
-		h.write(w, sealed)
+		response = sealed
 	case outcome.Disposition != nil:
-		h.write(w, outcome.Disposition)
+		response = outcome.Disposition
 	case outcome.Status != nil:
-		h.write(w, outcome.Status)
+		response = outcome.Status
 	default:
 		h.failure(w, "authorization_unavailable", &req, nil)
+		return
+	}
+	// A real net/http response supports the deadline and interrupts a stalled
+	// peer before releasing authority. Encoding/sealing happened before locking.
+	deadline := time.Now().Add(5 * time.Second)
+	_ = http.NewResponseController(w).SetWriteDeadline(deadline)
+	ctx, cancel := context.WithDeadline(r.Context(), deadline)
+	defer cancel()
+	written := false
+	emit := func() error { written = true; return h.write(w, response) }
+	if guard, ok := h.Backend.(DisclosureGuard); ok {
+		e = guard.Disclose(ctx, req, actor, emit)
+	} else {
+		e = emit()
+	}
+	if e != nil && !written {
+		var failure *Failure
+		if errors.As(e, &failure) {
+			h.failure(w, failure.Code, &req, failure.Revision)
+		} else {
+			h.failure(w, "authorization_unavailable", &req, nil)
+		}
 	}
 }
 func (h *Handler) challenge(w http.ResponseWriter, r *http.Request, raw []byte) {
@@ -185,7 +215,7 @@ func (h *Handler) failure(w http.ResponseWriter, code string, r *Request, revisi
 	}
 	h.writeStatus(w, ErrorStatus(code), e)
 }
-func (h *Handler) write(w http.ResponseWriter, v any) {
+func (h *Handler) write(w http.ResponseWriter, v any) error {
 	status := http.StatusOK
 	if s, ok := v.(*Status); ok {
 		if s.State == "namespace_closed" {
@@ -195,21 +225,28 @@ func (h *Handler) write(w http.ResponseWriter, v any) {
 			status = http.StatusConflict
 		}
 	}
-	h.writeStatus(w, status, v)
+	return h.writeStatus(w, status, v)
 }
-func (h *Handler) writeStatus(w http.ResponseWriter, status int, v any) {
+func (h *Handler) writeStatus(w http.ResponseWriter, status int, v any) error {
 	raw, err := json.Marshal(v)
 	if err != nil || len(raw)+1 > MaxBody {
 		v, err = NewError("resource_exhausted", h.Audience, nil, nil, h.Now(), h.Signer)
 		if err != nil {
 			http.Error(w, "control unavailable", http.StatusServiceUnavailable)
-			return
+			return err
 		}
 		raw, _ = json.Marshal(v)
 		status = http.StatusServiceUnavailable
 	}
 	w.WriteHeader(status)
-	_, _ = w.Write(append(raw, '\n'))
+	_, err = w.Write(append(raw, '\n'))
+	if err != nil {
+		return err
+	}
+	if err = http.NewResponseController(w).Flush(); errors.Is(err, http.ErrNotSupported) {
+		return nil
+	}
+	return err
 }
 
 // Client's HTTP transport must already pin the original HTTPS authority. It never
