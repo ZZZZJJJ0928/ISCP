@@ -29,16 +29,17 @@ type RelaySubmission = duplex.Submission
 type AcceptanceReceipt = duplex.Receipt
 
 type ReceiptFuture struct {
-	owner        *RelayClient
-	sessionCheck func(string) bool
-	uncertain    bool
-	Submission   RelaySubmission
-	done         chan struct{}
-	mu           sync.Mutex
-	result       *AcceptanceReceipt
-	err          error
-	written      bool
-	completed    bool
+	owner              *RelayClient
+	sessionCheck       func(string) bool
+	uncertain          bool
+	Submission         RelaySubmission
+	done               chan struct{}
+	mu                 sync.Mutex
+	result             *AcceptanceReceipt
+	err                error
+	written            bool
+	completed          bool
+	observedCredential relayCredentialObservation // guarded by socket.mu; captured at first wire write
 }
 
 func (f *ReceiptFuture) finish(r *AcceptanceReceipt, e error) {
@@ -82,6 +83,21 @@ func (f *ReceiptFuture) Wait(ctx context.Context) (*AcceptanceReceipt, error) {
 	return nil, &UnknownAcceptance{Submission: f.Submission, Cause: ctx.Err()}
 }
 
+type relayCredentialObservation struct {
+	binding     CredentialBinding
+	generation  CredentialGeneration
+	accessToken string
+}
+
+func observeRelayCredential(lease CredentialLease) relayCredentialObservation {
+	return relayCredentialObservation{lease.Binding, lease.CredentialGeneration, lease.Enrollment.Access.Token}
+}
+
+type relayRefreshHint struct {
+	reason   CredentialInvalidationReason
+	observed relayCredentialObservation
+}
+
 type relayWrite struct {
 	frame  duplex.Frame
 	future *ReceiptFuture
@@ -106,7 +122,7 @@ type relaySocket struct {
 	data          chan relayWrite
 	control       chan relayWrite
 	changed       chan struct{}
-	refresh       chan CredentialInvalidationReason
+	refresh       chan relayRefreshHint
 	deliveries    chan json.RawMessage
 	deliveryBytes int
 	workers       sync.WaitGroup
@@ -322,7 +338,7 @@ func (c *RelayClient) RunOnceReady(ctx context.Context, handle func(context.Cont
 			return errors.New("credential changed during Relay authentication")
 		}
 	}
-	s := &relaySocket{owner: c, ws: ws, ctx: life, cancel: cancel, ready: ready, pin: pin, epoch: epoch, request: 1, lease: lease, pending: map[string]*ReceiptFuture{}, queued: map[*ReceiptFuture]int{}, data: make(chan relayWrite, 64), control: make(chan relayWrite, 8), changed: make(chan struct{}, 1), refresh: make(chan CredentialInvalidationReason, 1), deliveries: make(chan json.RawMessage, 64)}
+	s := &relaySocket{owner: c, ws: ws, ctx: life, cancel: cancel, ready: ready, pin: pin, epoch: epoch, request: 1, lease: lease, pending: map[string]*ReceiptFuture{}, queued: map[*ReceiptFuture]int{}, data: make(chan relayWrite, 64), control: make(chan relayWrite, 8), changed: make(chan struct{}, 1), refresh: make(chan relayRefreshHint, 1), deliveries: make(chan json.RawMessage, 64)}
 	defer func() { cancel(); ws.Close(); s.workers.Wait(); s.failPending() }()
 	c.socketMu.Lock()
 	c.socket = s
@@ -464,6 +480,7 @@ func (s *relaySocket) write(w relayWrite) error {
 		s.request++
 		w.frame.RequestID = strconv.FormatUint(s.request, 10)
 		if w.future != nil {
+			w.future.observedCredential = observeRelayCredential(s.lease)
 			s.pending[w.frame.RequestID] = w.future
 		}
 		if w.frame.Kind == "reauth.request" {
@@ -539,6 +556,10 @@ func (s *relaySocket) receive(f duplex.Frame) error {
 	case "accepted", "rejected", "submit.status":
 		s.mu.Lock()
 		future := s.pending[f.RequestID]
+		var observed relayCredentialObservation
+		if future != nil {
+			observed = future.observedCredential
+		}
 		s.mu.Unlock()
 		if future == nil {
 			return errors.New("uncorrelated Relay result")
@@ -559,7 +580,7 @@ func (s *relaySocket) receive(f duplex.Frame) error {
 			err = &RejectedSubmission{Code: f.Code, Submission: future.Submission}
 			if f.Code == "auth_required" {
 				select {
-				case s.refresh <- CredentialInvalidationReason("authentication_required"):
+				case s.refresh <- relayRefreshHint{reason: AuthenticationRequired, observed: observed}:
 				default:
 				}
 			}
@@ -598,7 +619,7 @@ func (s *relaySocket) credentials() {
 		events = p.Subscribe(s.ctx, s.owner.providerBinding())
 	}
 	for {
-		reason := CredentialInvalidationReason("")
+		hint := relayRefreshHint{}
 		force := false
 		select {
 		case <-s.ctx.Done():
@@ -622,7 +643,7 @@ func (s *relaySocket) credentials() {
 				return
 			}
 			force = event.Lease != nil && event.Lease.Enrollment.Access.Token != current.Enrollment.Access.Token
-		case reason = <-s.refresh:
+		case hint = <-s.refresh:
 			force = true
 		case <-timer.C:
 		}
@@ -630,22 +651,25 @@ func (s *relaySocket) credentials() {
 		lease := s.lease
 		busy := s.reauthDone != nil
 		s.mu.Unlock()
+		if hint.reason != "" && hint.observed != observeRelayCredential(lease) {
+			continue // an old request cannot invalidate the newer authenticated lease
+		}
 		if busy || (!force && time.Until(lease.ExpiresAt) > time.Minute) {
 			continue
 		}
 		var next CredentialLease
 		var e error
 		if p := s.owner.CredentialProvider(); p != nil {
-			if reason != "" {
-				if e = p.Invalidate(lease.Binding, lease.CredentialGeneration, reason); e != nil {
+			if hint.reason != "" {
+				if e = p.Invalidate(hint.observed.binding, hint.observed.generation, hint.reason); e != nil {
 					s.cancel()
 					return
 				}
 			}
 			next, e = p.EnsureAccess(s.ctx, lease.Binding)
 		} else {
-			if reason != "" && s.owner.profile == ProfileLocalLab && lease.Enrollment.Mode == BundleModeWorkbenchLocalLab {
-				e = s.owner.refreshRejectedAccess(s.ctx, lease.Enrollment.Access.Token)
+			if hint.reason != "" && s.owner.profile == ProfileLocalLab && lease.Enrollment.Mode == BundleModeWorkbenchLocalLab {
+				e = s.owner.refreshRejectedAccess(s.ctx, hint.observed.accessToken)
 			} else {
 				e = s.owner.ensureAccess(s.ctx)
 			}

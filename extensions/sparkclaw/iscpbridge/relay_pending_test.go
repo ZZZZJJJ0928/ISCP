@@ -302,7 +302,7 @@ func TestCredentialScopeSnapshotDoesNotDisconnectNewOwner(t *testing.T) {
 			provider.events <- event
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
-			s := &relaySocket{owner: &RelayClient{credentialProvider: provider}, ctx: ctx, cancel: cancel, lease: lease, refresh: make(chan CredentialInvalidationReason), changed: make(chan struct{}, 1)}
+			s := &relaySocket{owner: &RelayClient{credentialProvider: provider}, ctx: ctx, cancel: cancel, lease: lease, refresh: make(chan relayRefreshHint), changed: make(chan struct{}, 1)}
 			done := make(chan struct{})
 			go func() { defer close(done); s.credentials() }()
 			if newOwner {
