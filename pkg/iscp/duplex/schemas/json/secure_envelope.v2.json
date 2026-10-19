@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.iscp.dev/json/secure_envelope.v2.json",
+  "title": "ISCP Secure Envelope v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "domain_id", "message_id", "session_id", "sender_device_id", "recipient_device_id", "sequence", "nonce", "payload_type", "route", "ciphertext"],
+  "properties": {
+    "type": { "const": "iscp.secure_envelope.v2" },
+    "domain_id": { "type": "string", "minLength": 1 },
+    "message_id": { "type": "string", "minLength": 1 },
+    "session_id": { "type": "string", "minLength": 1 },
+    "sender_device_id": { "type": "string", "minLength": 1 },
+    "recipient_device_id": { "type": "string", "minLength": 1 },
+    "sequence": { "type": "integer", "minimum": 0 },
+    "nonce": { "type": "string", "contentEncoding": "base64url" },
+    "payload_type": { "type": "string", "minLength": 1 },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relay_id", "ttl_seconds", "priority"],
+      "properties": {
+        "relay_id": { "type": "string", "minLength": 1 },
+        "ttl_seconds": { "type": "integer", "minimum": 1 },
+        "priority": { "type": "integer", "minimum": 0, "maximum": 9 }
+      }
+    },
+    "ciphertext": { "type": "string", "contentEncoding": "base64url" }
+  }
+}
+

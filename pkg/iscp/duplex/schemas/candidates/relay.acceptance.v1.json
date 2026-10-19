@@ -1,0 +1,118 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "type",
+    "receipt_id",
+    "relay_id",
+    "domain_id",
+    "history_id",
+    "message_id",
+    "sender_device_id",
+    "recipient_device_id",
+    "envelope_digest",
+    "not_after",
+    "accepted_at",
+    "expires_at",
+    "signature"
+  ],
+  "properties": {
+    "type": {
+      "const": "iscp.relay.acceptance.v1"
+    },
+    "receipt_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "minLength": 22,
+      "maxLength": 22
+    },
+    "relay_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "$comment": "UTF-8 byte length is additionally limited to 256 by the strict wire prevalidator."
+    },
+    "domain_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "$comment": "UTF-8 byte length is additionally limited to 256 by the strict wire prevalidator."
+    },
+    "history_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "minLength": 43,
+      "maxLength": 43,
+      "$comment": "Must decode canonically to exactly 32 bytes; reject nonzero pad bits."
+    },
+    "message_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "$comment": "UTF-8 byte length is additionally limited to 256 by the strict wire prevalidator."
+    },
+    "sender_device_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "$comment": "UTF-8 byte length is additionally limited to 256 by the strict wire prevalidator."
+    },
+    "recipient_device_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "$comment": "UTF-8 byte length is additionally limited to 256 by the strict wire prevalidator."
+    },
+    "envelope_digest": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "minLength": 43,
+      "maxLength": 43,
+      "$comment": "Must decode canonically to exactly 32 bytes; reject nonzero pad bits."
+    },
+    "not_after": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "format": "date-time"
+    },
+    "accepted_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "format": "date-time"
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "alg",
+        "kid",
+        "value"
+      ],
+      "properties": {
+        "alg": {
+          "const": "Ed25519"
+        },
+        "kid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "$comment": "UTF-8 byte length is additionally limited to 256 by the strict wire prevalidator."
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "minLength": 86,
+          "maxLength": 86
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.iscp.dev/candidates/relay.acceptance.v1.json",
+  "title": "PROPOSED 0038 immutable acceptance receipt; not a released capability"
+}

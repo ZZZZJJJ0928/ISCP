@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.iscp.dev/json/device.proof.v2.json",
+  "title": "ISCP Device Proof v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "domain_id", "device_id", "audience", "challenge", "nonce", "issued_at", "signature"],
+  "properties": {
+    "type": { "const": "iscp.device.proof.v2" },
+    "domain_id": { "type": "string", "minLength": 1 },
+    "device_id": { "type": "string", "minLength": 1 },
+    "audience": { "type": "string", "minLength": 1 },
+    "challenge": { "type": "string", "minLength": 8 },
+    "nonce": { "type": "string", "minLength": 8 },
+    "issued_at": { "type": "string", "format": "date-time" },
+    "signature": { "$ref": "#/$defs/signature" }
+  },
+  "$defs": {
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["alg", "kid", "value"],
+      "properties": {
+        "alg": { "const": "Ed25519" },
+        "kid": { "type": "string", "minLength": 1 },
+        "value": { "type": "string", "contentEncoding": "base64url" }
+      }
+    }
+  }
+}
+

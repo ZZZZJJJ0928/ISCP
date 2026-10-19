@@ -1,0 +1,934 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.iscp.dev/candidates/relay.duplex.v1.json",
+  "title": "PROPOSED 0038 duplex frame; not a released capability",
+  "$comment": "Schema plus strict raw-wire and stateful constraints in conformance/fixtures/relay.duplex.v1.constraints.json. Does not alter core v2 schemas.",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "kind",
+        "connection_id",
+        "relay_id",
+        "domain_id",
+        "challenge_id",
+        "challenge",
+        "expires_at",
+        "history_id",
+        "limits"
+      ],
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "kind": {
+          "const": "challenge"
+        },
+        "connection_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "relay_id": {
+          "$ref": "#/$defs/id"
+        },
+        "domain_id": {
+          "$ref": "#/$defs/id"
+        },
+        "challenge_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "challenge": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "expires_at": {
+          "$ref": "#/$defs/time"
+        },
+        "history_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "limits": {
+          "$ref": "#/$defs/limits"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "kind",
+        "connection_id",
+        "request_id",
+        "challenge_id",
+        "access_token",
+        "proof"
+      ],
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "kind": {
+          "const": "authenticate"
+        },
+        "connection_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uint64"
+        },
+        "challenge_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "access_token": {
+          "$ref": "#/$defs/token"
+        },
+        "proof": {
+          "$ref": "#/$defs/proof"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "kind",
+        "connection_id",
+        "owner_generation",
+        "request_id",
+        "domain_id",
+        "device_id",
+        "authority_expires_at",
+        "history_id",
+        "limits"
+      ],
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "kind": {
+          "const": "ready"
+        },
+        "connection_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "owner_generation": {
+          "$ref": "#/$defs/uint64"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uint64"
+        },
+        "domain_id": {
+          "$ref": "#/$defs/id"
+        },
+        "device_id": {
+          "$ref": "#/$defs/id"
+        },
+        "authority_expires_at": {
+          "$ref": "#/$defs/time"
+        },
+        "history_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "limits": {
+          "$ref": "#/$defs/limits"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "kind",
+        "connection_id",
+        "owner_generation",
+        "request_id",
+        "history_id",
+        "message_id",
+        "envelope_digest",
+        "not_after",
+        "envelope"
+      ],
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "kind": {
+          "const": "submit"
+        },
+        "connection_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "owner_generation": {
+          "$ref": "#/$defs/uint64"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uint64"
+        },
+        "history_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "message_id": {
+          "$ref": "#/$defs/id"
+        },
+        "envelope_digest": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "not_after": {
+          "$ref": "#/$defs/time"
+        },
+        "envelope": {
+          "$ref": "#/$defs/envelope"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "kind",
+        "connection_id",
+        "owner_generation",
+        "request_id",
+        "message_id",
+        "envelope_digest",
+        "receipt"
+      ],
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "kind": {
+          "const": "accepted"
+        },
+        "connection_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "owner_generation": {
+          "$ref": "#/$defs/uint64"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uint64"
+        },
+        "message_id": {
+          "$ref": "#/$defs/id"
+        },
+        "envelope_digest": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "receipt": {
+          "$ref": "#/$defs/receipt"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "kind",
+        "connection_id",
+        "owner_generation",
+        "request_id",
+        "message_id",
+        "envelope_digest",
+        "code"
+      ],
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "kind": {
+          "const": "rejected"
+        },
+        "connection_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "owner_generation": {
+          "$ref": "#/$defs/uint64"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uint64"
+        },
+        "message_id": {
+          "$ref": "#/$defs/id"
+        },
+        "envelope_digest": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "code": {
+          "enum": [
+            "envelope_invalid",
+            "digest_mismatch",
+            "deadline_expired",
+            "message_conflict",
+            "auth_required",
+            "sender_mismatch",
+            "resource_exhausted",
+            "storage_unavailable",
+            "history_unavailable"
+          ]
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "kind",
+        "connection_id",
+        "owner_generation",
+        "message_id",
+        "envelope_digest",
+        "envelope"
+      ],
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "kind": {
+          "const": "delivery"
+        },
+        "connection_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "owner_generation": {
+          "$ref": "#/$defs/uint64"
+        },
+        "message_id": {
+          "$ref": "#/$defs/id"
+        },
+        "envelope_digest": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "envelope": {
+          "$ref": "#/$defs/envelope"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "kind",
+        "connection_id",
+        "owner_generation",
+        "request_id",
+        "history_id",
+        "message_id",
+        "envelope_digest",
+        "not_after"
+      ],
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "kind": {
+          "const": "submit.query"
+        },
+        "connection_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "owner_generation": {
+          "$ref": "#/$defs/uint64"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uint64"
+        },
+        "history_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "message_id": {
+          "$ref": "#/$defs/id"
+        },
+        "envelope_digest": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "not_after": {
+          "$ref": "#/$defs/time"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "kind",
+        "connection_id",
+        "owner_generation",
+        "request_id",
+        "message_id",
+        "envelope_digest",
+        "state",
+        "receipt"
+      ],
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "kind": {
+          "const": "submit.status"
+        },
+        "connection_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "owner_generation": {
+          "$ref": "#/$defs/uint64"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uint64"
+        },
+        "message_id": {
+          "$ref": "#/$defs/id"
+        },
+        "envelope_digest": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "state": {
+          "const": "accepted"
+        },
+        "receipt": {
+          "$ref": "#/$defs/receipt"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "kind",
+        "connection_id",
+        "owner_generation",
+        "request_id",
+        "message_id",
+        "envelope_digest",
+        "state",
+        "receipt"
+      ],
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "kind": {
+          "const": "submit.status"
+        },
+        "connection_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "owner_generation": {
+          "$ref": "#/$defs/uint64"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uint64"
+        },
+        "message_id": {
+          "$ref": "#/$defs/id"
+        },
+        "envelope_digest": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "state": {
+          "const": "expired"
+        },
+        "receipt": {
+          "$ref": "#/$defs/receipt"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "kind",
+        "connection_id",
+        "owner_generation",
+        "request_id",
+        "message_id",
+        "envelope_digest",
+        "state"
+      ],
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "kind": {
+          "const": "submit.status"
+        },
+        "connection_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "owner_generation": {
+          "$ref": "#/$defs/uint64"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uint64"
+        },
+        "message_id": {
+          "$ref": "#/$defs/id"
+        },
+        "envelope_digest": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "state": {
+          "const": "absent"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "kind",
+        "connection_id",
+        "owner_generation",
+        "request_id",
+        "message_id",
+        "envelope_digest",
+        "state",
+        "reason"
+      ],
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "kind": {
+          "const": "submit.status"
+        },
+        "connection_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "owner_generation": {
+          "$ref": "#/$defs/uint64"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uint64"
+        },
+        "message_id": {
+          "$ref": "#/$defs/id"
+        },
+        "envelope_digest": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "state": {
+          "const": "unknown"
+        },
+        "reason": {
+          "enum": [
+            "commit_unknown",
+            "history_unavailable",
+            "legacy_record",
+            "barrier_timeout"
+          ]
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "kind",
+        "connection_id",
+        "owner_generation",
+        "request_id"
+      ],
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "kind": {
+          "const": "reauth.request"
+        },
+        "connection_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "owner_generation": {
+          "$ref": "#/$defs/uint64"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uint64"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "kind",
+        "connection_id",
+        "owner_generation",
+        "request_id",
+        "challenge_id",
+        "challenge",
+        "expires_at"
+      ],
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "kind": {
+          "const": "reauth.challenge"
+        },
+        "connection_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "owner_generation": {
+          "$ref": "#/$defs/uint64"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uint64"
+        },
+        "challenge_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "challenge": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "expires_at": {
+          "$ref": "#/$defs/time"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "kind",
+        "connection_id",
+        "owner_generation",
+        "request_id",
+        "challenge_id",
+        "access_token",
+        "proof"
+      ],
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "kind": {
+          "const": "reauthenticate"
+        },
+        "connection_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "owner_generation": {
+          "$ref": "#/$defs/uint64"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uint64"
+        },
+        "challenge_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "access_token": {
+          "$ref": "#/$defs/token"
+        },
+        "proof": {
+          "$ref": "#/$defs/proof"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "kind",
+        "connection_id",
+        "owner_generation",
+        "request_id",
+        "authority_expires_at"
+      ],
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "kind": {
+          "const": "reauthenticated"
+        },
+        "connection_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "owner_generation": {
+          "$ref": "#/$defs/uint64"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uint64"
+        },
+        "authority_expires_at": {
+          "$ref": "#/$defs/time"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "kind",
+        "connection_id",
+        "owner_generation",
+        "code"
+      ],
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "kind": {
+          "const": "closing"
+        },
+        "connection_id": {
+          "$ref": "#/$defs/bytes32"
+        },
+        "owner_generation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/uint64"
+            },
+            {
+              "const": "0"
+            }
+          ],
+          "$comment": "0 only before successful initial authentication."
+        },
+        "code": {
+          "enum": [
+            "protocol_error",
+            "challenge_expired",
+            "authentication_failed",
+            "revoked",
+            "replaced",
+            "maintenance",
+            "internal_error",
+            "auth_required",
+            "resource_exhausted"
+          ]
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "$comment": "UTF-8 byte length is additionally limited to 256 by the strict wire prevalidator."
+    },
+    "bytes32": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "minLength": 43,
+      "maxLength": 43,
+      "$comment": "Must decode canonically to exactly 32 bytes; reject nonzero pad bits."
+    },
+    "uint64": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]{0,19}$",
+      "maxLength": 20,
+      "$comment": "Decimal value <= 18446744073709551615; zero forbidden except initial-auth closing generation."
+    },
+    "time": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "format": "date-time"
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_frame_bytes",
+        "max_envelope_bytes",
+        "max_control_bytes",
+        "max_ttl_seconds",
+        "query_recovery_seconds"
+      ],
+      "properties": {
+        "max_frame_bytes": {
+          "const": 1114112
+        },
+        "max_envelope_bytes": {
+          "const": 1048576
+        },
+        "max_control_bytes": {
+          "const": 65536
+        },
+        "max_ttl_seconds": {
+          "const": 86400
+        },
+        "query_recovery_seconds": {
+          "const": 604800
+        }
+      }
+    },
+    "token": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8192,
+      "$comment": "UTF-8 byte length <= 8192."
+    },
+    "receipt": {
+      "$ref": "relay.acceptance.v1.json"
+    },
+    "proof": {
+      "allOf": [
+        {
+          "$ref": "../json/device.proof.v2.json"
+        },
+        {
+          "properties": {
+            "domain_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "$comment": "UTF-8 byte length is additionally limited to 256 by the strict wire prevalidator."
+            },
+            "device_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "$comment": "UTF-8 byte length is additionally limited to 256 by the strict wire prevalidator."
+            },
+            "audience": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "$comment": "UTF-8 byte length is additionally limited to 256 by the strict wire prevalidator."
+            },
+            "challenge": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]+$",
+              "minLength": 43,
+              "maxLength": 43,
+              "$comment": "Must decode canonically to exactly 32 bytes; reject nonzero pad bits."
+            },
+            "nonce": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]+$",
+              "minLength": 22,
+              "maxLength": 256
+            },
+            "issued_at": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+              "format": "date-time"
+            },
+            "signature": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "alg",
+                "kid",
+                "value"
+              ],
+              "properties": {
+                "alg": {
+                  "const": "Ed25519"
+                },
+                "kid": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "$comment": "UTF-8 byte length is additionally limited to 256 by the strict wire prevalidator."
+                },
+                "value": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9_-]+$",
+                  "minLength": 86,
+                  "maxLength": 86
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "envelope": {
+      "allOf": [
+        {
+          "$ref": "../json/secure_envelope.v2.json"
+        },
+        {
+          "properties": {
+            "domain_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "$comment": "UTF-8 byte length is additionally limited to 256 by the strict wire prevalidator."
+            },
+            "message_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "$comment": "UTF-8 byte length is additionally limited to 256 by the strict wire prevalidator."
+            },
+            "session_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "$comment": "UTF-8 byte length is additionally limited to 256 by the strict wire prevalidator."
+            },
+            "sender_device_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "$comment": "UTF-8 byte length is additionally limited to 256 by the strict wire prevalidator."
+            },
+            "recipient_device_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "$comment": "UTF-8 byte length is additionally limited to 256 by the strict wire prevalidator."
+            },
+            "payload_type": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "$comment": "UTF-8 byte length is additionally limited to 256 by the strict wire prevalidator."
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "nonce": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]+$",
+              "minLength": 16,
+              "maxLength": 16
+            },
+            "ciphertext": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]+$"
+            },
+            "route": {
+              "properties": {
+                "relay_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "$comment": "UTF-8 byte length is additionally limited to 256 by the strict wire prevalidator."
+                },
+                "ttl_seconds": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 86400
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
