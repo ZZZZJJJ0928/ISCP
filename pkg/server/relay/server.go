@@ -62,6 +62,12 @@ type ManagedAdapter interface {
 	Metadata() map[string]string
 }
 
+// ManagedRegistrationDiscloser holds current authority through the actual
+// registration response write, including flushing buffered HTTP data.
+type ManagedRegistrationDiscloser interface {
+	DiscloseRegistration(context.Context, identity.DeviceIdentity, func() error) error
+}
+
 type Server struct {
 	duplexMu        sync.Mutex
 	duplexOwners    map[string]*duplexConnection
@@ -327,10 +333,26 @@ func (s *Server) registerWithSignedTicket(w http.ResponseWriter, r *http.Request
 			httpx.WriteError(w, managedStatus(err), err)
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Cache-Control", "no-store")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write(raw)
+		write := func() error {
+			controller := http.NewResponseController(w)
+			if err := controller.SetWriteDeadline(time.Now().Add(5 * time.Second)); err != nil && !errors.Is(err, http.ErrNotSupported) {
+				return err
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Cache-Control", "no-store")
+			if _, err := w.Write(raw); err != nil {
+				return err
+			}
+			return controller.Flush()
+		}
+		if guard, ok := s.cfg.Managed.(ManagedRegistrationDiscloser); ok {
+			if err := guard.DiscloseRegistration(r.Context(), req.Identity, write); err != nil {
+				httpx.WriteError(w, managedStatus(err), err)
+			}
+		} else if err := write(); err != nil {
+			return
+		}
+
 		return
 	}
 	if s.cfg.TicketIssuer == nil {
