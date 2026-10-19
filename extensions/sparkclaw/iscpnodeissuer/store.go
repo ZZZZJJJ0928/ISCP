@@ -34,12 +34,13 @@ type State struct {
 // ControlState is never inferred from a missing legacy record. New bindings
 // create a fresh namespace; restore/import requires an explicit history gate.
 type ControlState struct {
-	HistoryID       string                     `json:"history_id"`
-	HistoryComplete bool                       `json:"history_complete"`
-	Closed          bool                       `json:"closed"`
-	Generation      control.Counter            `json:"credential_generation"`
-	Records         map[string]*control.Record `json:"records"`
-	Parents         map[string]*ControlParent  `json:"parents"`
+	ActivationEvidence string                     `json:"activation_evidence_sha256,omitempty"`
+	HistoryID          string                     `json:"history_id"`
+	HistoryComplete    bool                       `json:"history_complete"`
+	Closed             bool                       `json:"closed"`
+	Generation         control.Counter            `json:"credential_generation"`
+	Records            map[string]*control.Record `json:"records"`
+	Parents            map[string]*ControlParent  `json:"parents"`
 }
 type ControlParent struct {
 	ChildAck         *control.Ack         `json:"child_ack,omitempty"`
@@ -81,8 +82,9 @@ type Store interface {
 // PostgresStore keeps all private channel/secret/receipt material encrypted.
 // A separate 32-byte protected storage key must accompany a paired DB backup.
 type PostgresStore struct {
-	pool *pgxpool.Pool
-	key  []byte
+	writerEpoch string
+	pool        *pgxpool.Pool
+	key         []byte
 }
 
 func NewPostgresStore(ctx context.Context, dsn string, key []byte) (*PostgresStore, error) {
@@ -98,9 +100,13 @@ func NewPostgresStore(ctx context.Context, dsn string, key []byte) (*PostgresSto
 	if e != nil {
 		return nil, e
 	}
-	s := &PostgresStore{pool, append([]byte{}, key...)}
+	s := &PostgresStore{pool: pool, key: append([]byte{}, key...)}
 	_, e = pool.Exec(ctx, `CREATE TABLE IF NOT EXISTS sparkclaw_iscp_issuer_state (id text PRIMARY KEY, ciphertext bytea NOT NULL, updated_at timestamptz NOT NULL DEFAULT now(), CONSTRAINT bounded_id CHECK(length(id)<=200), CONSTRAINT bounded_ciphertext CHECK(octet_length(ciphertext)<=4194304))`)
 	if e != nil {
+		pool.Close()
+		return nil, e
+	}
+	if _, e = pool.Exec(ctx, issuerWriterSchema); e != nil {
 		pool.Close()
 		return nil, e
 	}
@@ -138,14 +144,22 @@ func (s *PostgresStore) Create(ctx context.Context, id string, v *State) error {
 	if e != nil {
 		return e
 	}
-	tag, e := s.pool.Exec(ctx, `INSERT INTO sparkclaw_iscp_issuer_state(id,ciphertext) VALUES($1,$2) ON CONFLICT DO NOTHING`, id, b)
+	tx, e := s.pool.Begin(ctx)
+	if e != nil {
+		return e
+	}
+	defer tx.Rollback(ctx)
+	if e = s.lockWriter(ctx, tx); e != nil {
+		return e
+	}
+	tag, e := tx.Exec(ctx, `INSERT INTO sparkclaw_iscp_issuer_state(id,ciphertext) VALUES($1,$2) ON CONFLICT DO NOTHING`, id, b)
 	if e != nil {
 		return ErrUnavailable
 	}
 	if tag.RowsAffected() != 1 {
 		return ErrConflict
 	}
-	return nil
+	return tx.Commit(ctx)
 }
 func (s *PostgresStore) Read(ctx context.Context, id string) (*State, error) {
 	var b []byte
@@ -164,6 +178,9 @@ func (s *PostgresStore) Update(ctx context.Context, id string, fn func(*State) e
 		return ErrUnavailable
 	}
 	defer tx.Rollback(ctx)
+	if e = s.lockWriter(ctx, tx); e != nil {
+		return e
+	}
 	var b []byte
 	e = tx.QueryRow(ctx, `SELECT ciphertext FROM sparkclaw_iscp_issuer_state WHERE id=$1 FOR UPDATE`, id).Scan(&b)
 	if errors.Is(e, pgx.ErrNoRows) {
