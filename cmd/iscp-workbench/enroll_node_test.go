@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+	control "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpcontrol"
 	n "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
 	"github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpworkbench"
 	c "github.com/Infinimesh-ai/ISCP/pkg/iscp/crypto"
@@ -108,9 +109,14 @@ func TestHelperNodeEnrollmentReplayExpiredResultAndPrivateActivation(t *testing.
 	}
 	signer, inviter, responder, relay := device("issuer"), device("inviter"), device("responder"), device("relay-signer")
 	var issuer *n.Issuer
+	var controlHandler http.Handler
 	drop := true
 	var server *httptest.Server
 	server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/v2/control/") {
+			controlHandler.ServeHTTP(w, r)
+			return
+		}
 		if r.URL.Path == "/.well-known/iscp/relay" {
 			now := time.Now().UTC()
 			d := descriptor.RelayDescriptor{Type: "iscp.relay.descriptor.v2", DomainID: "domain", RelayID: "relay", BaseURL: server.URL, WebSocketURL: "wss" + strings.TrimPrefix(server.URL, "https") + "/v2/relay/duplex", SigningKeys: []descriptor.PublicKey{{KTY: "Ed25519", Use: "descriptor-signature", KID: relay.Identity.PublicKey.KID, Public: relay.Identity.PublicKey.Public}}, IssuedAt: now, ExpiresAt: now.Add(time.Hour)}
@@ -152,11 +158,13 @@ func TestHelperNodeEnrollmentReplayExpiredResultAndPrivateActivation(t *testing.
 	defer server.Close()
 	management := &helperManagement{active: map[string]bool{}}
 	registration := &helperRegistration{prepared: map[string]n.RegistrationPreparation{}, receipts: map[string]n.RegistrationReceipt{}}
+	controlRelay := &helperControlRelay{signer: relay, actor: device("issuer-service-actor"), registration: registration, records: map[string]*control.Record{}, generations: map[string]uint64{}}
 	var err error
-	issuer, err = n.New(n.Config{Template: n.Credential{Origin: server.URL, TLSCertificatePEM: string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw})), DomainID: "domain", RelayID: "relay", RelaySignerIdentity: relay.Identity, IssuerIdentity: signer.Identity, InvitationSignerIdentity: inviter.Identity, IssuerRoute: "work2-node", ResponderIdentity: responder.Identity, DeploymentID: "deployment", OwnerID: "owner"}, Issuer: signer, InvitationSigner: inviter, GrantTTL: time.Second}, n.NewMemoryStore(), management, registration)
+	issuer, err = n.New(n.Config{EnableControlV2: true, ControlRelay: controlRelay, Template: n.Credential{Origin: server.URL, TLSCertificatePEM: string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw})), DomainID: "domain", RelayID: "relay", RelaySignerIdentity: relay.Identity, IssuerIdentity: signer.Identity, InvitationSignerIdentity: inviter.Identity, IssuerRoute: "work2-node", ResponderIdentity: responder.Identity, DeploymentID: "deployment", OwnerID: "owner"}, Issuer: signer, InvitationSigner: inviter, GrantTTL: time.Second}, n.NewMemoryStore(), management, registration)
 	if err != nil {
 		t.Fatal(err)
 	}
+	controlHandler = issuer.ControlHandler()
 	encoded, err := issuer.CreateInvitation(context.Background(), "SparkX", 15*time.Minute, []string{"workbench.read"}, "create-native-helper")
 	if err != nil {
 		t.Fatal(err)
