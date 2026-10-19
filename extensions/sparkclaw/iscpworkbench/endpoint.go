@@ -155,6 +155,11 @@ func newEndpoint(cfg Config, m material, relay RelayTransport, handler Handler, 
 			return nil, err
 		}
 		e.lifecycle = client
+		if real, ok := relay.(*iscpbridge.RelayClient); ok {
+			if err := configureNodeCredentialProvider(e, real); err != nil {
+				return nil, err
+			}
+		}
 	}
 	if cfg.GrantRenewal != nil {
 		client, err := iscpbridge.NewGrantLifecycleClient(cfg.GrantRenewal.URL, cfg.GrantRenewal.PendingFile, m.device, m.issuer, m.enrollment.RelayID, m.grant, 5*time.Second)
@@ -746,6 +751,11 @@ func (e *Endpoint) Close() error {
 	e.resetLocked()
 	e.mu.Unlock()
 	e.setState("closed")
+	if real, ok := e.relay.(*iscpbridge.RelayClient); ok {
+		if provider := real.CredentialProvider(); provider != nil {
+			return provider.Close()
+		}
+	}
 	return nil
 }
 

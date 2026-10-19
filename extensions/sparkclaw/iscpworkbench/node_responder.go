@@ -100,7 +100,16 @@ func NewNodeResponder(cfg Config, factory NodeHandlerFactory, validate NodePeerV
 	if err != nil {
 		return nil, err
 	}
-	return newNodeResponder(cfg, m, r, factory, validate, onState)
+	if err := r.ConfigureServiceCredentialProvider(m.issuer); err != nil {
+		return nil, err
+	}
+	n, err := newNodeResponder(cfg, m, r, factory, validate, onState)
+	if err != nil {
+		if provider := r.CredentialProvider(); provider != nil {
+			_ = provider.Close()
+		}
+	}
+	return n, err
 }
 func NewNodeResponderWithRelay(cfg Config, relay RelayTransport, factory NodeHandlerFactory, validate NodePeerValidator, onState func(string)) (*NodeResponder, error) {
 	m, err := loadMaterial(cfg)
@@ -396,14 +405,8 @@ func (n *NodeResponder) Run(ctx context.Context) error {
 			}
 		}
 		if relay, ok := n.relay.(*iscpbridge.RelayClient); ok {
-			bundle := relay.Enrollment()
-			if !time.Now().Before(bundle.Refresh.ExpiresAt) || !time.Now().Before(bundle.ExpiresAt) {
-				pending := n.config.EnrollmentFile + ".service-recovery.pending"
-				if updated, recoveryErr := iscpbridge.RecoverNodeServiceCredentials(ctx, bundle, n.material.device, pending); recoveryErr == nil {
-					if err := relay.UpdateEnrollment(func(b *iscpbridge.EnrollmentBundle) { *b = updated }); err == nil {
-						_ = iscpbridge.CommitNodeServiceRecovery(pending)
-					}
-				}
+			if provider := relay.CredentialProvider(); provider != nil {
+				_, _ = provider.EnsureAccess(ctx, relay.CredentialBinding())
 			}
 		}
 		n.resetAll()
@@ -441,5 +444,10 @@ func (n *NodeResponder) Close() error {
 		cancel()
 	}
 	n.closePeers()
+	if real, ok := n.relay.(*iscpbridge.RelayClient); ok {
+		if provider := real.CredentialProvider(); provider != nil {
+			return provider.Close()
+		}
+	}
 	return nil
 }
