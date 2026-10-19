@@ -47,7 +47,7 @@ func TestSignedRelayDiscoveryPinnedCloudRoot(t *testing.T) {
 					if name == "relay_id" {
 						relayID = "other"
 					}
-					ws := "wss" + strings.TrimPrefix(server.URL, "https") + "/v2/relay/connect"
+					ws := "wss" + strings.TrimPrefix(server.URL, "https") + "/v2/relay/duplex"
 					if name == "websocket" {
 						ws = "wss://other.invalid/connect"
 					}
@@ -72,7 +72,7 @@ func TestSignedRelayDiscoveryPinnedCloudRoot(t *testing.T) {
 				_ = json.NewEncoder(w).Encode(map[string]any{"descriptor": signed})
 			}))
 			defer server.Close()
-			bundle := EnrollmentBundle{RelayID: "relay", RelayBaseURL: server.URL, RelayWebSocketURL: "wss" + strings.TrimPrefix(server.URL, "https") + "/v2/relay/connect", TrustRootIdentity: root.Identity}
+			bundle := EnrollmentBundle{RelayID: "relay", RelayBaseURL: server.URL, RelayWebSocketURL: "wss" + strings.TrimPrefix(server.URL, "https") + "/v2/relay/duplex", TrustRootIdentity: root.Identity}
 			if name == "foreign_root" {
 				foreign, err := identity.NewDevice(provider, "cloud-domain", "cloud-root", now)
 				if err != nil {

@@ -383,7 +383,7 @@ func TestOperatorBindScopesApprovedServicesAndPreservesAdminBootstrap(t *testing
 	if e != nil {
 		t.Fatal(e)
 	}
-	relay, e := ref.New(ref.Config{DomainID: "test-domain", RelayID: "test-relay", BaseURL: "https://127.0.0.1", WebSocketURL: "wss://127.0.0.1/v2/relay/connect", AdminToken: "operator-test-only", AllowedOrigins: []string{"https://127.0.0.1"}, ProfileGate: gate.DefaultGate(gate.ProfileProduction), DB: pool, Managed: m})
+	relay, e := ref.New(ref.Config{DomainID: "test-domain", RelayID: "test-relay", BaseURL: "https://127.0.0.1", WebSocketURL: "wss://127.0.0.1/v2/relay/duplex", AdminToken: "operator-test-only", AllowedOrigins: []string{"https://127.0.0.1"}, ProfileGate: gate.DefaultGate(gate.ProfileProduction), DB: pool, Managed: m})
 	if e != nil {
 		t.Fatal(e)
 	}

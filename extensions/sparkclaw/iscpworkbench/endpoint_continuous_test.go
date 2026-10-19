@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"encoding/pem"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -16,6 +15,8 @@ import (
 
 	"github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
 	iscpcrypto "github.com/Infinimesh-ai/ISCP/pkg/iscp/crypto"
+	"github.com/Infinimesh-ai/ISCP/pkg/iscp/descriptor"
+	"github.com/Infinimesh-ai/ISCP/pkg/iscp/duplex"
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/envelope"
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/identity"
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/session"
@@ -44,38 +45,81 @@ func testContinuousRelay(t *testing.T, profile string) {
 	if profile == iscpbridge.ProfileProduction {
 		newServer = httptest.NewTLSServer
 	}
-	server := newServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var server *httptest.Server
+	server = newServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/v2/relay/connect":
-			connection, err := new(websocket.Upgrader).Upgrade(w, r, nil)
+		case "/.well-known/iscp/relay":
+			digest, _ := duplex.Digest(duplex.DefaultLimits())
+			d := descriptor.RelayDescriptor{Type: "iscp.relay.descriptor.v2", RelayID: "relay-test", DomainID: desktop.enrollment.DomainID, BaseURL: server.URL, WebSocketURL: "ws" + strings.TrimPrefix(server.URL, "http") + duplex.Path, SigningKeys: []descriptor.PublicKey{{KTY: "Ed25519", Use: "descriptor-signature", KID: signer.Identity.PublicKey.KID, Public: signer.Identity.PublicKey.Public}}, Metadata: map[string]string{"duplex_protocol": duplex.Protocol, "duplex_path": duplex.Path, "duplex_limits_sha256": digest}, IssuedAt: time.Now().Add(-time.Minute), ExpiresAt: time.Now().Add(time.Hour)}
+			signed, _ := descriptor.Sign(provider, signer, d.Type, d, time.Now())
+			_ = json.NewEncoder(w).Encode(map[string]any{"descriptor": signed})
+		case duplex.Path:
+			connection, err := (&websocket.Upgrader{Subprotocols: []string{duplex.Protocol}}).Upgrade(w, r, nil)
 			if err != nil {
-				t.Error(err)
 				return
 			}
 			defer connection.Close()
-			challenge := newUUID()
-			if err := connection.WriteJSON(map[string]string{"state": "challenge", "challenge": challenge}); err != nil {
+			limits := duplex.DefaultLimits()
+			challenge := duplex.Frame{V: 1, Kind: "challenge", ConnectionID: duplex.RandomID(), RelayID: "relay-test", DomainID: desktop.enrollment.DomainID, ChallengeID: duplex.RandomID(), Challenge: duplex.RandomID(), ExpiresAt: duplex.Timestamp(time.Now().Add(10 * time.Second)), HistoryID: strings.Repeat("A", 43), Limits: &limits}
+			write := func(f duplex.Frame) error {
+				raw, e := duplex.Encode(f)
+				if e != nil {
+					return e
+				}
+				return connection.WriteMessage(websocket.TextMessage, raw)
+			}
+			if write(challenge) != nil {
 				return
 			}
-			var proof identity.DeviceProof
-			if connection.ReadJSON(&proof) != nil {
+			_, raw, err := connection.ReadMessage()
+			if err != nil {
 				return
 			}
-			id, ok := devices[proof.DeviceID]
-			if !ok || identity.VerifyProof(provider, id, proof, "relay-test", challenge, time.Now().UTC(), time.Minute) != nil {
-				t.Error("invalid authenticated drain poll proof")
+			auth, err := duplex.Decode(raw)
+			if err != nil || auth.Proof == nil {
+				return
+			}
+			id, ok := devices[auth.Proof.DeviceID]
+			if !ok {
+				return
+			}
+			expected, _ := duplex.AuthChallenge(challenge, "authenticate", "1", "0", id.DeviceID+"-access", id)
+			if identity.VerifyProof(provider, id, *auth.Proof, "relay-test", expected, time.Now(), time.Minute) != nil {
+				t.Error("invalid duplex proof")
 				return
 			}
 			proofs.Add(1)
-			if connection.WriteJSON(map[string]string{"state": "ready"}) != nil {
+			ready := duplex.Frame{V: 1, Kind: "ready", ConnectionID: challenge.ConnectionID, OwnerGeneration: "1", RequestID: "1", DomainID: id.DomainID, DeviceID: id.DeviceID, HistoryID: challenge.HistoryID, Limits: &limits, AuthorityExpiresAt: duplex.Timestamp(time.Now().Add(time.Hour))}
+			if write(ready) != nil {
 				return
 			}
 			polls.Add(1)
 			closed := make(chan struct{})
+			out := make(chan duplex.Frame, 64)
 			go func() {
 				defer close(closed)
 				for {
-					if _, _, err := connection.ReadMessage(); err != nil {
+					_, raw, err := connection.ReadMessage()
+					if err != nil {
+						return
+					}
+					f, err := duplex.Decode(raw)
+					if err != nil || f.Kind != "submit" {
+						return
+					}
+					var env envelope.SecureEnvelope
+					if json.Unmarshal(f.Envelope, &env) != nil || env.SenderDeviceID != id.DeviceID {
+						return
+					}
+					posts.Add(1)
+					receipt, _ := duplex.SignReceipt(provider, signer, duplex.Receipt{ReceiptID: iscpcrypto.Base64URL(iscpcrypto.RandomBytes(16)), RelayID: "relay-test", DomainID: id.DomainID, HistoryID: f.HistoryID, MessageID: f.MessageID, SenderDeviceID: id.DeviceID, RecipientDeviceID: env.RecipientDeviceID, EnvelopeDigest: f.EnvelopeDigest, NotAfter: f.NotAfter, AcceptedAt: duplex.Timestamp(time.Now()), ExpiresAt: f.NotAfter})
+					queueMu.Lock()
+					queues[env.RecipientDeviceID] = append(queues[env.RecipientDeviceID], f.Envelope)
+					queueMu.Unlock()
+					reply := duplex.Frame{V: 1, Kind: "accepted", ConnectionID: ready.ConnectionID, OwnerGeneration: ready.OwnerGeneration, RequestID: f.RequestID, MessageID: f.MessageID, EnvelopeDigest: f.EnvelopeDigest, Receipt: &receipt}
+					select {
+					case out <- reply:
+					case <-r.Context().Done():
 						return
 					}
 				}
@@ -83,52 +127,33 @@ func testContinuousRelay(t *testing.T, profile string) {
 			ticker := time.NewTicker(2 * time.Millisecond)
 			defer ticker.Stop()
 			for {
-				queueMu.Lock()
-				snapshot := queues[id.DeviceID]
-				delete(queues, id.DeviceID)
-				queueMu.Unlock()
-				for _, raw := range snapshot {
-					if connection.WriteJSON(map[string]any{"state": "message", "message_id": newUUID(), "envelope": raw}) != nil {
-						return
-					}
-				}
 				select {
 				case <-closed:
 					return
+				case reply := <-out:
+					if write(reply) != nil {
+						return
+					}
 				case <-ticker.C:
+					queueMu.Lock()
+					snapshot := queues[id.DeviceID]
+					delete(queues, id.DeviceID)
+					queueMu.Unlock()
+					for _, raw := range snapshot {
+						var env envelope.SecureEnvelope
+						_ = json.Unmarshal(raw, &env)
+						digest, _ := duplex.Digest(raw)
+						if write(duplex.Frame{V: 1, Kind: "delivery", ConnectionID: ready.ConnectionID, OwnerGeneration: ready.OwnerGeneration, MessageID: env.MessageID, EnvelopeDigest: digest, Envelope: raw}) != nil {
+							return
+						}
+					}
 				}
 			}
-		case "/v2/relay/envelopes":
-			raw, err := io.ReadAll(io.LimitReader(r.Body, 100<<10))
-			if err != nil {
-				w.WriteHeader(400)
-				return
-			}
-			var env envelope.SecureEnvelope
-			if json.Unmarshal(raw, &env) != nil {
-				w.WriteHeader(400)
-				return
-			}
-			id, ok := devices[env.SenderDeviceID]
-			token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-			var proof identity.DeviceProof
-			proofRaw, decodeErr := iscpcrypto.DecodeBase64URL(r.Header.Get("X-ISCP-Access-Proof"))
-			challenge := strings.Join([]string{"iscp/v2/relay/access-proof", http.MethodPost, "/v2/relay/envelopes", iscpcrypto.Base64URL(iscpcrypto.SHA256([]byte(token)))}, "\x00")
-			if !ok || token != id.DeviceID+"-access" || decodeErr != nil || json.Unmarshal(proofRaw, &proof) != nil || identity.VerifyProof(provider, id, proof, "relay-test", challenge, time.Now().UTC(), time.Minute) != nil {
-				t.Error("invalid encrypted envelope access PoP")
-				w.WriteHeader(401)
-				return
-			}
-			posts.Add(1)
-			queueMu.Lock()
-			queues[env.RecipientDeviceID] = append(queues[env.RecipientDeviceID], json.RawMessage(raw))
-			queueMu.Unlock()
-			w.WriteHeader(http.StatusAccepted)
 		default:
-			t.Errorf("unexpected reference lifecycle endpoint: %s", r.URL.Path)
-			w.WriteHeader(404)
+			w.WriteHeader(http.StatusGone)
 		}
 	}))
+
 	defer server.Close()
 	invitation, err := identity.NewDevice(provider, desktop.enrollment.DomainID, "node-invitation", time.Now().UTC())
 	if err != nil {
@@ -144,7 +169,7 @@ func testContinuousRelay(t *testing.T, profile string) {
 		m.enrollment.TrustRootIdentity = identity.DeviceIdentity{}
 		m.enrollment.RelaySignerIdentity = &signer.Identity
 		m.enrollment.RelayBaseURL = server.URL
-		m.enrollment.RelayWebSocketURL = "ws" + strings.TrimPrefix(server.URL, "http") + "/v2/relay/connect"
+		m.enrollment.RelayWebSocketURL = "ws" + strings.TrimPrefix(server.URL, "http") + "/v2/relay/duplex"
 		m.enrollment.Access.Token = m.device.Identity.DeviceID + "-access"
 		return m
 	}

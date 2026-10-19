@@ -48,7 +48,7 @@ func TestRuntimeStartupRecoversExpiredLocalEnrollment(t *testing.T) {
 				switch r.URL.Path {
 				case "/.well-known/iscp/relay":
 					discoveries.Add(1)
-					desc := descriptor.RelayDescriptor{Type: "iscp.relay.descriptor.v2", RelayID: m.enrollment.RelayID, DomainID: m.enrollment.DomainID, BaseURL: "http://iscp-relay:8080", WebSocketURL: "ws://iscp-relay:8080/v2/relay/connect", SigningKeys: []descriptor.PublicKey{{KTY: "Ed25519", Use: "descriptor-signature", KID: advertised.Identity.PublicKey.KID, Public: advertised.Identity.PublicKey.Public}}, IssuedAt: now, ExpiresAt: now.Add(24 * time.Hour)}
+					desc := descriptor.RelayDescriptor{Type: "iscp.relay.descriptor.v2", RelayID: m.enrollment.RelayID, DomainID: m.enrollment.DomainID, BaseURL: "http://iscp-relay:8080", WebSocketURL: "ws://iscp-relay:8080/v2/relay/duplex", SigningKeys: []descriptor.PublicKey{{KTY: "Ed25519", Use: "descriptor-signature", KID: advertised.Identity.PublicKey.KID, Public: advertised.Identity.PublicKey.Public}}, IssuedAt: now, ExpiresAt: now.Add(24 * time.Hour)}
 					signed, signErr := descriptor.Sign(provider, advertised, desc.Type, desc, now)
 					if signErr != nil {
 						t.Error(signErr)
@@ -80,7 +80,7 @@ func TestRuntimeStartupRecoversExpiredLocalEnrollment(t *testing.T) {
 			m.enrollment.Mode = iscpbridge.BundleModeWorkbenchLocalLab
 			m.enrollment.RelaySignerIdentity = &signer.Identity
 			m.enrollment.RelayBaseURL = server.URL
-			m.enrollment.RelayWebSocketURL = "ws://iscp-relay:8080/v2/relay/connect"
+			m.enrollment.RelayWebSocketURL = "ws://iscp-relay:8080/v2/relay/duplex"
 			m.enrollment.IssuedAt = now.Add(-2 * time.Hour)
 			m.enrollment.ExpiresAt = now.Add(-time.Hour)
 			if variant == "expired-refresh" {

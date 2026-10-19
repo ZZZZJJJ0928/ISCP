@@ -33,7 +33,7 @@ func TestLocalRelayEnrollmentRefreshPersistsAcrossOriginalExpiry(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				switch r.URL.Path {
 				case "/.well-known/iscp/relay":
-					desc := descriptor.RelayDescriptor{Type: "iscp.relay.descriptor.v2", RelayID: "relay", DomainID: "domain", BaseURL: "http://iscp-relay:8080", WebSocketURL: "ws://iscp-relay:8080/v2/relay/connect", SigningKeys: []descriptor.PublicKey{{KTY: "Ed25519", Use: "descriptor-signature", KID: signer.Identity.PublicKey.KID, Public: signer.Identity.PublicKey.Public}}, IssuedAt: now, ExpiresAt: now.Add(48 * time.Hour)}
+					desc := descriptor.RelayDescriptor{Type: "iscp.relay.descriptor.v2", RelayID: "relay", DomainID: "domain", BaseURL: "http://iscp-relay:8080", WebSocketURL: "ws://iscp-relay:8080/v2/relay/duplex", SigningKeys: []descriptor.PublicKey{{KTY: "Ed25519", Use: "descriptor-signature", KID: signer.Identity.PublicKey.KID, Public: signer.Identity.PublicKey.Public}}, IssuedAt: now, ExpiresAt: now.Add(48 * time.Hour)}
 					signed, err := descriptor.Sign(provider, signer, desc.Type, desc, now)
 					if err != nil {
 						t.Error(err)
@@ -56,7 +56,7 @@ func TestLocalRelayEnrollmentRefreshPersistsAcrossOriginalExpiry(t *testing.T) {
 				}
 			}))
 			defer server.Close()
-			bundle := EnrollmentBundle{Type: EnrollmentBundleType, Mode: BundleModeWorkbenchLocalLab, DomainID: "domain", DeviceID: "device", RelayID: "relay", RelayBaseURL: server.URL, RelayWebSocketURL: "ws://iscp-relay:8080/v2/relay/connect", RelaySignerIdentity: &signer.Identity, IssuedAt: now.Add(-24 * time.Hour), ExpiresAt: now.Add(30 * time.Second), Access: RelayCredential{DomainID: "domain", DeviceID: "device", Token: "existing-access", ExpiresAt: now.Add(5 * time.Minute)}, Refresh: RelayCredential{DomainID: "domain", DeviceID: "device", Token: "existing-refresh", ExpiresAt: now.Add(time.Hour)}}
+			bundle := EnrollmentBundle{Type: EnrollmentBundleType, Mode: BundleModeWorkbenchLocalLab, DomainID: "domain", DeviceID: "device", RelayID: "relay", RelayBaseURL: server.URL, RelayWebSocketURL: "ws://iscp-relay:8080/v2/relay/duplex", RelaySignerIdentity: &signer.Identity, IssuedAt: now.Add(-24 * time.Hour), ExpiresAt: now.Add(30 * time.Second), Access: RelayCredential{DomainID: "domain", DeviceID: "device", Token: "existing-access", ExpiresAt: now.Add(5 * time.Minute)}, Refresh: RelayCredential{DomainID: "domain", DeviceID: "device", Token: "existing-refresh", ExpiresAt: now.Add(time.Hour)}}
 			if recoverExpired {
 				bundle.ExpiresAt = now.Add(-time.Hour)
 			}
@@ -122,7 +122,7 @@ func TestLocalRelayEnrollmentRecoveryCannotInventValidity(t *testing.T) {
 						expires = now.Add(-time.Minute)
 						issued = now.Add(-time.Hour)
 					}
-					desc := descriptor.RelayDescriptor{Type: "iscp.relay.descriptor.v2", RelayID: "relay", DomainID: "domain", BaseURL: "http://iscp-relay:8080", WebSocketURL: "ws://iscp-relay:8080/v2/relay/connect", SigningKeys: []descriptor.PublicKey{{KTY: "Ed25519", Use: "descriptor-signature", KID: advertised.Identity.PublicKey.KID, Public: advertised.Identity.PublicKey.Public}}, IssuedAt: issued, ExpiresAt: expires}
+					desc := descriptor.RelayDescriptor{Type: "iscp.relay.descriptor.v2", RelayID: "relay", DomainID: "domain", BaseURL: "http://iscp-relay:8080", WebSocketURL: "ws://iscp-relay:8080/v2/relay/duplex", SigningKeys: []descriptor.PublicKey{{KTY: "Ed25519", Use: "descriptor-signature", KID: advertised.Identity.PublicKey.KID, Public: advertised.Identity.PublicKey.Public}}, IssuedAt: issued, ExpiresAt: expires}
 					signed, _ := descriptor.Sign(provider, advertised, desc.Type, desc, issued)
 					if failure == "tampered-signature" {
 						signed.Signature.Value = "invalid"
@@ -145,7 +145,7 @@ func TestLocalRelayEnrollmentRecoveryCannotInventValidity(t *testing.T) {
 				}
 			}))
 			defer server.Close()
-			bundle := EnrollmentBundle{Type: EnrollmentBundleType, Mode: BundleModeWorkbenchLocalLab, DomainID: "domain", DeviceID: "device", RelayID: "relay", RelayBaseURL: server.URL, RelayWebSocketURL: "ws://iscp-relay:8080/v2/relay/connect", RelaySignerIdentity: &signer.Identity, IssuedAt: now.Add(-24 * time.Hour), ExpiresAt: now.Add(-time.Hour), Access: RelayCredential{DomainID: "domain", DeviceID: "device", Token: "access", ExpiresAt: now.Add(-time.Minute)}, Refresh: RelayCredential{DomainID: "domain", DeviceID: "device", Token: "refresh", ExpiresAt: now.Add(time.Hour)}}
+			bundle := EnrollmentBundle{Type: EnrollmentBundleType, Mode: BundleModeWorkbenchLocalLab, DomainID: "domain", DeviceID: "device", RelayID: "relay", RelayBaseURL: server.URL, RelayWebSocketURL: "ws://iscp-relay:8080/v2/relay/duplex", RelaySignerIdentity: &signer.Identity, IssuedAt: now.Add(-24 * time.Hour), ExpiresAt: now.Add(-time.Hour), Access: RelayCredential{DomainID: "domain", DeviceID: "device", Token: "access", ExpiresAt: now.Add(-time.Minute)}, Refresh: RelayCredential{DomainID: "domain", DeviceID: "device", Token: "refresh", ExpiresAt: now.Add(time.Hour)}}
 			if failure == "expired-refresh" {
 				bundle.Refresh.ExpiresAt = now.Add(-time.Minute)
 			}

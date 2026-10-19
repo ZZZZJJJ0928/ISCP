@@ -473,7 +473,7 @@ func TestExplicitLocalLabConfigUsesRelaySignerWithoutCloudRoot(t *testing.T) {
 	desktop.enrollment.TrustRootIdentity = identity.DeviceIdentity{}
 	desktop.enrollment.RelaySignerIdentity = &signer.Identity
 	desktop.enrollment.RelayBaseURL = "http://127.0.0.1:18180"
-	desktop.enrollment.RelayWebSocketURL = "ws://127.0.0.1:18180/v2/relay/connect"
+	desktop.enrollment.RelayWebSocketURL = "ws://127.0.0.1:18180/v2/relay/duplex"
 	path := writeFixtureConfig(t, desktop, RoleInitiator)
 	if _, err := LoadConfig(path); err == nil {
 		t.Fatal("local reference enrollment accepted without explicit local-lab Relay profile")
@@ -505,7 +505,7 @@ func TestExplicitLocalLabConfigUsesRelaySignerWithoutCloudRoot(t *testing.T) {
 	}
 	_ = endpoint.Close()
 	desktop.enrollment.RelayBaseURL = "http://192.168.1.11:18180"
-	desktop.enrollment.RelayWebSocketURL = "ws://192.168.1.11:18180/v2/relay/connect"
+	desktop.enrollment.RelayWebSocketURL = "ws://192.168.1.11:18180/v2/relay/duplex"
 	if validateEnrollment(desktop.enrollment, desktop.device.Identity, iscpbridge.ProfileLocalLab, time.Now()) == nil {
 		t.Fatal("local-lab connected to a LAN host")
 	}

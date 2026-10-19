@@ -10,8 +10,7 @@ import (
 	"testing"
 	"time"
 
-	iscpcrypto "github.com/Infinimesh-ai/ISCP/pkg/iscp/crypto"
-	"github.com/Infinimesh-ai/ISCP/pkg/iscp/identity"
+	"github.com/Infinimesh-ai/ISCP/pkg/iscp/duplex"
 	"github.com/gorilla/websocket"
 )
 
@@ -73,43 +72,13 @@ func TestRelaySilentConnectionStillTimesOut(t *testing.T) {
 	}
 }
 
-func TestRelayRejectsDrainWithoutReconnectingOrCooldown(t *testing.T) {
-	var connections, ready atomic.Int32
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		connection, err := (&websocket.Upgrader{}).Upgrade(w, r, nil)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		defer connection.Close()
-		connections.Add(1)
-		_ = connection.WriteJSON(relayMessage{State: "challenge", Challenge: "continuous-receive-test"})
-		var proof identity.DeviceProof
-		if connection.ReadJSON(&proof) != nil {
-			return
-		}
-		_ = connection.WriteJSON(relayMessage{State: "ready"})
-		_ = connection.WriteJSON(relayMessage{State: "drained"})
-	}))
-	defer server.Close()
-	now := time.Now().UTC()
-	device, err := identity.NewDevice(iscpcrypto.NewProvider(), "domain", "device", now)
-	if err != nil {
-		t.Fatal(err)
-	}
-	client, err := NewRelayClient(ProfileLocalLab, "", EnrollmentBundle{DomainID: "domain", DeviceID: "device", RelayID: "relay", RelayBaseURL: server.URL, RelayWebSocketURL: "ws" + strings.TrimPrefix(server.URL, "http"), Access: RelayCredential{ExpiresAt: now.Add(time.Hour)}, Refresh: RelayCredential{ExpiresAt: now.Add(time.Hour)}, ExpiresAt: now.Add(time.Hour)}, device, time.Second)
-	if err != nil {
-		t.Fatal(err)
-	}
-	client.credentialOnly = true
-	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+func TestRelayRejectsRetiredDrainFrame(t *testing.T) {
+	client, _ := newDuplexClientFixture(t, false, func(ws *websocket.Conn, _ duplex.Frame) { _ = ws.WriteJSON(relayMessage{State: "drained"}) })
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	started := time.Now()
-	err = client.RunOnceReady(ctx, func(context.Context, json.RawMessage) error { return nil }, func() { ready.Add(1) })
-	if err == nil || !strings.Contains(err.Error(), "matched Relay update required") || connections.Load() != 1 || ready.Load() != 1 {
-		t.Fatalf("drain silently polled: %v, connections=%d, ready=%d", err, connections.Load(), ready.Load())
-	}
-	if time.Since(started) >= 500*time.Millisecond {
-		t.Fatal("unexpected fixed receive cooldown")
+	var ready atomic.Int32
+	err := client.RunOnceReady(ctx, nil, func() { ready.Add(1) })
+	if err == nil || ready.Load() != 1 {
+		t.Fatal("retired frame accepted", err)
 	}
 }

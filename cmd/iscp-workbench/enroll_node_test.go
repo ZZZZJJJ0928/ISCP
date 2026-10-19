@@ -113,12 +113,12 @@ func TestHelperNodeEnrollmentReplayExpiredResultAndPrivateActivation(t *testing.
 	server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/.well-known/iscp/relay" {
 			now := time.Now().UTC()
-			d := descriptor.RelayDescriptor{Type: "iscp.relay.descriptor.v2", DomainID: "domain", RelayID: "relay", BaseURL: server.URL, WebSocketURL: "wss" + strings.TrimPrefix(server.URL, "https") + "/v2/relay/connect", SigningKeys: []descriptor.PublicKey{{KTY: "Ed25519", Use: "descriptor-signature", KID: relay.Identity.PublicKey.KID, Public: relay.Identity.PublicKey.Public}}, IssuedAt: now, ExpiresAt: now.Add(time.Hour)}
+			d := descriptor.RelayDescriptor{Type: "iscp.relay.descriptor.v2", DomainID: "domain", RelayID: "relay", BaseURL: server.URL, WebSocketURL: "wss" + strings.TrimPrefix(server.URL, "https") + "/v2/relay/duplex", SigningKeys: []descriptor.PublicKey{{KTY: "Ed25519", Use: "descriptor-signature", KID: relay.Identity.PublicKey.KID, Public: relay.Identity.PublicKey.Public}}, IssuedAt: now, ExpiresAt: now.Add(time.Hour)}
 			signed, _ := descriptor.Sign(c.NewProvider(), relay, d.Type, d, now)
 			_ = json.NewEncoder(w).Encode(map[string]any{"descriptor": signed})
 			return
 		}
-		if r.URL.Path == "/v2/relay/connect" {
+		if r.URL.Path == "/v2/relay/duplex" {
 			w.WriteHeader(503)
 			return
 		}

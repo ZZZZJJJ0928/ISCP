@@ -32,7 +32,7 @@ func TestLocalEnrollmentSignedDiscoveryAndProofWithDockerAliases(t *testing.T) {
 		signer := signerValue.Load().(identity.Device)
 		switch r.URL.Path {
 		case "/.well-known/iscp/relay":
-			desc := descriptor.RelayDescriptor{Type: "iscp.relay.descriptor.v2", RelayID: "local-relay", DomainID: "local-domain", BaseURL: "http://iscp-relay:8080", WebSocketURL: "ws://iscp-relay:8080/v2/relay/connect", SigningKeys: []descriptor.PublicKey{{KTY: "Ed25519", Use: "descriptor-signature", KID: signer.Identity.PublicKey.KID, Public: signer.Identity.PublicKey.Public}}, IssuedAt: now, ExpiresAt: now.Add(time.Hour)}
+			desc := descriptor.RelayDescriptor{Type: "iscp.relay.descriptor.v2", RelayID: "local-relay", DomainID: "local-domain", BaseURL: "http://iscp-relay:8080", WebSocketURL: "ws://iscp-relay:8080/v2/relay/duplex", SigningKeys: []descriptor.PublicKey{{KTY: "Ed25519", Use: "descriptor-signature", KID: signer.Identity.PublicKey.KID, Public: signer.Identity.PublicKey.Public}}, IssuedAt: now, ExpiresAt: now.Add(time.Hour)}
 			signed, err := descriptor.Sign(provider, signer, desc.Type, desc, now)
 			if err != nil {
 				t.Error(err)
@@ -117,7 +117,7 @@ func TestLocalEnrollmentSignedDiscoveryAndProofWithDockerAliases(t *testing.T) {
 	}
 	firstKey := summary.DeviceThumbprint
 	opts.RuntimeRelayURL = "http://iscp-relay:8080"
-	opts.RuntimeWebSocketURL = "ws://iscp-relay:8080/v2/relay/connect"
+	opts.RuntimeWebSocketURL = "ws://iscp-relay:8080/v2/relay/duplex"
 	summary, err = Enroll(context.Background(), opts)
 	if err != nil {
 		t.Fatal(err)

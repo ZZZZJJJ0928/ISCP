@@ -46,7 +46,7 @@ func TestEnrollWithTicketV3(t *testing.T) {
 		case r.URL.Path == "/.well-known/iscp/relay":
 			desc := descriptor.RelayDescriptor{
 				Type: "iscp.relay.descriptor.v2", RelayID: "relay-test", DomainID: "infinimesh-cloud",
-				BaseURL: server.URL, WebSocketURL: "ws" + strings.TrimPrefix(server.URL, "http") + "/v2/relay/connect",
+				BaseURL: server.URL, WebSocketURL: "ws" + strings.TrimPrefix(server.URL, "http") + "/v2/relay/duplex",
 				// A real deployment's descriptor declares the key it is signed
 				// with; an empty key set is unverifiable and now rejected.
 				SigningKeys: []descriptor.PublicKey{{
@@ -139,7 +139,7 @@ func TestEnrollWithTicketV3(t *testing.T) {
 	bundle, err := EnrollWithTicket(context.Background(), TicketEnrollmentOptions{
 		Payload:           payload,
 		RelayBaseURL:      server.URL,
-		RelayWebSocketURL: "ws" + strings.TrimPrefix(server.URL, "http") + "/v2/relay/connect",
+		RelayWebSocketURL: "ws" + strings.TrimPrefix(server.URL, "http") + "/v2/relay/duplex",
 		IdentityDirectory: filepath.Join(dir, "identity"),
 		KeyBackend:        "file",
 		Profile:           ProfileLocalLab,
@@ -254,7 +254,7 @@ func TestDescriptorVerificationRejectsUnusableDescriptors(t *testing.T) {
 			}
 			desc := descriptor.RelayDescriptor{
 				Type: "iscp.relay.descriptor.v2", RelayID: "relay-test", DomainID: "infinimesh-cloud",
-				BaseURL: server.URL, WebSocketURL: "ws" + strings.TrimPrefix(server.URL, "http") + "/v2/relay/connect",
+				BaseURL: server.URL, WebSocketURL: "ws" + strings.TrimPrefix(server.URL, "http") + "/v2/relay/duplex",
 				SigningKeys: keys, IssuedAt: issuedAt, ExpiresAt: expiresAt,
 			}
 			signed, _ := descriptor.Sign(provider, signer, desc.Type, desc, issuedAt)

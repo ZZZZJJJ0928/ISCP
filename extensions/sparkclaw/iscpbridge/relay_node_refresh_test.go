@@ -36,7 +36,7 @@ func TestNodeRelayRefreshLostResponseRestartAndConcurrentIsolation(t *testing.T)
 	server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/.well-known/iscp/relay":
-			d := descriptor.RelayDescriptor{Type: "iscp.relay.descriptor.v2", RelayID: "relay", DomainID: "domain", BaseURL: server.URL, WebSocketURL: "wss" + strings.TrimPrefix(server.URL, "https") + "/v2/relay/connect", SigningKeys: []descriptor.PublicKey{{KTY: "Ed25519", Use: "descriptor-signature", KID: signer.Identity.PublicKey.KID, Public: signer.Identity.PublicKey.Public}}, IssuedAt: now, ExpiresAt: now.Add(time.Hour), Metadata: map[string]string{"sparkclaw_refresh_receipts": "v1"}}
+			d := descriptor.RelayDescriptor{Type: "iscp.relay.descriptor.v2", RelayID: "relay", DomainID: "domain", BaseURL: server.URL, WebSocketURL: "wss" + strings.TrimPrefix(server.URL, "https") + "/v2/relay/duplex", SigningKeys: []descriptor.PublicKey{{KTY: "Ed25519", Use: "descriptor-signature", KID: signer.Identity.PublicKey.KID, Public: signer.Identity.PublicKey.Public}}, IssuedAt: now, ExpiresAt: now.Add(time.Hour), Metadata: map[string]string{"sparkclaw_refresh_receipts": "v1"}}
 			signed, e := descriptor.Sign(provider, signer, d.Type, d, now)
 			if e != nil {
 				t.Error(e)
@@ -116,7 +116,7 @@ func TestNodeRelayRefreshLostResponseRestartAndConcurrentIsolation(t *testing.T)
 		}
 	}))
 	defer server.Close()
-	bundle := EnrollmentBundle{Type: EnrollmentBundleType, Mode: BundleModeWorkbenchNodeManaged, DomainID: "domain", DeviceID: "device", RelayID: "relay", RelayBaseURL: server.URL, RelayWebSocketURL: "wss" + strings.TrimPrefix(server.URL, "https") + "/v2/relay/connect", RelaySignerIdentity: &signer.Identity, InvitationSignerIdentity: &invitation.Identity, TLSCertificatePEM: string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw})), IssuedAt: now, ExpiresAt: now.Add(20 * time.Minute), Access: RelayCredential{"domain", "device", "original-access", now.Add(-time.Second)}, Refresh: RelayCredential{"domain", "device", "original-refresh-secret", now.Add(time.Hour)}}
+	bundle := EnrollmentBundle{Type: EnrollmentBundleType, Mode: BundleModeWorkbenchNodeManaged, DomainID: "domain", DeviceID: "device", RelayID: "relay", RelayBaseURL: server.URL, RelayWebSocketURL: "wss" + strings.TrimPrefix(server.URL, "https") + "/v2/relay/duplex", RelaySignerIdentity: &signer.Identity, InvitationSignerIdentity: &invitation.Identity, TLSCertificatePEM: string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw})), IssuedAt: now, ExpiresAt: now.Add(20 * time.Minute), Access: RelayCredential{"domain", "device", "original-access", now.Add(-time.Second)}, Refresh: RelayCredential{"domain", "device", "original-refresh-secret", now.Add(time.Hour)}}
 	dir := t.TempDir()
 	_ = os.Chmod(dir, 0700)
 	path := filepath.Join(dir, "enrollment.json")

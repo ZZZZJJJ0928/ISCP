@@ -78,7 +78,7 @@ func TestOperatorServiceRecoveryExpiredCredentialsLostResponseAndPrivateActivati
 					if scenario != "undeclared" {
 						metadata["sparkclaw_service_peer_recovery"] = "v1"
 					}
-					d := descriptor.RelayDescriptor{Type: "iscp.relay.descriptor.v2", RelayID: "relay", DomainID: "domain", BaseURL: server.URL, WebSocketURL: "wss" + strings.TrimPrefix(server.URL, "https") + "/v2/relay/connect", SigningKeys: []descriptor.PublicKey{{KTY: "Ed25519", Use: "descriptor-signature", KID: signer.Identity.PublicKey.KID, Public: signer.Identity.PublicKey.Public}}, IssuedAt: now, ExpiresAt: now.Add(time.Hour), Metadata: metadata}
+					d := descriptor.RelayDescriptor{Type: "iscp.relay.descriptor.v2", RelayID: "relay", DomainID: "domain", BaseURL: server.URL, WebSocketURL: "wss" + strings.TrimPrefix(server.URL, "https") + "/v2/relay/duplex", SigningKeys: []descriptor.PublicKey{{KTY: "Ed25519", Use: "descriptor-signature", KID: signer.Identity.PublicKey.KID, Public: signer.Identity.PublicKey.Public}}, IssuedAt: now, ExpiresAt: now.Add(time.Hour), Metadata: metadata}
 					signed, e := descriptor.Sign(provider, signer, d.Type, d, now)
 					if e != nil {
 						t.Error(e)
@@ -125,7 +125,7 @@ func TestOperatorServiceRecoveryExpiredCredentialsLostResponseAndPrivateActivati
 				}
 			}))
 			defer server.Close()
-			bundle := EnrollmentBundle{Type: EnrollmentBundleType, Mode: BundleModeWorkbenchNodeManaged, DomainID: "domain", DeviceID: device.Identity.DeviceID, RelayID: "relay", RelayBaseURL: server.URL, RelayWebSocketURL: "wss" + strings.TrimPrefix(server.URL, "https") + "/v2/relay/connect", RelaySignerIdentity: &signer.Identity, InvitationSignerIdentity: &invitation.Identity, TLSCertificatePEM: string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw})), IssuedAt: now.Add(-48 * time.Hour), ExpiresAt: now.Add(-time.Hour), Access: RelayCredential{"domain", device.Identity.DeviceID, "expired-access", now.Add(-time.Hour)}, Refresh: RelayCredential{"domain", device.Identity.DeviceID, "expired-refresh", now.Add(-time.Hour)}}
+			bundle := EnrollmentBundle{Type: EnrollmentBundleType, Mode: BundleModeWorkbenchNodeManaged, DomainID: "domain", DeviceID: device.Identity.DeviceID, RelayID: "relay", RelayBaseURL: server.URL, RelayWebSocketURL: "wss" + strings.TrimPrefix(server.URL, "https") + "/v2/relay/duplex", RelaySignerIdentity: &signer.Identity, InvitationSignerIdentity: &invitation.Identity, TLSCertificatePEM: string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw})), IssuedAt: now.Add(-48 * time.Hour), ExpiresAt: now.Add(-time.Hour), Access: RelayCredential{"domain", device.Identity.DeviceID, "expired-access", now.Add(-time.Hour)}, Refresh: RelayCredential{"domain", device.Identity.DeviceID, "expired-refresh", now.Add(-time.Hour)}}
 			dir := t.TempDir()
 			_ = os.Chmod(dir, 0700)
 			path := filepath.Join(dir, "enrollment.json")

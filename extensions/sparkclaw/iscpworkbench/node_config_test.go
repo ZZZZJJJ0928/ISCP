@@ -36,7 +36,7 @@ func nodeConfigurationFixture(t *testing.T) (string, Config) {
 	m.enrollment.RelaySignerIdentity = &relay.Identity
 	m.enrollment.TLSCertificatePEM = string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw}))
 	m.enrollment.RelayBaseURL = "https://127.0.0.1:443"
-	m.enrollment.RelayWebSocketURL = "wss://127.0.0.1:443/v2/relay/connect"
+	m.enrollment.RelayWebSocketURL = "wss://127.0.0.1:443/v2/relay/duplex"
 	path := writeFixtureConfig(t, m, RoleInitiator)
 	base := filepath.Dir(path)
 	write := func(name string, v any) {

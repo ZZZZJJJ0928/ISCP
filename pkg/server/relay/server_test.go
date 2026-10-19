@@ -7,11 +7,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
-
-	"github.com/gorilla/websocket"
 
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/config"
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/crypto"
@@ -22,7 +19,7 @@ import (
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/session"
 )
 
-func TestRelayBindRefreshEnvelopeAndRevoke(t *testing.T) {
+func TestRelayBindRefreshAndRevoke(t *testing.T) {
 	srv, err := New(Config{
 		DomainID:     "domain-a",
 		RelayID:      "relay-a",
@@ -64,102 +61,12 @@ func TestRelayBindRefreshEnvelopeAndRevoke(t *testing.T) {
 		t.Fatal("expected refreshed credentials")
 	}
 
-	env := secureEnvelopeFixture(t, p, now, device)
-	var receipt map[string]any
-	postJSON(t, handler, "/v2/relay/envelopes", env, http.StatusUnauthorized, nil)
-	raw := postJSONWithBearer(t, handler, "/v2/relay/envelopes", bindResp.Access.Token, env, http.StatusAccepted, &receipt)
-	if receipt["status"] != "queued" {
-		t.Fatalf("unexpected receipt %#v", receipt)
-	}
-	if receipt["type"] != "iscp.delivery_receipt.v2" || receipt["receipt_id"] != "receipt-msg-a" || receipt["domain_id"] != "domain-a" {
-		t.Fatalf("receipt does not match delivery_receipt.v2 schema shape %#v", receipt)
-	}
-	if strings.Contains(string(raw), "hello over relay") || strings.Contains(string(raw), "session"+"_key") {
-		t.Fatal("relay response leaked plaintext or key material")
-	}
-
 	postJSON(t, handler, "/v2/relay/devices/revoke-access", map[string]string{"device_id": device.Identity.DeviceID}, http.StatusUnauthorized, nil)
 	postJSONWithBearer(t, handler, "/v2/relay/devices/revoke-access", refreshResp.Access.Token, map[string]string{"device_id": device.Identity.DeviceID}, http.StatusOK, nil)
 	postJSON(t, handler, "/v2/relay/devices/refresh-access", map[string]string{"refresh": refreshResp.Refresh.Token}, http.StatusUnauthorized, nil)
 }
 
-func TestRelayConnectDeliversQueuedEnvelope(t *testing.T) {
-	srv, err := New(Config{
-		DomainID:     "domain-a",
-		RelayID:      "relay-a",
-		BaseURL:      "http://relay.test",
-		WebSocketURL: "ws://relay.test/v2/relay/connect",
-		AdminToken:   "admin-test-token",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	handler := srv.Handler()
-	p := crypto.NewProvider()
-	now := time.Now().UTC()
-	sender, err := identity.NewDevice(p, "domain-a", "sender-a", now)
-	if err != nil {
-		t.Fatal(err)
-	}
-	recipient, err := identity.NewDevice(p, "domain-a", "recipient-a", now)
-	if err != nil {
-		t.Fatal(err)
-	}
-	senderAccess := bindDeviceForTest(t, handler, p, sender, "relay-a", "sender-bind")
-	_ = bindDeviceForTest(t, handler, p, recipient, "relay-a", "recipient-bind")
-
-	env := secureEnvelopeBetween(t, p, now, sender, recipient)
-	postJSONWithBearer(t, handler, "/v2/relay/envelopes", senderAccess.Token, env, http.StatusAccepted, nil)
-
-	ts := httptest.NewServer(handler)
-	defer ts.Close()
-	wsURL := "ws" + strings.TrimPrefix(ts.URL, "http") + "/v2/relay/connect"
-	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer conn.Close()
-
-	var challenge struct {
-		State     string `json:"state"`
-		Challenge string `json:"challenge"`
-	}
-	if err := conn.ReadJSON(&challenge); err != nil {
-		t.Fatal(err)
-	}
-	if challenge.State != "challenge" || challenge.Challenge == "" {
-		t.Fatalf("unexpected challenge %#v", challenge)
-	}
-	proof, err := recipient.CreateProof(p, "relay-a", challenge.Challenge, "recipient-connect", time.Now().UTC())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := conn.WriteJSON(proof); err != nil {
-		t.Fatal(err)
-	}
-	var ready struct {
-		State string `json:"state"`
-	}
-	if err := conn.ReadJSON(&ready); err != nil {
-		t.Fatal(err)
-	}
-	if ready.State != "ready" {
-		t.Fatalf("unexpected ready state %#v", ready)
-	}
-	var delivered struct {
-		State     string          `json:"state"`
-		MessageID string          `json:"message_id"`
-		Envelope  json.RawMessage `json:"envelope"`
-	}
-	if err := conn.ReadJSON(&delivered); err != nil {
-		t.Fatal(err)
-	}
-	if delivered.State != "message" || delivered.MessageID != env.MessageID || len(delivered.Envelope) == 0 {
-		t.Fatalf("unexpected delivered message %#v", delivered)
-	}
-}
-
-func TestProductionRelayEnvelopeRequiresAccessProof(t *testing.T) {
+func TestRetiredPostTransportRejectsEvenValidAccessProof(t *testing.T) {
 	srv, err := New(Config{
 		DomainID:       "domain-a",
 		RelayID:        "relay-a",
@@ -182,16 +89,16 @@ func TestProductionRelayEnvelopeRequiresAccessProof(t *testing.T) {
 	access := bindDeviceForTest(t, handler, p, device, "relay-a", "prod-bind")
 	env := secureEnvelopeFixture(t, p, now, device)
 
-	postJSONWithBearer(t, handler, "/v2/relay/envelopes", access.Token, env, http.StatusUnauthorized, nil)
+	postJSONWithBearer(t, handler, "/v2/relay/envelopes", access.Token, env, http.StatusGone, nil)
 	proof := accessProofHeaderValue(t, p, device, access.Token, http.MethodPost, "/v2/relay/envelopes", "prod-envelope")
 	postJSONWithHeaders(t, handler, "/v2/relay/envelopes", map[string]string{
 		"Authorization":   "Bearer " + access.Token,
 		accessProofHeader: proof,
-	}, env, http.StatusAccepted, nil)
+	}, env, http.StatusGone, nil)
 	postJSONWithHeaders(t, handler, "/v2/relay/envelopes", map[string]string{
 		"Authorization":   "Bearer " + access.Token,
 		accessProofHeader: proof,
-	}, env, http.StatusUnauthorized, nil)
+	}, env, http.StatusGone, nil)
 }
 
 func secureEnvelopeFixture(t *testing.T, p crypto.Provider, now time.Time, sender identity.Device) envelope.SecureEnvelope {
