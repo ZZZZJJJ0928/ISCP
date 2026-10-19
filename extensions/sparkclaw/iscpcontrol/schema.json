@@ -1,0 +1,3521 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.iscp.dev/candidates/operation-recovery.v2.json",
+  "title": "0041 authentication/operation recovery freeze candidate",
+  "description": "Candidate only, not an advertised protocol. Before schema validation reject malformed UTF-8, duplicate members, lone surrogates, trailing garbage, non-integer JSON numbers; enforce all semantic and cryptographic checks in the accompanying spec.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/intent"
+    },
+    {
+      "$ref": "#/$defs/challenge_request"
+    },
+    {
+      "$ref": "#/$defs/challenge"
+    },
+    {
+      "$ref": "#/$defs/authentication_context"
+    },
+    {
+      "$ref": "#/$defs/result_payload"
+    },
+    {
+      "$ref": "#/$defs/result"
+    },
+    {
+      "$ref": "#/$defs/status"
+    },
+    {
+      "$ref": "#/$defs/error"
+    },
+    {
+      "$ref": "#/$defs/disposition_receipt"
+    },
+    {
+      "$ref": "#/$defs/sealed_result"
+    },
+    {
+      "$ref": "#/$defs/request_submit"
+    },
+    {
+      "$ref": "#/$defs/request_recover"
+    },
+    {
+      "$ref": "#/$defs/request_lookup"
+    },
+    {
+      "$ref": "#/$defs/request_ack"
+    }
+  ],
+  "$defs": {
+    "key": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "domain_id",
+        "device_id",
+        "namespace",
+        "operation_id"
+      ],
+      "properties": {
+        "domain_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "device_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "namespace": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "operation_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "alg",
+        "kid",
+        "value"
+      ],
+      "properties": {
+        "alg": {
+          "const": "Ed25519"
+        },
+        "kid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 86,
+          "pattern": "^[A-Za-z0-9_-]{86}$"
+        }
+      }
+    },
+    "ack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "result_digest",
+        "disposition",
+        "credential_generation",
+        "recorded_at",
+        "parent_result_digest"
+      ],
+      "properties": {
+        "result_digest": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "disposition": {
+          "enum": [
+            "applied",
+            "installed",
+            "delegated",
+            "acknowledged_expired",
+            "acknowledged_superseded"
+          ]
+        },
+        "credential_generation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20,
+          "pattern": "^(0|[1-9][0-9]{0,19})$"
+        },
+        "recorded_at": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "parent_result_digest": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "version",
+        "namespace",
+        "operation_id",
+        "kind",
+        "subject_binding",
+        "target",
+        "task_authorization",
+        "payload",
+        "business_deadline",
+        "preconditions"
+      ],
+      "properties": {
+        "type": {
+          "const": "iscp.operation.intent.v2"
+        },
+        "version": {
+          "const": 2
+        },
+        "namespace": {
+          "enum": [
+            "control.credentials.v2",
+            "control.relay-credentials.v2"
+          ]
+        },
+        "operation_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "kind": {
+          "enum": [
+            "credential.renew",
+            "credential.recover",
+            "relay.refresh",
+            "relay.recover"
+          ]
+        },
+        "subject_binding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "domain_id",
+            "device_id",
+            "binding_id"
+          ],
+          "properties": {
+            "domain_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "device_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "binding_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            }
+          }
+        },
+        "target": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "service_id",
+            "resource_id"
+          ],
+          "properties": {
+            "service_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "resource_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            }
+          }
+        },
+        "task_authorization": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "authorization_revision",
+            "scopes"
+          ],
+          "properties": {
+            "kind": {
+              "const": "standing"
+            },
+            "authorization_revision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "scopes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+              },
+              "uniqueItems": true,
+              "minItems": 1,
+              "maxItems": 256
+            }
+          }
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "requested_scopes"
+          ],
+          "properties": {
+            "requested_scopes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+              },
+              "uniqueItems": true,
+              "minItems": 1,
+              "maxItems": 256
+            }
+          }
+        },
+        "business_deadline": {
+          "type": "null"
+        },
+        "preconditions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "resource_version",
+            "credential_generation",
+            "authorization_revision"
+          ],
+          "properties": {
+            "resource_version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "credential_generation": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "authorization_revision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            }
+          }
+        },
+        "parent": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "key",
+            "semantic_digest",
+            "step",
+            "child_index"
+          ],
+          "properties": {
+            "key": {
+              "$ref": "#/$defs/key"
+            },
+            "semantic_digest": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "step": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "child_index": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            }
+          }
+        },
+        "predecessor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "key",
+            "result_digest",
+            "disposition_digest"
+          ],
+          "properties": {
+            "key": {
+              "$ref": "#/$defs/key"
+            },
+            "result_digest": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "disposition_digest": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            }
+          }
+        }
+      }
+    },
+    "challenge_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "protocol",
+        "audience",
+        "domain_id",
+        "device_id",
+        "purpose"
+      ],
+      "properties": {
+        "type": {
+          "const": "iscp.control.challenge.request.v2"
+        },
+        "protocol": {
+          "const": "iscp.operation.recovery.v2"
+        },
+        "audience": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "domain_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "device_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "purpose": {
+          "enum": [
+            "submit",
+            "lookup",
+            "recover",
+            "ack"
+          ]
+        }
+      }
+    },
+    "challenge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "protocol",
+        "audience",
+        "challenge_id",
+        "challenge",
+        "purpose",
+        "server_time",
+        "expires_at"
+      ],
+      "properties": {
+        "type": {
+          "const": "iscp.control.challenge.v2"
+        },
+        "protocol": {
+          "const": "iscp.operation.recovery.v2"
+        },
+        "audience": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "challenge_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "challenge": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "purpose": {
+          "enum": [
+            "submit",
+            "lookup",
+            "recover",
+            "ack"
+          ]
+        },
+        "server_time": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "expires_at": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        }
+      }
+    },
+    "authentication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "challenge_id",
+        "challenge",
+        "nonce",
+        "issued_at",
+        "signature"
+      ],
+      "properties": {
+        "challenge_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "challenge": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "nonce": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 86,
+          "pattern": "^[A-Za-z0-9_-]{22,86}$"
+        },
+        "issued_at": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "signature": {
+          "$ref": "#/$defs/signature"
+        }
+      }
+    },
+    "delivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "delivery_id",
+        "recipient_public_key"
+      ],
+      "properties": {
+        "delivery_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "recipient_public_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        }
+      }
+    },
+    "authentication_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "protocol",
+        "purpose",
+        "method",
+        "path",
+        "audience",
+        "domain_id",
+        "device_id",
+        "challenge_id",
+        "challenge",
+        "nonce",
+        "issued_at",
+        "request_digest",
+        "credential_sha256"
+      ],
+      "properties": {
+        "type": {
+          "const": "iscp.control.authentication.v2"
+        },
+        "protocol": {
+          "const": "iscp.operation.recovery.v2"
+        },
+        "purpose": {
+          "enum": [
+            "submit",
+            "lookup",
+            "recover",
+            "ack"
+          ]
+        },
+        "method": {
+          "const": "POST"
+        },
+        "path": {
+          "enum": [
+            "/v2/control/operations/submit",
+            "/v2/control/operations/lookup",
+            "/v2/control/operations/recover",
+            "/v2/control/operations/ack"
+          ]
+        },
+        "audience": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "domain_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "device_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "challenge_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "challenge": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "nonce": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 86,
+          "pattern": "^[A-Za-z0-9_-]{22,86}$"
+        },
+        "issued_at": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "request_digest": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "credential_sha256": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "result_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "protocol",
+        "key",
+        "semantic_digest",
+        "result_version",
+        "state",
+        "completed_at",
+        "credential_generation",
+        "body"
+      ],
+      "properties": {
+        "type": {
+          "const": "iscp.operation.result.payload.v2"
+        },
+        "protocol": {
+          "const": "iscp.operation.recovery.v2"
+        },
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "semantic_digest": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "result_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20,
+          "pattern": "^(0|[1-9][0-9]{0,19})$"
+        },
+        "state": {
+          "enum": [
+            "succeeded",
+            "failed",
+            "cancelled"
+          ]
+        },
+        "completed_at": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "credential_generation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20,
+          "pattern": "^(0|[1-9][0-9]{0,19})$"
+        },
+        "body": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "grant"
+              ],
+              "properties": {
+                "grant": {
+                  "$ref": "#/$defs/trust_grant"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "grant",
+                "relay_result"
+              ],
+              "properties": {
+                "grant": {
+                  "$ref": "#/$defs/trust_grant"
+                },
+                "relay_result": {
+                  "$ref": "#/$defs/relay_result"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "relay_credentials"
+              ],
+              "properties": {
+                "relay_credentials": {
+                  "$ref": "#/$defs/relay_credentials"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "code"
+              ],
+              "properties": {
+                "code": {
+                  "enum": [
+                    "scope_denied",
+                    "generation_conflict",
+                    "authorization_revoked",
+                    "authorization_ended",
+                    "cancelled"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "payload",
+        "result_digest",
+        "signature"
+      ],
+      "properties": {
+        "type": {
+          "const": "iscp.operation.result.v2"
+        },
+        "payload": {
+          "$ref": "#/$defs/result_payload"
+        },
+        "result_digest": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "signature": {
+          "$ref": "#/$defs/signature"
+        }
+      }
+    },
+    "status": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "key",
+            "semantic_digest",
+            "state",
+            "record_version",
+            "history_id",
+            "history_complete",
+            "code",
+            "result_digest",
+            "credential_generation",
+            "checked_at",
+            "signature"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.status.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "key": {
+              "$ref": "#/$defs/key"
+            },
+            "semantic_digest": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "state": {
+              "const": "admitted"
+            },
+            "record_version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "history_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "history_complete": {
+              "const": true
+            },
+            "code": {
+              "const": "none"
+            },
+            "result_digest": {
+              "type": "null"
+            },
+            "credential_generation": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "checked_at": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "key",
+            "semantic_digest",
+            "state",
+            "record_version",
+            "history_id",
+            "history_complete",
+            "code",
+            "result_digest",
+            "credential_generation",
+            "checked_at",
+            "signature"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.status.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "key": {
+              "$ref": "#/$defs/key"
+            },
+            "semantic_digest": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "state": {
+              "const": "running"
+            },
+            "record_version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "history_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "history_complete": {
+              "const": true
+            },
+            "code": {
+              "const": "none"
+            },
+            "result_digest": {
+              "type": "null"
+            },
+            "credential_generation": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "checked_at": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "key",
+            "semantic_digest",
+            "state",
+            "record_version",
+            "history_id",
+            "history_complete",
+            "code",
+            "result_digest",
+            "credential_generation",
+            "checked_at",
+            "signature"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.status.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "key": {
+              "$ref": "#/$defs/key"
+            },
+            "semantic_digest": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "state": {
+              "const": "succeeded"
+            },
+            "record_version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "history_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "history_complete": {
+              "const": true
+            },
+            "code": {
+              "const": "none"
+            },
+            "result_digest": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "credential_generation": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "checked_at": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "key",
+            "semantic_digest",
+            "state",
+            "record_version",
+            "history_id",
+            "history_complete",
+            "code",
+            "result_digest",
+            "credential_generation",
+            "checked_at",
+            "signature"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.status.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "key": {
+              "$ref": "#/$defs/key"
+            },
+            "semantic_digest": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "state": {
+              "const": "succeeded"
+            },
+            "record_version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "history_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "history_complete": {
+              "const": true
+            },
+            "code": {
+              "const": "result_expired"
+            },
+            "result_digest": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "credential_generation": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "checked_at": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "key",
+            "semantic_digest",
+            "state",
+            "record_version",
+            "history_id",
+            "history_complete",
+            "code",
+            "result_digest",
+            "credential_generation",
+            "checked_at",
+            "signature"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.status.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "key": {
+              "$ref": "#/$defs/key"
+            },
+            "semantic_digest": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "state": {
+              "const": "failed"
+            },
+            "record_version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "history_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "history_complete": {
+              "const": true
+            },
+            "code": {
+              "const": "none"
+            },
+            "result_digest": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "credential_generation": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "checked_at": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "key",
+            "semantic_digest",
+            "state",
+            "record_version",
+            "history_id",
+            "history_complete",
+            "code",
+            "result_digest",
+            "credential_generation",
+            "checked_at",
+            "signature"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.status.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "key": {
+              "$ref": "#/$defs/key"
+            },
+            "semantic_digest": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "state": {
+              "const": "failed"
+            },
+            "record_version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "history_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "history_complete": {
+              "const": true
+            },
+            "code": {
+              "const": "result_expired"
+            },
+            "result_digest": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "credential_generation": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "checked_at": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "key",
+            "semantic_digest",
+            "state",
+            "record_version",
+            "history_id",
+            "history_complete",
+            "code",
+            "result_digest",
+            "credential_generation",
+            "checked_at",
+            "signature"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.status.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "key": {
+              "$ref": "#/$defs/key"
+            },
+            "semantic_digest": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "state": {
+              "const": "cancelled"
+            },
+            "record_version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "history_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "history_complete": {
+              "const": true
+            },
+            "code": {
+              "const": "none"
+            },
+            "result_digest": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "credential_generation": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "checked_at": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "key",
+            "semantic_digest",
+            "state",
+            "record_version",
+            "history_id",
+            "history_complete",
+            "code",
+            "result_digest",
+            "credential_generation",
+            "checked_at",
+            "signature"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.status.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "key": {
+              "$ref": "#/$defs/key"
+            },
+            "semantic_digest": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "state": {
+              "const": "cancelled"
+            },
+            "record_version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "history_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "history_complete": {
+              "const": true
+            },
+            "code": {
+              "const": "result_expired"
+            },
+            "result_digest": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "credential_generation": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "checked_at": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "key",
+            "semantic_digest",
+            "state",
+            "record_version",
+            "history_id",
+            "history_complete",
+            "code",
+            "result_digest",
+            "credential_generation",
+            "checked_at",
+            "signature"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.status.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "key": {
+              "$ref": "#/$defs/key"
+            },
+            "semantic_digest": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "state": {
+              "const": "absent"
+            },
+            "record_version": {
+              "const": "0"
+            },
+            "history_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "history_complete": {
+              "const": true
+            },
+            "code": {
+              "const": "none"
+            },
+            "result_digest": {
+              "type": "null"
+            },
+            "credential_generation": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "checked_at": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "key",
+            "semantic_digest",
+            "state",
+            "record_version",
+            "history_id",
+            "history_complete",
+            "code",
+            "result_digest",
+            "credential_generation",
+            "checked_at",
+            "signature"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.status.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "key": {
+              "$ref": "#/$defs/key"
+            },
+            "semantic_digest": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "state": {
+              "const": "unknown"
+            },
+            "record_version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "history_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "history_complete": {
+              "const": false
+            },
+            "code": {
+              "const": "history_unavailable"
+            },
+            "result_digest": {
+              "type": "null"
+            },
+            "credential_generation": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "checked_at": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "key",
+            "semantic_digest",
+            "state",
+            "record_version",
+            "history_id",
+            "history_complete",
+            "code",
+            "result_digest",
+            "credential_generation",
+            "checked_at",
+            "signature"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.status.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "key": {
+              "$ref": "#/$defs/key"
+            },
+            "semantic_digest": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "state": {
+              "const": "unknown"
+            },
+            "record_version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "history_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "history_complete": {
+              "const": true
+            },
+            "code": {
+              "const": "commit_unknown"
+            },
+            "result_digest": {
+              "type": "null"
+            },
+            "credential_generation": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "checked_at": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "key",
+            "semantic_digest",
+            "state",
+            "record_version",
+            "history_id",
+            "history_complete",
+            "code",
+            "result_digest",
+            "credential_generation",
+            "checked_at",
+            "signature"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.status.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "key": {
+              "$ref": "#/$defs/key"
+            },
+            "semantic_digest": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "state": {
+              "const": "unknown"
+            },
+            "record_version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "history_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "history_complete": {
+              "const": true
+            },
+            "code": {
+              "const": "effect_unknown"
+            },
+            "result_digest": {
+              "type": "null"
+            },
+            "credential_generation": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "checked_at": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "key",
+            "semantic_digest",
+            "state",
+            "record_version",
+            "history_id",
+            "history_complete",
+            "code",
+            "result_digest",
+            "credential_generation",
+            "checked_at",
+            "signature"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.status.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "key": {
+              "$ref": "#/$defs/key"
+            },
+            "semantic_digest": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "state": {
+              "const": "conflict"
+            },
+            "record_version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "history_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "history_complete": {
+              "const": true
+            },
+            "code": {
+              "const": "operation_conflict"
+            },
+            "result_digest": {
+              "type": "null"
+            },
+            "credential_generation": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "checked_at": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "key",
+            "semantic_digest",
+            "state",
+            "record_version",
+            "history_id",
+            "history_complete",
+            "code",
+            "result_digest",
+            "credential_generation",
+            "checked_at",
+            "signature"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.status.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "key": {
+              "$ref": "#/$defs/key"
+            },
+            "semantic_digest": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "state": {
+              "const": "namespace_closed"
+            },
+            "record_version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "history_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 43,
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "history_complete": {
+              "const": false
+            },
+            "code": {
+              "const": "namespace_closed"
+            },
+            "result_digest": {
+              "type": "null"
+            },
+            "credential_generation": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "checked_at": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            }
+          }
+        }
+      ]
+    },
+    "error": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "audience",
+            "code",
+            "retryable",
+            "server_time",
+            "signature",
+            "key",
+            "authorization_revision"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.error.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "audience": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "code": {
+              "const": "invalid_request"
+            },
+            "retryable": {
+              "const": false
+            },
+            "server_time": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            },
+            "key": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/key"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "authorization_revision": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 20,
+                  "pattern": "^(0|[1-9][0-9]{0,19})$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "audience",
+            "code",
+            "retryable",
+            "server_time",
+            "signature",
+            "key",
+            "authorization_revision"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.error.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "audience": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "code": {
+              "const": "protocol_incompatible"
+            },
+            "retryable": {
+              "const": false
+            },
+            "server_time": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            },
+            "key": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/key"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "authorization_revision": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 20,
+                  "pattern": "^(0|[1-9][0-9]{0,19})$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "audience",
+            "code",
+            "retryable",
+            "server_time",
+            "signature",
+            "key",
+            "authorization_revision"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.error.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "audience": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "code": {
+              "const": "challenge_expired"
+            },
+            "retryable": {
+              "const": true
+            },
+            "server_time": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            },
+            "key": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/key"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "authorization_revision": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 20,
+                  "pattern": "^(0|[1-9][0-9]{0,19})$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "audience",
+            "code",
+            "retryable",
+            "server_time",
+            "signature",
+            "key",
+            "authorization_revision"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.error.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "audience": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "code": {
+              "const": "authentication_failed"
+            },
+            "retryable": {
+              "const": false
+            },
+            "server_time": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            },
+            "key": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/key"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "authorization_revision": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 20,
+                  "pattern": "^(0|[1-9][0-9]{0,19})$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "audience",
+            "code",
+            "retryable",
+            "server_time",
+            "signature",
+            "key",
+            "authorization_revision"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.error.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "audience": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "code": {
+              "const": "authorization_unavailable"
+            },
+            "retryable": {
+              "const": true
+            },
+            "server_time": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            },
+            "key": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/key"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "authorization_revision": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 20,
+                  "pattern": "^(0|[1-9][0-9]{0,19})$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "audience",
+            "code",
+            "retryable",
+            "server_time",
+            "signature",
+            "key",
+            "authorization_revision"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.error.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "audience": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "code": {
+              "const": "authorization_revoked"
+            },
+            "retryable": {
+              "const": false
+            },
+            "server_time": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            },
+            "key": {
+              "$ref": "#/$defs/key"
+            },
+            "authorization_revision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "audience",
+            "code",
+            "retryable",
+            "server_time",
+            "signature",
+            "key",
+            "authorization_revision"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.error.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "audience": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "code": {
+              "const": "authorization_ended"
+            },
+            "retryable": {
+              "const": false
+            },
+            "server_time": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            },
+            "key": {
+              "$ref": "#/$defs/key"
+            },
+            "authorization_revision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "audience",
+            "code",
+            "retryable",
+            "server_time",
+            "signature",
+            "key",
+            "authorization_revision"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.error.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "audience": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "code": {
+              "const": "identity_recovery_required"
+            },
+            "retryable": {
+              "const": false
+            },
+            "server_time": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            },
+            "key": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/key"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "authorization_revision": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 20,
+                  "pattern": "^(0|[1-9][0-9]{0,19})$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "audience",
+            "code",
+            "retryable",
+            "server_time",
+            "signature",
+            "key",
+            "authorization_revision"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.error.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "audience": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "code": {
+              "const": "scope_denied"
+            },
+            "retryable": {
+              "const": false
+            },
+            "server_time": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            },
+            "key": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/key"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "authorization_revision": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 20,
+                  "pattern": "^(0|[1-9][0-9]{0,19})$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "audience",
+            "code",
+            "retryable",
+            "server_time",
+            "signature",
+            "key",
+            "authorization_revision"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.error.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "audience": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "code": {
+              "const": "generation_conflict"
+            },
+            "retryable": {
+              "const": false
+            },
+            "server_time": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            },
+            "key": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/key"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "authorization_revision": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 20,
+                  "pattern": "^(0|[1-9][0-9]{0,19})$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "audience",
+            "code",
+            "retryable",
+            "server_time",
+            "signature",
+            "key",
+            "authorization_revision"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.error.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "audience": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "code": {
+              "const": "deadline_exceeded"
+            },
+            "retryable": {
+              "const": false
+            },
+            "server_time": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            },
+            "key": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/key"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "authorization_revision": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 20,
+                  "pattern": "^(0|[1-9][0-9]{0,19})$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "protocol",
+            "attempt_id",
+            "audience",
+            "code",
+            "retryable",
+            "server_time",
+            "signature",
+            "key",
+            "authorization_revision"
+          ],
+          "properties": {
+            "type": {
+              "const": "iscp.operation.error.v2"
+            },
+            "protocol": {
+              "const": "iscp.operation.recovery.v2"
+            },
+            "attempt_id": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "audience": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+            },
+            "code": {
+              "const": "resource_exhausted"
+            },
+            "retryable": {
+              "const": true
+            },
+            "server_time": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "signature": {
+              "$ref": "#/$defs/signature"
+            },
+            "key": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/key"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "authorization_revision": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 20,
+                  "pattern": "^(0|[1-9][0-9]{0,19})$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "disposition_receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "protocol",
+        "key",
+        "semantic_digest",
+        "ack",
+        "disposition_digest",
+        "accepted_at",
+        "signature"
+      ],
+      "properties": {
+        "type": {
+          "const": "iscp.operation.disposition.v2"
+        },
+        "protocol": {
+          "const": "iscp.operation.recovery.v2"
+        },
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "semantic_digest": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "ack": {
+          "$ref": "#/$defs/ack"
+        },
+        "disposition_digest": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "accepted_at": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "signature": {
+          "$ref": "#/$defs/signature"
+        }
+      }
+    },
+    "sealed_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "protocol",
+        "attempt_id",
+        "key",
+        "semantic_digest",
+        "result_digest",
+        "delivery_id",
+        "recipient_public_key",
+        "server_public_key",
+        "nonce",
+        "ciphertext",
+        "ciphersuite"
+      ],
+      "properties": {
+        "type": {
+          "const": "iscp.operation.sealed-result.v2"
+        },
+        "protocol": {
+          "const": "iscp.operation.recovery.v2"
+        },
+        "attempt_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "semantic_digest": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "result_digest": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "delivery_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "recipient_public_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "server_public_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "nonce": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16,
+          "pattern": "^[A-Za-z0-9_-]{16}$"
+        },
+        "ciphertext": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1048576,
+          "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        "ciphersuite": {
+          "const": "ISCP_V2_X25519_HKDF_SHA256_CHACHA20POLY1305"
+        }
+      }
+    },
+    "relay_credential": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "domain_id",
+        "device_id",
+        "token",
+        "expires_at"
+      ],
+      "properties": {
+        "domain_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "device_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "token": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "expires_at": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        }
+      }
+    },
+    "relay_credentials": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_service_id",
+        "binding_id",
+        "credential_generation",
+        "authorization_revision",
+        "access",
+        "refresh"
+      ],
+      "properties": {
+        "target_service_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "binding_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "credential_generation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20,
+          "pattern": "^(0|[1-9][0-9]{0,19})$"
+        },
+        "authorization_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20,
+          "pattern": "^(0|[1-9][0-9]{0,19})$"
+        },
+        "access": {
+          "$ref": "#/$defs/relay_credential"
+        },
+        "refresh": {
+          "$ref": "#/$defs/relay_credential"
+        }
+      }
+    },
+    "trust_grant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "grant_id",
+        "issuer",
+        "subject_device_id",
+        "audience",
+        "confirmation_thumbprint",
+        "permissions",
+        "not_before",
+        "expires_at",
+        "revocation_epoch",
+        "signature"
+      ],
+      "properties": {
+        "type": {
+          "const": "iscp.trust_grant.v2"
+        },
+        "grant_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "issuer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "subject_device_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "audience": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "confirmation_thumbprint": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "permissions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+          },
+          "uniqueItems": true,
+          "minItems": 1,
+          "maxItems": 256
+        },
+        "relay_constraints": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+          },
+          "uniqueItems": true,
+          "maxItems": 256
+        },
+        "not_before": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "expires_at": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "revocation_epoch": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "signature": {
+          "$ref": "#/$defs/signature"
+        }
+      }
+    },
+    "relay_result_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "protocol",
+        "key",
+        "semantic_digest",
+        "result_version",
+        "state",
+        "completed_at",
+        "credential_generation",
+        "body"
+      ],
+      "properties": {
+        "type": {
+          "const": "iscp.operation.result.payload.v2"
+        },
+        "protocol": {
+          "const": "iscp.operation.recovery.v2"
+        },
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "semantic_digest": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "result_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20,
+          "pattern": "^(0|[1-9][0-9]{0,19})$"
+        },
+        "state": {
+          "enum": [
+            "succeeded",
+            "failed",
+            "cancelled"
+          ]
+        },
+        "completed_at": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "credential_generation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20,
+          "pattern": "^(0|[1-9][0-9]{0,19})$"
+        },
+        "body": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "relay_credentials"
+          ],
+          "properties": {
+            "relay_credentials": {
+              "$ref": "#/$defs/relay_credentials"
+            }
+          }
+        }
+      }
+    },
+    "relay_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "payload",
+        "result_digest",
+        "signature"
+      ],
+      "properties": {
+        "type": {
+          "const": "iscp.operation.result.v2"
+        },
+        "payload": {
+          "$ref": "#/$defs/relay_result_payload"
+        },
+        "result_digest": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "signature": {
+          "$ref": "#/$defs/signature"
+        }
+      }
+    },
+    "request_submit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "protocol",
+        "attempt_id",
+        "action",
+        "key",
+        "semantic_digest",
+        "authentication",
+        "intent",
+        "delivery"
+      ],
+      "properties": {
+        "type": {
+          "const": "iscp.operation.request.v2"
+        },
+        "protocol": {
+          "const": "iscp.operation.recovery.v2"
+        },
+        "attempt_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "action": {
+          "const": "submit"
+        },
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "semantic_digest": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "authentication": {
+          "$ref": "#/$defs/authentication"
+        },
+        "intent": {
+          "$ref": "#/$defs/intent"
+        },
+        "delivery": {
+          "$ref": "#/$defs/delivery"
+        }
+      }
+    },
+    "request_recover": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "protocol",
+        "attempt_id",
+        "action",
+        "key",
+        "semantic_digest",
+        "authentication",
+        "intent",
+        "delivery"
+      ],
+      "properties": {
+        "type": {
+          "const": "iscp.operation.request.v2"
+        },
+        "protocol": {
+          "const": "iscp.operation.recovery.v2"
+        },
+        "attempt_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "action": {
+          "const": "recover"
+        },
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "semantic_digest": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "authentication": {
+          "$ref": "#/$defs/authentication"
+        },
+        "intent": {
+          "$ref": "#/$defs/intent"
+        },
+        "delivery": {
+          "$ref": "#/$defs/delivery"
+        }
+      }
+    },
+    "request_lookup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "protocol",
+        "attempt_id",
+        "action",
+        "key",
+        "semantic_digest",
+        "authentication",
+        "delivery"
+      ],
+      "properties": {
+        "type": {
+          "const": "iscp.operation.request.v2"
+        },
+        "protocol": {
+          "const": "iscp.operation.recovery.v2"
+        },
+        "attempt_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "action": {
+          "const": "lookup"
+        },
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "semantic_digest": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "authentication": {
+          "$ref": "#/$defs/authentication"
+        },
+        "delivery": {
+          "$ref": "#/$defs/delivery"
+        }
+      }
+    },
+    "request_ack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "protocol",
+        "attempt_id",
+        "action",
+        "key",
+        "semantic_digest",
+        "authentication",
+        "ack"
+      ],
+      "properties": {
+        "type": {
+          "const": "iscp.operation.request.v2"
+        },
+        "protocol": {
+          "const": "iscp.operation.recovery.v2"
+        },
+        "attempt_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"
+        },
+        "action": {
+          "const": "ack"
+        },
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "semantic_digest": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "authentication": {
+          "$ref": "#/$defs/authentication"
+        },
+        "ack": {
+          "$ref": "#/$defs/ack"
+        }
+      }
+    }
+  }
+}
