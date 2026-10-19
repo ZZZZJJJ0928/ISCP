@@ -367,3 +367,31 @@ func TestDuplexActualClientInvalidationRefreshKeepsSocketAndPersists(t *testing.
 		})
 	}
 }
+
+func TestDuplexUnmanagedRefreshMissingDomainStaysInMaintenance(t *testing.T) {
+	q := newDuplexQualification(t)
+	refresh := currentTestRefresh(q)
+	// A damaged/incomplete maintenance scope must never fall back to the old
+	// unversioned mint path merely because its domain authority is absent.
+	tx, err := q.pool.Begin(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback(context.Background())
+	for _, table := range []string{"connection_owners", "device_authority", "domain_authority"} {
+		if _, err = tx.Exec(t.Context(), "DELETE FROM iscp_relay."+table+" WHERE scope_id='relay-a'"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err = tx.Commit(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	status, _, err := refreshTestHTTP(q.http.URL, refresh)
+	if err != nil || status != 401 {
+		t.Fatal(status, err)
+	}
+	var count, unbound int
+	if err = q.pool.QueryRow(t.Context(), `SELECT count(*),count(*) FILTER (WHERE credential_generation IS NULL) FROM iscp_relay.refresh_tokens WHERE device_id=$1`, q.a.Identity.DeviceID).Scan(&count, &unbound); err != nil || count != 1 || unbound != 0 {
+		t.Fatal("maintenance minted replacement credentials", count, unbound, err)
+	}
+}

@@ -22,7 +22,7 @@ func (s *Server) refreshDuplexCredentials(w http.ResponseWriter, r *http.Request
 		return false
 	}
 	var active bool
-	if err := s.cfg.DB.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM iscp_relay.domain_authority WHERE scope_id=$1 AND domain_id=$2)`, s.cfg.RelayID, s.cfg.DomainID).Scan(&active); err != nil {
+	if err := s.cfg.DB.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM iscp_relay.writer_scopes WHERE scope_id=$1)`, s.cfg.RelayID).Scan(&active); err != nil {
 		httpx.WriteError(w, 503, err)
 		return true
 	}
