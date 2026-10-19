@@ -37,10 +37,8 @@ func (a *Adapter) EnableControlV2(ctx context.Context, signer identity.Device, e
 	if e != nil {
 		return nil, e
 	}
-	_, e = a.db.Exec(ctx, `CREATE TABLE IF NOT EXISTS iscp_relay.control_operations (
- scope_id text NOT NULL, authority_id text NOT NULL, actor_domain text NOT NULL, actor_device text NOT NULL, namespace text NOT NULL, operation_id text NOT NULL,
- subject_device text NOT NULL, ciphertext bytea NOT NULL CHECK(octet_length(ciphertext)<=1048576),
- PRIMARY KEY(scope_id,actor_domain,actor_device,namespace,operation_id));`)
+	var table string
+	e = a.db.QueryRow(ctx, "SELECT to_regclass('iscp_relay.control_operations')::text").Scan(&table)
 	if e != nil {
 		return nil, e
 	}
@@ -148,6 +146,13 @@ func (b *ControlBackend) current(ctx context.Context, tx pgx.Tx, actor identity.
 			return out, &control.Failure{Code: "authorization_unavailable"}
 		}
 	}
+	if !delegated && a.servicePeer(actor) {
+		if subject.BindingID != actor.DeviceID || a.owned(ctx, tx, actor.DeviceID) != nil {
+			return out, &control.Failure{Code: "scope_denied"}
+		}
+		state := snapshot.Devices[actor.DeviceID]
+		return node.ControlAuthority{Subject: subject, Target: target, Generation: control.Counter(state.CredentialGeneration), AuthorizationRevision: control.Counter(state.AuthorizationRevision), ResourceVersion: "1", Scopes: []string{"relay.transport"}}, nil
+	}
 	var prepRaw []byte
 	e := tx.QueryRow(ctx, "SELECT preparation FROM iscp_relay.node_preparations WHERE domain_id=$1 AND device_id=$2 AND authority_id=$3 ORDER BY created_at ASC LIMIT 1", a.cfg.DomainID, subject.DeviceID, a.authority).Scan(&prepRaw)
 	var prep node.RegistrationPreparation
@@ -178,7 +183,7 @@ func (b *ControlBackend) current(ctx context.Context, tx pgx.Tx, actor identity.
 // plane; the actor must be the configured registered issuer service device.
 func (b *ControlBackend) Authority(ctx context.Context, actor identity.DeviceIdentity, subject control.Subject, target control.Target) (node.ControlAuthority, error) {
 	var out node.ControlAuthority
-	if b.adapter.cfg.ControlIssuerActor == nil || node.Digest(actor) != node.Digest(*b.adapter.cfg.ControlIssuerActor) {
+	if !(b.adapter.cfg.ControlIssuerActor != nil && node.Digest(actor) == node.Digest(*b.adapter.cfg.ControlIssuerActor)) && !(actor.DeviceID == subject.DeviceID && b.adapter.servicePeer(actor)) {
 		return out, control.ErrAuthentication
 	}
 	tx, e := b.adapter.db.Begin(ctx)
@@ -209,16 +214,17 @@ func (b *ControlBackend) Execute(ctx context.Context, r control.Request, actor i
 		intent = r.Intent
 	}
 	if intent == nil {
-		if a.cfg.ControlIssuerActor != nil && actor.DeviceID == a.cfg.ControlIssuerActor.DeviceID {
-			return out, &control.Failure{Code: "invalid_request"}
+		if a.servicePeer(actor) {
+			intent = &control.Intent{SubjectBinding: control.Subject{DomainID: actor.DomainID, DeviceID: actor.DeviceID, BindingID: actor.DeviceID}, Target: control.Target{ServiceID: a.cfg.RelayID, ResourceID: actor.DeviceID}}
+		} else {
+			var raw []byte
+			err := a.db.QueryRow(ctx, "SELECT preparation FROM iscp_relay.node_preparations WHERE domain_id=$1 AND device_id=$2 AND authority_id=$3 ORDER BY created_at ASC LIMIT 1", a.cfg.DomainID, actor.DeviceID, a.authority).Scan(&raw)
+			var prep node.RegistrationPreparation
+			if err != nil || json.Unmarshal(raw, &prep) != nil {
+				return out, &control.Failure{Code: "scope_denied"}
+			}
+			intent = &control.Intent{SubjectBinding: control.Subject{DomainID: actor.DomainID, DeviceID: actor.DeviceID, BindingID: prep.Binding.ClientID}, Target: control.Target{ServiceID: a.cfg.RelayID, ResourceID: prep.Binding.ClientID}}
 		}
-		var raw []byte
-		err := a.db.QueryRow(ctx, "SELECT preparation FROM iscp_relay.node_preparations WHERE domain_id=$1 AND device_id=$2 AND authority_id=$3 ORDER BY created_at ASC LIMIT 1", a.cfg.DomainID, actor.DeviceID, a.authority).Scan(&raw)
-		var prep node.RegistrationPreparation
-		if err != nil || json.Unmarshal(raw, &prep) != nil {
-			return out, &control.Failure{Code: "scope_denied"}
-		}
-		intent = &control.Intent{SubjectBinding: control.Subject{DomainID: actor.DomainID, DeviceID: actor.DeviceID, BindingID: prep.Binding.ClientID}, Target: control.Target{ServiceID: a.cfg.RelayID, ResourceID: prep.Binding.ClientID}}
 	}
 	tx, e := a.db.Begin(ctx)
 	if e != nil {

@@ -26,7 +26,7 @@ type testControlRelay struct {
 
 func (r *testControlRelay) Actor() identity.DeviceIdentity { return r.actor.Identity }
 func (r *testControlRelay) Authority(_ context.Context, subject control.Subject, target control.Target) (node.ControlAuthority, error) {
-	return node.ControlAuthority{Subject: subject, Target: target, Generation: "36", AuthorizationRevision: "1", ResourceVersion: "1", Scopes: []string{node.Permission}}, nil
+	return node.ControlAuthority{Subject: subject, Target: target, Generation: "36", AuthorizationRevision: "7", ResourceVersion: "1", Scopes: []string{node.Permission}}, nil
 }
 func (r *testControlRelay) Attempt(_ context.Context, q control.Request, _ string) (control.Outcome, error) {
 	r.mu.Lock()
@@ -38,7 +38,7 @@ func (r *testControlRelay) Attempt(_ context.Context, q control.Request, _ strin
 		return control.Outcome{Disposition: &d}, e
 	}
 	if record == nil {
-		tokens := &control.RelayCredentials{TargetServiceID: q.Intent.Target.ServiceID, BindingID: q.Intent.SubjectBinding.BindingID, CredentialGeneration: "37", AuthorizationRevision: "1", Access: control.Credential{DomainID: q.Intent.SubjectBinding.DomainID, DeviceID: q.Intent.SubjectBinding.DeviceID, Token: "https-child-access", ExpiresAt: now.Add(10 * time.Minute)}, Refresh: control.Credential{DomainID: q.Intent.SubjectBinding.DomainID, DeviceID: q.Intent.SubjectBinding.DeviceID, Token: "https-child-refresh", ExpiresAt: now.Add(time.Hour)}}
+		tokens := &control.RelayCredentials{TargetServiceID: q.Intent.Target.ServiceID, BindingID: q.Intent.SubjectBinding.BindingID, CredentialGeneration: "37", AuthorizationRevision: "7", Access: control.Credential{DomainID: q.Intent.SubjectBinding.DomainID, DeviceID: q.Intent.SubjectBinding.DeviceID, Token: "https-child-access", ExpiresAt: now.Add(10 * time.Minute)}, Refresh: control.Credential{DomainID: q.Intent.SubjectBinding.DomainID, DeviceID: q.Intent.SubjectBinding.DeviceID, Token: "https-child-refresh", ExpiresAt: now.Add(time.Hour)}}
 		result, e := control.NewResult(control.ResultPayload{Key: q.Key, SemanticDigest: q.SemanticDigest, ResultVersion: "1", State: "succeeded", CompletedAt: now, CredentialGeneration: "37", Body: control.ResultBody{RelayCredentials: tokens}}, r.signer)
 		if e != nil {
 			return control.Outcome{}, e
@@ -97,7 +97,7 @@ func TestControlHTTPSRecoveryNestedPinsIndependentGenerationsAndInstallACK(t *te
 	if err != nil {
 		t.Fatal(err)
 	}
-	if lease.CredentialGeneration != "37" || lease.AuthorizationRevision != "1" {
+	if lease.CredentialGeneration != "37" || lease.AuthorizationRevision != "7" {
 		t.Fatalf("mixed issuer and Relay counters: %#v", lease)
 	}
 	journal, err = (clientControlStore{again}).Load(t.Context())

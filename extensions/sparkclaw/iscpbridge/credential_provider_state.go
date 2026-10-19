@@ -75,6 +75,9 @@ func (r *RelayClient) ConfigureCredentialProvider(binding CredentialBinding, rec
 // The installation callback runs after durable CAS and outside every provider
 // mutex/file lock. A lost ACK retries this callback against the retained lease.
 func (r *RelayClient) ConfigureCredentialProviderWithInstallation(binding CredentialBinding, recovery CredentialRecovery, installed func(context.Context, CredentialLease) error) error {
+	if err := CheckLegacyCredentialPending(r.enrollmentPath); err != nil {
+		return err
+	}
 	if !filepath.IsAbs(r.enrollmentPath) || recovery == nil || binding.TLSCertificateSHA256 != c.Base64URL(c.SHA256([]byte(r.enrollment.TLSCertificatePEM))) || binding.DomainID != r.device.Identity.DomainID || binding.DeviceID != r.device.Identity.DeviceID || binding.ResourceBindingID == "" || binding.TargetServiceID == "" || binding.RelayPublicKey == "" || binding.IssuerPublicKey == "" || binding.TLSCertificateSHA256 == "" {
 		return errors.New("credential provider needs original verified binding and pins")
 	}
@@ -175,6 +178,9 @@ func (p *managedCredentialProvider) persist(state credentialState) error {
 	return syncCredentialDirectory(filepath.Dir(p.path))
 }
 func (p *managedCredentialProvider) EnsureAccess(ctx context.Context, binding CredentialBinding) (CredentialLease, error) {
+	if err := CheckLegacyCredentialPending(p.relay.enrollmentPath); err != nil {
+		return CredentialLease{}, err
+	}
 	p.mu.Lock()
 	if p.closed {
 		p.mu.Unlock()

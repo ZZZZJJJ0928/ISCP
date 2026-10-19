@@ -23,12 +23,13 @@ const MaxAuthorities = 16
 var routePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$`)
 
 type NodeConfig struct {
-	IssuerRoute      string                    `json:"issuer_route"`
-	ManagedSocket    string                    `json:"managed_socket"`
-	InvitationSigner identity.DeviceIdentity   `json:"invitation_signer"`
-	GrantSigner      identity.DeviceIdentity   `json:"grant_signer"`
-	Responder        identity.DeviceIdentity   `json:"responder"`
-	ServicePeers     []identity.DeviceIdentity `json:"service_peers,omitempty"`
+	ControlIssuerActor *identity.DeviceIdentity  `json:"control_issuer_actor,omitempty"`
+	IssuerRoute        string                    `json:"issuer_route"`
+	ManagedSocket      string                    `json:"managed_socket"`
+	InvitationSigner   identity.DeviceIdentity   `json:"invitation_signer"`
+	GrantSigner        identity.DeviceIdentity   `json:"grant_signer"`
+	Responder          identity.DeviceIdentity   `json:"responder"`
+	ServicePeers       []identity.DeviceIdentity `json:"service_peers,omitempty"`
 }
 type MultiConfig struct {
 	SchemaVersion     int          `json:"schema_version"`
@@ -70,7 +71,7 @@ func ValidateMultiConfig(cfg MultiConfig) error {
 		routes[n.IssuerRoute] = true
 		sockets[n.ManagedSocket] = true
 		legacyFound = legacyFound || cfg.LegacyIssuerRoute == n.IssuerRoute
-		c := Config{DomainID: cfg.DomainID, RelayID: cfg.RelayID, InvitationSigner: n.InvitationSigner, GrantSigner: n.GrantSigner, Responder: n.Responder, ServicePeers: n.ServicePeers}
+		c := Config{DomainID: cfg.DomainID, RelayID: cfg.RelayID, InvitationSigner: n.InvitationSigner, GrantSigner: n.GrantSigner, Responder: n.Responder, ServicePeers: n.ServicePeers, ControlIssuerActor: n.ControlIssuerActor}
 		if e := validateConfig(c); e != nil {
 			return e
 		}
@@ -114,7 +115,7 @@ func NewManager(ctx context.Context, pool *pgxpool.Pool, cfg MultiConfig) (*Mana
 		}
 	}
 	for _, n := range nodes {
-		c := Config{DomainID: cfg.DomainID, RelayID: cfg.RelayID, InvitationSigner: n.InvitationSigner, GrantSigner: n.GrantSigner, Responder: n.Responder, ServicePeers: n.ServicePeers, issuerRoute: n.IssuerRoute}
+		c := Config{DomainID: cfg.DomainID, RelayID: cfg.RelayID, InvitationSigner: n.InvitationSigner, GrantSigner: n.GrantSigner, Responder: n.Responder, ServicePeers: n.ServicePeers, ControlIssuerActor: n.ControlIssuerActor, issuerRoute: n.IssuerRoute}
 		a := &Adapter{cfg: c, db: pool, Now: time.Now, authority: authorityID(c)}
 		if e = a.initializeTx(ctx, tx, n.IssuerRoute == cfg.LegacyIssuerRoute); e != nil {
 			return nil, e

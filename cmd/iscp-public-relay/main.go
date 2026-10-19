@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	control "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpcontrol"
 	ctl "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodecontrol"
 	"github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
 	"github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscprelayadapter"
@@ -103,7 +104,32 @@ func run() error {
 		node.Adapter.Invalidate = relay.InvalidateDevice
 		node.Adapter.MarkRevoked = relay.MarkRevoked
 	}
-	public := server(env("ISCP_RELAY_ADDR", "127.0.0.1:55117"), relay.Handler())
+	publicHandler := relay.Handler()
+	if os.Getenv("ISCP_CONTROL_V2") == "true" {
+		signer, epoch := relay.ControlAuthority()
+		service, err := iscprelayadapter.NewControlService(startup, nodes, signer, epoch)
+		if err != nil {
+			return err
+		}
+		local := service.Handler()
+		router, err := ctl.LoadHTTPSControlRoutes(os.Getenv("ISCP_CONTROL_ROUTES_FILE"), map[string]http.Handler{cfg.RelayID: local})
+		if err != nil {
+			return err
+		}
+		transport := publicHandler
+		publicHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == iscpnodeissuer.ControlAuthorityPath {
+				local.ServeHTTP(w, r)
+				return
+			}
+			if r.URL.Path == control.ChallengePath || strings.HasPrefix(r.URL.Path, control.OperationPath) {
+				router.ServeHTTP(w, r)
+				return
+			}
+			transport.ServeHTTP(w, r)
+		})
+	}
+	public := server(env("ISCP_RELAY_ADDR", "127.0.0.1:55117"), publicHandler)
 	var private []*http.Server
 	var listeners []net.Listener
 	// Bind every private authority before exposing public traffic. One failed

@@ -12,6 +12,7 @@ import (
 	control "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpcontrol"
 	node "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
 	c "github.com/Infinimesh-ai/ISCP/pkg/iscp/crypto"
+	"github.com/Infinimesh-ai/ISCP/pkg/iscp/trust"
 )
 
 const controlJournalName = "operations.v2"
@@ -74,12 +75,16 @@ func (cl *Client) verifyControlResult(intent control.Intent, result control.Resu
 		}
 		return nil
 	}
+	// The verified outer issuer signature commits the complete child result.
+	// The issuer checks its exact durable child key/digest; the consumer verifies
+	// Relay signer/subject/target independently, without inventing a service actor
+	// pin absent from enrollment. A self-authored terminal cannot be delegated.
 	child := result.Payload.Body.RelayResult
-	if intent.Kind != "credential.recover" || child == nil || child.Verify(cl.cfg.RelaySignerIdentity) != nil || child.Payload.State != "succeeded" || child.Payload.Key.Namespace != control.RelayNamespace || child.Payload.Key.DomainID != cl.device.Identity.DomainID {
+	if intent.Kind != "credential.recover" || child == nil || child.Verify(cl.cfg.RelaySignerIdentity) != nil || child.Payload.State != "succeeded" || child.Payload.Key.Namespace != control.RelayNamespace || child.Payload.Key.DomainID != cl.device.Identity.DomainID || child.Payload.Key.DeviceID == cl.device.Identity.DeviceID {
 		return control.ErrAuthentication
 	}
 	credentials := child.Payload.Body.RelayCredentials
-	if credentials == nil || credentials.TargetServiceID != cl.cfg.RelayID || credentials.BindingID != cl.cfg.Binding.ClientID || credentials.CredentialGeneration != child.Payload.CredentialGeneration || credentials.AuthorizationRevision != control.Number(cl.cfg.Revision) {
+	if credentials == nil || credentials.TargetServiceID != cl.cfg.RelayID || credentials.BindingID != cl.cfg.Binding.ClientID || credentials.CredentialGeneration != child.Payload.CredentialGeneration || credentials.AuthorizationRevision == "0" {
 		return control.ErrAuthentication
 	}
 	for _, token := range []control.Credential{credentials.Access, credentials.Refresh} {
@@ -155,6 +160,44 @@ func (cl *Client) PendingControlGrant(ctx context.Context) (node.LifecycleResult
 	}
 	return node.LifecycleResult{Version: 2, OperationID: result.Payload.Key.OperationID, Grant: result.Payload.Body.Grant}, nil
 }
+
+// PersistControlGrant fences local Grant installation against another process
+// advancing the durable control journal. The callback may only write local
+// files; it must not perform network I/O or call back into this client.
+func (cl *Client) PersistControlGrant(ctx context.Context, lease bridge.CredentialLease, save func(trust.Grant) error) (trust.Grant, error) {
+	cl.mu.Lock()
+	defer cl.mu.Unlock()
+	unlock, err := bridge.LockPrivateCheckpoint(ctx, filepath.Join(cl.directory, controlJournalName+".lock"))
+	if err != nil {
+		return trust.Grant{}, err
+	}
+	defer unlock()
+	var state control.ClientJournal
+	if err = cl.read(controlJournalName, &state); err != nil {
+		return trust.Grant{}, err
+	}
+	if state.Pending == nil || state.Pending.Result == nil {
+		return trust.Grant{}, control.ErrJournalCAS
+	}
+	result := state.Pending.Result
+	if err = cl.verifyControlResult(state.Pending.Intent, *result); err != nil {
+		return trust.Grant{}, err
+	}
+	child := result.Payload.Body.RelayResult
+	if child == nil || child.Payload.Body.RelayCredentials == nil || result.Payload.Body.Grant == nil {
+		return trust.Grant{}, control.ErrInvalid
+	}
+	tokens := child.Payload.Body.RelayCredentials
+	if string(tokens.CredentialGeneration) != string(lease.CredentialGeneration) || tokens.Access.Token != lease.Enrollment.Access.Token || tokens.Refresh.Token != lease.Enrollment.Refresh.Token {
+		return trust.Grant{}, control.ErrJournalCAS
+	}
+	grant := cloneGrant(*result.Payload.Body.Grant)
+	if err = save(grant); err != nil {
+		return trust.Grant{}, err
+	}
+	return grant, nil
+}
+
 func (cl *Client) CredentialLeaseInstalled(ctx context.Context, lease bridge.CredentialLease) error {
 	cl.mu.Lock()
 	defer cl.mu.Unlock()

@@ -44,15 +44,7 @@ func newNodeLifecycle(cfg Config, m material) (*iscpnodeclient.Client, error) {
 
 func recoverNodeRuntime(ctx context.Context, path string, cfg Config, m material) (Config, error) {
 	if cfg.Role == RoleResponder {
-		pending := cfg.EnrollmentFile + ".service-recovery.pending"
-		updated, err := iscpbridge.RecoverNodeServiceCredentials(ctx, m.enrollment, m.device, pending)
-		if err != nil {
-			return Config{}, err
-		}
-		if err = iscpbridge.SaveEnrollment(cfg.EnrollmentFile, updated); err != nil {
-			return Config{}, err
-		}
-		if err = iscpbridge.CommitNodeServiceRecovery(pending); err != nil {
+		if _, err := iscpbridge.RecoverNodeServiceRuntime(ctx, cfg.EnrollmentFile, m.enrollment, m.device, m.issuer); err != nil {
 			return Config{}, err
 		}
 		return LoadConfig(path)
@@ -272,18 +264,18 @@ func configureNodeCredentialProvider(e *Endpoint, relay *iscpbridge.RelayClient)
 		if err != nil {
 			return iscpbridge.CredentialLease{}, err
 		}
-		pending, err := client.PendingControlGrant(ctx)
-		if err != nil || pending.Grant == nil {
-			return iscpbridge.CredentialLease{}, control.ErrUnknown
-		}
 		next := e.grantMaterial()
-		next.grant = *pending.Grant
-		if err = verifyGrant(e.config, next, time.Now().UTC()); err != nil {
+		grant, err := client.PersistControlGrant(ctx, lease, func(g trust.Grant) error {
+			next.grant = g
+			if err := verifyGrant(e.config, next, time.Now().UTC()); err != nil {
+				return err
+			}
+			return saveCurrentGrant(e.config.GrantFile, g)
+		})
+		if err != nil {
 			return iscpbridge.CredentialLease{}, err
 		}
-		if err = saveCurrentGrant(e.config.GrantFile, next.grant); err != nil {
-			return iscpbridge.CredentialLease{}, err
-		}
+		next.grant = grant
 		if err = client.AcceptGrant(next.grant); err != nil {
 			return iscpbridge.CredentialLease{}, err
 		}

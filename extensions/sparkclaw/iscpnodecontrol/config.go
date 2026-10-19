@@ -1,7 +1,6 @@
 package iscpnodecontrol
 
 import (
-	"context"
 	"github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
 	n "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
 	c "github.com/Infinimesh-ai/ISCP/pkg/iscp/crypto"
@@ -92,24 +91,11 @@ func LoadPeer(path string, h Handler) (*Peer, error) {
 			return nil, e
 		}
 	}
-	if !time.Now().Before(bundle.Refresh.ExpiresAt) || !time.Now().Before(bundle.ExpiresAt) {
-		ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
-		defer cancel()
-		pending := cfg.EnrollmentFile + ".service-recovery"
-		updated, e := iscpbridge.RecoverNodeServiceCredentials(ctx, bundle, dev, pending)
-		if e != nil {
-			return nil, e
-		}
-		if e = iscpbridge.SaveEnrollment(cfg.EnrollmentFile, updated); e != nil {
-			return nil, e
-		}
-		if e = iscpbridge.CommitNodeServiceRecovery(pending); e != nil {
-			return nil, e
-		}
-		bundle = updated
-	}
 	relay, e := iscpbridge.NewRelayCredentialClient(iscpbridge.ProfileProduction, cfg.EnrollmentFile, bundle, dev, 15*time.Second)
 	if e != nil {
+		return nil, e
+	}
+	if e = relay.ConfigureServiceCredentialProvider(issuer); e != nil {
 		return nil, e
 	}
 	p, e := newPeer(PeerConfig{cfg.Initiator, dev, peer, issuer, grant, bundle.RelayID}, relay, h, cfg.ControlAuthorization == "until_revoked", cfg.Active, cfg.GrantFile)

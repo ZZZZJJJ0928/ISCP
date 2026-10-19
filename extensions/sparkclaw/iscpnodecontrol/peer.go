@@ -374,5 +374,22 @@ func (p *Peer) receiveContinuous(ctx context.Context) error {
 	err := p.relay.RunOnceReady(ctx, p.receive, func() { _ = p.begin(ctx) })
 	cancel()
 	<-done
+	if err != nil {
+		// The Relay owner ended this connection (including a changed authority
+		// revision). Retire its E2E projection before a new ready callback can
+		// reuse it. Ordinary same-authority reauth never exits RunOnceReady.
+		p.mu.Lock()
+		p.state = nil
+		p.local = session.LocalHello{}
+		p.lastHelloSent = time.Time{}
+		for id, pending := range p.pending {
+			select {
+			case pending.ch <- rpc{Version: 1, ID: id, Kind: "response", Error: "unavailable"}:
+			default:
+			}
+			delete(p.pending, id)
+		}
+		p.mu.Unlock()
+	}
 	return err
 }

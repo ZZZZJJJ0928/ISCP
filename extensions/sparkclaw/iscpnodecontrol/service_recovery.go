@@ -16,6 +16,10 @@ func (p *Peer) maintainServiceCredentials(ctx context.Context) error {
 	if !ok {
 		return n.ErrInvalid
 	}
+	if provider := client.CredentialProvider(); provider != nil {
+		_, err := provider.EnsureAccess(ctx, client.CredentialBinding())
+		return err
+	}
 	bundle := client.Enrollment()
 	if time.Now().Before(bundle.ExpiresAt) && time.Now().Before(bundle.Refresh.ExpiresAt) {
 		return nil

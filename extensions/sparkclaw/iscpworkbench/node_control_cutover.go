@@ -24,6 +24,9 @@ func UpgradeNodeControlV2(ctx context.Context, path, evidence string) error {
 	if cfg.Mode != "node-managed" || cfg.Role != RoleInitiator {
 		return errors.New("control upgrade requires the original node-managed initiator")
 	}
+	if err = iscpbridge.CheckLegacyCredentialPending(cfg.EnrollmentFile); err != nil {
+		return err
+	}
 	m, err := loadMaterialMode(cfg, true)
 	if err != nil {
 		return err

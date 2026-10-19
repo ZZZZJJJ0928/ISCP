@@ -19,14 +19,7 @@ type ControlRelay interface {
 
 // ControlAuthority is an internal authenticated service snapshot, not a public
 // 0041 wire object. It never establishes authority: admission CAS rechecks it.
-type ControlAuthority struct {
-	Subject               control.Subject `json:"subject"`
-	Target                control.Target  `json:"target"`
-	Generation            control.Counter `json:"credential_generation"`
-	AuthorizationRevision control.Counter `json:"authorization_revision"`
-	ResourceVersion       control.Counter `json:"resource_version"`
-	Scopes                []string        `json:"scopes"`
-}
+type ControlAuthority = control.Authority
 
 func newControlState() *ControlState {
 	return &ControlState{HistoryID: control.RandomID(), HistoryComplete: true, Generation: "1", Records: map[string]*control.Record{}, Parents: map[string]*ControlParent{}}
@@ -291,11 +284,13 @@ func (i *Issuer) advanceControlParent(ctx context.Context, id string, r control.
 			if e != nil {
 				return out, e
 			}
-			if snapshot.Subject != intent.SubjectBinding || snapshot.Target != intent.Target || snapshot.AuthorizationRevision != control.Number(state.Revision) || snapshot.Generation == "0" {
+			if snapshot.Subject != intent.SubjectBinding || snapshot.Target != intent.Target || snapshot.AuthorizationRevision == "0" || snapshot.Generation == "0" {
 				return out, ErrDenied
 			}
 			intent.Preconditions.CredentialGeneration = snapshot.Generation
 			intent.Preconditions.ResourceVersion = snapshot.ResourceVersion
+			intent.Preconditions.AuthorizationRevision = snapshot.AuthorizationRevision
+			intent.TaskAuthorization.AuthorizationRevision = snapshot.AuthorizationRevision
 
 			e = i.store.Update(ctx, id, func(s *State) error {
 				if e := i.controlAuthority(s, actor, &record.Intent); e != nil {
@@ -333,7 +328,7 @@ func (i *Issuer) advanceControlParent(ctx context.Context, id string, r control.
 			if creds == nil && !failedCAS {
 				return out, ErrDenied
 			}
-			if creds != nil && (creds.TargetServiceID != state.Credential.RelayID || creds.BindingID != state.Credential.ClientID || creds.AuthorizationRevision != control.Number(state.Revision) || creds.CredentialGeneration != child.Payload.CredentialGeneration || creds.Access.DomainID != actor.DomainID || creds.Access.DeviceID != actor.DeviceID || creds.Refresh.DomainID != actor.DomainID || creds.Refresh.DeviceID != actor.DeviceID) {
+			if creds != nil && (creds.TargetServiceID != state.Credential.RelayID || creds.BindingID != state.Credential.ClientID || creds.AuthorizationRevision != intent.Preconditions.AuthorizationRevision || creds.CredentialGeneration != child.Payload.CredentialGeneration || creds.Access.DomainID != actor.DomainID || creds.Access.DeviceID != actor.DeviceID || creds.Refresh.DomainID != actor.DomainID || creds.Refresh.DeviceID != actor.DeviceID) {
 				return out, ErrDenied
 			}
 			e = i.store.Update(ctx, id, func(s *State) error {
