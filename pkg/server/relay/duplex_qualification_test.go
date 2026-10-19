@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -504,5 +505,82 @@ func TestDuplexCrossOwnerUnfinishedCommitCannotProveAbsence(t *testing.T) {
 	got := recovered.read(t)
 	if got.State != "accepted" || got.Receipt == nil {
 		t.Fatal("unfinished original was reclassified absent", got)
+	}
+}
+
+func TestDuplexAdmissionLatencyObservation(t *testing.T) {
+	if os.Getenv("SC_RELAY_LATENCY_QUALIFICATION") != "1" {
+		t.Skip("explicit non-race local latency observation")
+	}
+	q := newDuplexQualification(t)
+	p := connectDuplexTest(t, q.http.URL, q.a, q.token)
+	commits := make(chan time.Duration, 100)
+	q.server.duplexMu.Lock()
+	q.server.admissionCommit = func(ctx context.Context, tx pgx.Tx) error {
+		start := time.Now()
+		err := tx.Commit(ctx)
+		commits <- time.Since(start)
+		return err
+	}
+	q.server.duplexMu.Unlock()
+	wire, commit, transaction := make([]time.Duration, 0, 100), make([]time.Duration, 0, 100), make([]time.Duration, 0, 100)
+	for i := 0; i < 100; i++ {
+		env := qualificationEnvelope(q.a.Identity.DeviceID, q.b.Identity.DeviceID, fmt.Sprintf("wire-latency-%d", i))
+		env.Ciphertext = strings.Repeat("A", 3000)
+		f := qualificationFrame(p, env)
+		f.RequestID = fmt.Sprint(i + 2)
+		start := time.Now()
+		p.write(t, f)
+		got := p.read(t)
+		wire = append(wire, time.Since(start))
+		if got.Kind != "accepted" {
+			t.Fatal(got)
+		}
+		commit = append(commit, <-commits)
+	}
+	q.server.duplexMu.Lock()
+	q.server.admissionCommit = nil
+	q.server.duplexMu.Unlock()
+	for i := 0; i < 100; i++ {
+		env := qualificationEnvelope(q.a.Identity.DeviceID, q.b.Identity.DeviceID, fmt.Sprintf("db-latency-%d", i))
+		env.Ciphertext = strings.Repeat("A", 3000)
+		f := qualificationFrame(p, env)
+		sub := duplex.Submission{MessageID: f.MessageID, EnvelopeDigest: f.EnvelopeDigest, HistoryID: f.HistoryID, NotAfter: f.NotAfter, Envelope: f.Envelope}
+		start := time.Now()
+		tx, err := q.pool.Begin(t.Context())
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = authority.Lock(t.Context(), tx, authority.Request{ScopeID: "relay-a", DomainID: "domain-a", ExpectedWriterEpoch: "1", Devices: []authority.DeviceLock{{ID: q.a.Identity.DeviceID}}, Owners: []authority.DeviceLock{{ID: q.a.Identity.DeviceID}}, Keys: []authority.Key{{Namespace: "message", ID: f.MessageID}}, RequireContinuousHistory: true})
+		if err != nil {
+			tx.Rollback(context.Background())
+			t.Fatal(err)
+		}
+		r, err := repository.AdmitEnvelope(t.Context(), tx, "relay-a", "domain-a", q.a.Identity.DeviceID, "relay-a", sub, q.server.signer, time.Now())
+		if err != nil || r.State != "accepted" {
+			tx.Rollback(context.Background())
+			t.Fatal(r, err)
+		}
+		if err = tx.Commit(t.Context()); err != nil {
+			t.Fatal(err)
+		}
+		transaction = append(transaction, time.Since(start))
+	}
+	report := map[string]any{"samples": 100, "ciphertext_bytes": 3000, "environment": "macOS local Go process + loopback WebSocket + Docker PostgreSQL 18; independent raw client; not native UI; no race instrumentation"}
+	for name, values := range map[string][]time.Duration{"send_to_receipt": wire, "db_commit": commit, "admission_transaction_including_authority_and_signing": transaction} {
+		sort.Slice(values, func(i, j int) bool { return values[i] < values[j] })
+		sum := time.Duration(0)
+		for _, v := range values {
+			sum += v
+		}
+		ms := func(v time.Duration) float64 { return float64(v) / float64(time.Millisecond) }
+		report[name+"_ms"] = map[string]float64{"mean": ms(sum / time.Duration(len(values))), "p50": ms(values[49]), "p95": ms(values[94]), "p99": ms(values[98]), "max": ms(values[99])}
+	}
+	raw, _ := json.MarshalIndent(report, "", "  ")
+	t.Log(string(raw))
+	if path := os.Getenv("SC_RELAY_LATENCY_REPORT"); path != "" {
+		if err := os.WriteFile(path, append(raw, '\n'), 0600); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
