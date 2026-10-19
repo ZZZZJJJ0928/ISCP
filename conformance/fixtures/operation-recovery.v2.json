@@ -972,5 +972,55 @@
       ],
       "value": "another-child"
     }
+  ],
+  "signature_kid_prefix_vectors": [
+    {
+      "seed_hex": "4646464646464646464646464646464646464646464646464646464646464646",
+      "public_key": "7pOk9m-NFrgZu5vrn_zN_NwUEuh_7moyTCqZoeDmcUg",
+      "kid": "-bQPs92b64NtZbYMXEpHjl6aZfNRwee31TBd3NV3p9I",
+      "wire": {
+        "type": "iscp.operation.error.v2",
+        "protocol": "iscp.operation.recovery.v2",
+        "attempt_id": null,
+        "key": null,
+        "authorization_revision": null,
+        "audience": "issuer-test",
+        "code": "invalid_request",
+        "retryable": false,
+        "server_time": "2026-10-19T04:00:00Z",
+        "signature": {
+          "alg": "Ed25519",
+          "kid": "-bQPs92b64NtZbYMXEpHjl6aZfNRwee31TBd3NV3p9I",
+          "value": "M7VndoG0mP0r7uBcRto0aSq7oEFuYK_7HMt7pcPDShLbf4MQC7YAu93FcIyMMoUD918du7wiAgGwRoZ-_-1SBA"
+        }
+      }
+    },
+    {
+      "seed_hex": "5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c",
+      "public_key": "7WpHo52oabVEYVXkCy2T8ePwFnviZzK656PvnY46P9M",
+      "kid": "_TyBxeLtmPFAzdZNytWSyB4PGoeCwhOwfdWo9z34Vss",
+      "wire": {
+        "type": "iscp.operation.error.v2",
+        "protocol": "iscp.operation.recovery.v2",
+        "attempt_id": null,
+        "key": null,
+        "authorization_revision": null,
+        "audience": "issuer-test",
+        "code": "invalid_request",
+        "retryable": false,
+        "server_time": "2026-10-19T04:00:00Z",
+        "signature": {
+          "alg": "Ed25519",
+          "kid": "_TyBxeLtmPFAzdZNytWSyB4PGoeCwhOwfdWo9z34Vss",
+          "value": "vHse0OqDWdVUJcPFcGoSlwzbvQ12qpNpDhtpK5_lKdoAvyFxU9S-hF_ev__j47Qyfa_8gZv1JyXB7jKi2eyCDA"
+        }
+      }
+    }
+  ],
+  "negative_kid": [
+    "/invalid",
+    "+invalid",
+    "bad kid",
+    "bad\\kid"
   ]
 }

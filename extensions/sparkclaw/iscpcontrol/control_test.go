@@ -1,13 +1,16 @@
 package iscpcontrol
 
 import (
+	"bytes"
 	"context"
 	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -192,5 +195,103 @@ func TestAuthenticationBindsRealEndpointAndEveryAttempt(t *testing.T) {
 	}
 	if VerifyAuthentication(r, ch, device.Identity, "POST", OperationPath+"submit", "issuer-test", "", now) == nil || VerifyAuthentication(r, ch, device.Identity, "POST", OperationPath+"recover", "other-issuer", "", now) == nil || VerifyAuthentication(r, ch, device.Identity, "POST", OperationPath+"recover", "issuer-test", "", now.Add(11*time.Second)) == nil {
 		t.Fatal("endpoint/audience/expiry not bound")
+	}
+}
+
+func TestHTTPChallengeIsOpaqueAndLimitsAreSymmetric(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+	device, _ := identity.NewDevice(c.NewProvider(), "domain-test", "device-test", now)
+	signer, _ := identity.NewDevice(c.NewProvider(), "domain-test", "issuer-test", now)
+	backend := &testBackend{actor: device.Identity, signer: signer}
+	h := NewHandler("issuer-test", signer, backend)
+	for _, id := range []string{"device-test", "unknown-device"} {
+		q := ChallengeRequest{Type: "iscp.control.challenge.request.v2", Protocol: Protocol, Audience: "issuer-test", DomainID: "domain-test", DeviceID: id, Purpose: "lookup"}
+		raw, _ := json.Marshal(q)
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest("POST", ChallengePath, bytes.NewReader(raw)))
+		if rec.Code != 200 {
+			t.Fatalf("challenge leaks actor existence %s %d", id, rec.Code)
+		}
+		var ch Challenge
+		if Decode(rec.Body.Bytes(), "challenge", &ch) != nil {
+			t.Fatal("invalid opaque challenge")
+		}
+	}
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("POST", ChallengePath, bytes.NewReader(make([]byte, MaxBody+1))))
+	if rec.Body.Len() > MaxBody || rec.Code != 400 {
+		t.Fatalf("request bound %d", rec.Code)
+	}
+	rec = httptest.NewRecorder()
+	h.write(rec, strings.Repeat("x", MaxBody))
+	if rec.Body.Len() > MaxBody || rec.Code != 503 {
+		t.Fatalf("response bound %d", rec.Code)
+	}
+	for code, status := range map[string]int{"authentication_failed": 401, "scope_denied": 403, "generation_conflict": 409, "deadline_exceeded": 410, "authorization_unavailable": 503} {
+		rec = httptest.NewRecorder()
+		h.failure(rec, code, nil, nil)
+		if rec.Code != status {
+			t.Errorf("%s status %d", code, rec.Code)
+		}
+	}
+}
+
+func TestRealThumbprintKIDAllowsBase64urlPrefixes(t *testing.T) {
+	found := map[byte]bool{}
+	now := time.Now().UTC().Truncate(time.Second)
+	for n := 0; n < 256 && len(found) < 2; n++ {
+		seed := bytes.Repeat([]byte{byte(n)}, 32)
+		ed := ed25519.NewKeyFromSeed(seed)
+		pub := ed.Public().(ed25519.PublicKey)
+		kid := c.Thumbprint("Ed25519", pub)
+		if kid[0] != '-' && kid[0] != '_' || found[kid[0]] {
+			continue
+		}
+		priv, e := c.Ed25519PrivateKeyFromBytes(ed)
+		if e != nil {
+			t.Fatal(e)
+		}
+		device := identity.Device{Identity: identity.DeviceIdentity{Type: identity.TypeDeviceIdentity, DomainID: "test", DeviceID: "issuer", PublicKey: identity.PublicKey{KTY: "Ed25519", Use: "identity-signature", KID: kid, Public: c.Base64URL(pub)}, CreatedAt: now}, Private: priv}
+		errObject, e := NewError("invalid_request", "issuer", nil, nil, now, device)
+		if e != nil {
+			t.Fatalf("legitimate %c KID rejected: %v", kid[0], e)
+		}
+		if Verify(errObject.Type, errObject, errObject.Signature, device.Identity) != nil {
+			t.Fatal("real signature invalid")
+		}
+		found[kid[0]] = true
+		bad := *errObject
+		bad.Signature.KID = "/invalid"
+		if Validate(bad, "error") == nil {
+			t.Fatal("nonidentifier KID accepted")
+		}
+	}
+	if len(found) != 2 {
+		t.Fatal("did not exercise both real KID prefixes")
+	}
+}
+
+func TestChallengeRejectsUnrelatedSignedAuthorityTerminal(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+	device, _ := identity.NewDevice(c.NewProvider(), "domain-test", "device-test", now)
+	signer, _ := identity.NewDevice(c.NewProvider(), "domain-test", "issuer-test", now)
+	other := Request{AttemptID: "old-attempt", Key: Key{DomainID: "domain-test", DeviceID: "another-device", Namespace: CredentialNamespace, OperationID: "old-operation"}}
+	rev := Counter("9")
+	signed, e := NewError("authorization_revoked", "issuer-test", &other, &rev, now, signer)
+	if e != nil {
+		t.Fatal(e)
+	}
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(403)
+		_ = json.NewEncoder(w).Encode(signed)
+	}))
+	defer server.Close()
+	client, e := NewClient(server.URL, "issuer-test", device, signer.Identity, server.Client())
+	if e != nil {
+		t.Fatal(e)
+	}
+	_, e = client.Attempt(context.Background(), Request{Action: "recover"}, "")
+	if !errors.Is(e, ErrAuthentication) {
+		t.Fatalf("old/other-subject terminal became current authority: %v", e)
 	}
 }

@@ -26,7 +26,7 @@ const hash = str('^[A-Za-z0-9_-]{43}$',43);
 const counter = str('^(0|[1-9][0-9]{0,19})$',20);
 const timestamp = str('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$',20);
 const protocol = {const:'iscp.operation.recovery.v2'};
-const signature = object({alg:{const:'Ed25519'},kid:id,value:str('^[A-Za-z0-9_-]{86}$',86)});
+const signature = object({alg:{const:'Ed25519'},kid:str('^[A-Za-z0-9_-][A-Za-z0-9._:-]{0,159}$'),value:str('^[A-Za-z0-9_-]{86}$',86)});
 const key = object({domain_id:id,device_id:id,namespace:id,operation_id:id});
 const ack = object({result_digest:hash,disposition:{enum:['applied','installed','delegated','acknowledged_expired','acknowledged_superseded']},credential_generation:counter,recorded_at:timestamp,parent_result_digest:{oneOf:[hash,{type:'null'}]}});
 const defs = {
@@ -195,4 +195,14 @@ fixture.negative_delegation=[
   mutation('wrong-parent-subject',['intent','parent','key','device_id'],'another-device'),
   mutation('wrong-child-key',['key','operation_id'],'another-child')
 ];
+// Accepted erratum 0042: actual thumbprints may begin with '-' or '_'.
+fixture.signature_kid_prefix_vectors=[];
+for(let seed=0;seed<256&&fixture.signature_kid_prefix_vectors.length<2;seed++){
+  const key=edKey(Buffer.alloc(32,seed));
+  const publicKey=pub(key),kid=b64(createHash('sha256').update('iscp/v2/thumbprint/Ed25519\0').update(publicKey).digest());
+  if(!['-','_'].includes(kid[0])||fixture.signature_kid_prefix_vectors.some(v=>v.kid[0]===kid[0]))continue;
+  const wire=signObject('iscp.operation.error.v2',{type:'iscp.operation.error.v2',protocol:protocol.const,attempt_id:null,key:null,authorization_revision:null,audience:'issuer-test',code:'invalid_request',retryable:false,server_time:'2026-10-19T04:00:00Z'},key,kid);
+  fixture.signature_kid_prefix_vectors.push({seed_hex:Buffer.alloc(32,seed).toString('hex'),public_key:b64(publicKey),kid,wire});
+}
+fixture.negative_kid=['/invalid','+invalid','bad kid','bad\\kid'];
 fs.writeFileSync('conformance/fixtures/operation-recovery.v2.json',JSON.stringify(fixture,null,2)+'\n');

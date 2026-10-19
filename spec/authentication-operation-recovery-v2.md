@@ -368,3 +368,5 @@ expire proof/access/refresh; reopen unknown commits; verify history-gap fences,
 independent builds and native original UI/data. Business-family inventory gates
 must run against actual handlers, including never-sent submission, running-task
 attach, durable result/ACK, unknown side effects and stream snapshot recovery.
+
+Accepted erratum 0042: signature `kid` accepts a leading `-` or `_`, because an existing ISCP SHA-256 base64url thumbprint can start with either. Other identifier rules remain unchanged.

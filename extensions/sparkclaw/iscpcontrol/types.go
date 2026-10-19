@@ -12,6 +12,8 @@ import (
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/trust"
 )
 
+const MaxBody = 128 << 10
+
 const Protocol = "iscp.operation.recovery.v2"
 const ChallengePath = "/v2/control/challenge"
 const OperationPath = "/v2/control/operations/"

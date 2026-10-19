@@ -34,7 +34,7 @@ func object(v any) map[string]any { return v.(map[string]any) }
 // Decode validates lexical JSON, the closed wire shape, and scalar semantics
 // before populating a typed value. No caller-supplied schema is executed.
 func Decode(raw []byte, definition string, out any) error {
-	if len(raw) == 0 || len(raw) > 1<<20 || !utf8.Valid(raw) || !json.Valid(raw) {
+	if len(raw) == 0 || len(raw) > MaxBody || !utf8.Valid(raw) || !json.Valid(raw) || !validUnicodeEscapes(raw) {
 		return ErrInvalid
 	}
 	if _, e := canonical.ParseStrict(raw); e != nil {
@@ -186,7 +186,7 @@ func validateSchema(value any, schema, root map[string]any) error {
 				return fmt.Errorf("invalid UTC timestamp")
 			}
 		}
-		if strings.HasPrefix(pattern, "^[A-Za-z0-9_-]") {
+		if strings.HasPrefix(pattern, "^[A-Za-z0-9_-]{") || pattern == "^[A-Za-z0-9_-]+$" {
 			b, e := base64.RawURLEncoding.Strict().DecodeString(s)
 			if e != nil || base64.RawURLEncoding.EncodeToString(b) != s {
 				return fmt.Errorf("noncanonical base64url")
@@ -238,4 +238,39 @@ func validateSchema(value any, schema, root map[string]any) error {
 		return fmt.Errorf("unsupported test schema keyword type %v", schema["type"])
 	}
 	return nil
+}
+
+// JSON syntax is checked before this scan. encoding/json otherwise silently
+// replaces invalid UTF-16 surrogate escapes with U+FFFD, changing signed bytes.
+func validUnicodeEscapes(input []byte) bool {
+	for i := 0; i < len(input); i++ {
+		if input[i] != '"' {
+			continue
+		}
+		i++
+		for ; i < len(input) && input[i] != '"'; i++ {
+			if input[i] != '\\' {
+				continue
+			}
+			i++
+			if input[i] != 'u' {
+				continue
+			}
+			n, _ := strconv.ParseUint(string(input[i+1:i+5]), 16, 16)
+			i += 4
+			if n >= 0xD800 && n <= 0xDBFF {
+				if i+6 >= len(input) || input[i+1] != '\\' || input[i+2] != 'u' {
+					return false
+				}
+				low, err := strconv.ParseUint(string(input[i+3:i+7]), 16, 16)
+				if err != nil || low < 0xDC00 || low > 0xDFFF {
+					return false
+				}
+				i += 6
+			} else if n >= 0xDC00 && n <= 0xDFFF {
+				return false
+			}
+		}
+	}
+	return true
 }

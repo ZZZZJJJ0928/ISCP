@@ -53,8 +53,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.failure(w, "invalid_request", nil, nil)
 		return
 	}
-	raw, e := io.ReadAll(io.LimitReader(r.Body, (1<<20)+1))
-	if e != nil || len(raw) > 1<<20 {
+	raw, e := io.ReadAll(io.LimitReader(r.Body, MaxBody+1))
+	if e != nil || len(raw) > MaxBody {
 		h.failure(w, "invalid_request", nil, nil)
 		return
 	}
@@ -144,10 +144,6 @@ func (h *Handler) challenge(w http.ResponseWriter, r *http.Request, raw []byte) 
 		h.failure(w, "invalid_request", nil, nil)
 		return
 	}
-	if _, e := h.Backend.ResolveActor(r.Context(), q.DomainID, q.DeviceID); e != nil {
-		h.failure(w, "authentication_failed", nil, nil)
-		return
-	}
 	now := h.Now().UTC().Truncate(time.Second)
 	ch := Challenge{Type: "iscp.control.challenge.v2", Protocol: Protocol, Audience: h.Audience, ChallengeID: RandomID(), Challenge: RandomID(), Purpose: q.Purpose, ServerTime: now, ExpiresAt: now.Add(10 * time.Second)}
 	h.mu.Lock()
@@ -165,16 +161,56 @@ func (h *Handler) challenge(w http.ResponseWriter, r *http.Request, raw []byte) 
 	h.mu.Unlock()
 	h.write(w, ch)
 }
+func ErrorStatus(code string) int {
+	switch code {
+	case "authentication_failed", "challenge_expired":
+		return http.StatusUnauthorized
+	case "authorization_revoked", "authorization_ended", "identity_recovery_required", "scope_denied":
+		return http.StatusForbidden
+	case "generation_conflict":
+		return http.StatusConflict
+	case "deadline_exceeded":
+		return http.StatusGone
+	case "authorization_unavailable", "resource_exhausted":
+		return http.StatusServiceUnavailable
+	default:
+		return http.StatusBadRequest
+	}
+}
 func (h *Handler) failure(w http.ResponseWriter, code string, r *Request, revision *Counter) {
 	e, err := NewError(code, h.Audience, r, revision, h.Now(), h.Signer)
 	if err != nil {
 		http.Error(w, "control unavailable", http.StatusServiceUnavailable)
 		return
 	}
-	w.WriteHeader(http.StatusBadRequest)
-	h.write(w, e)
+	h.writeStatus(w, ErrorStatus(code), e)
 }
-func (h *Handler) write(w http.ResponseWriter, v any) { _ = json.NewEncoder(w).Encode(v) }
+func (h *Handler) write(w http.ResponseWriter, v any) {
+	status := http.StatusOK
+	if s, ok := v.(*Status); ok {
+		if s.State == "namespace_closed" {
+			status = http.StatusGone
+		}
+		if s.State == "conflict" {
+			status = http.StatusConflict
+		}
+	}
+	h.writeStatus(w, status, v)
+}
+func (h *Handler) writeStatus(w http.ResponseWriter, status int, v any) {
+	raw, err := json.Marshal(v)
+	if err != nil || len(raw)+1 > MaxBody {
+		v, err = NewError("resource_exhausted", h.Audience, nil, nil, h.Now(), h.Signer)
+		if err != nil {
+			http.Error(w, "control unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		raw, _ = json.Marshal(v)
+		status = http.StatusServiceUnavailable
+	}
+	w.WriteHeader(status)
+	_, _ = w.Write(append(raw, '\n'))
+}
 
 // Client's HTTP transport must already pin the original HTTPS authority. It never
 // follows redirects or falls back to WSS. Fresh wraps/proofs are per attempt;
@@ -291,6 +327,9 @@ func (c *Client) wireError(raw []byte, r *Request) error {
 	if Decode(raw, "error", &e) != nil || e.Audience != c.Audience || Verify(e.Type, e, e.Signature, c.Signer) != nil {
 		return ErrAuthentication
 	}
+	if r == nil && (e.AttemptID != nil || e.Key != nil || e.AuthorizationRevision != nil || e.Code == "authorization_revoked" || e.Code == "authorization_ended") {
+		return ErrAuthentication
+	}
 	if r != nil && (e.AttemptID == nil || *e.AttemptID != r.AttemptID || e.Key == nil || *e.Key != r.Key) {
 		return ErrAuthentication
 	}
@@ -298,6 +337,9 @@ func (c *Client) wireError(raw []byte, r *Request) error {
 }
 func (c *Client) post(ctx context.Context, path string, v any, token string) ([]byte, error) {
 	body, e := json.Marshal(v)
+	if len(body) > MaxBody {
+		return nil, ErrInvalid
+	}
 	if e != nil {
 		return nil, e
 	}
@@ -314,15 +356,15 @@ func (c *Client) post(ctx context.Context, path string, v any, token string) ([]
 		return nil, errors.Join(ErrUnknown, e)
 	}
 	defer response.Body.Close()
-	raw, e := io.ReadAll(io.LimitReader(response.Body, (1<<20)+1))
-	if e != nil || len(raw) > 1<<20 {
+	raw, e := io.ReadAll(io.LimitReader(response.Body, MaxBody+1))
+	if e != nil || len(raw) > MaxBody {
 		return nil, ErrUnknown
 	}
 	if response.StatusCode != http.StatusOK {
 		var kind struct {
 			Type string `json:"type"`
 		}
-		if json.Unmarshal(raw, &kind) != nil || kind.Type != "iscp.operation.error.v2" {
+		if json.Unmarshal(raw, &kind) != nil || (kind.Type != "iscp.operation.error.v2" && kind.Type != "iscp.operation.status.v2") {
 			return nil, ErrUnknown
 		}
 	}
