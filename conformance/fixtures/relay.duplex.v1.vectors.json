@@ -1,0 +1,406 @@
+{
+  "context": {
+    "access_token_sha256": "TF3Jt3CJBfd_Xl0WMWtd-0JeaMsybc1VqGDpCncHAx4",
+    "challenge": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM",
+    "challenge_id": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI",
+    "connection_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "device_id": "device-test",
+    "domain_id": "domain-test",
+    "history_id": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE",
+    "limits_sha256": "JbOt-VgyDcLNvVMLYsuq6Af0zIB4X_Puotqmi0_mRY8",
+    "method": "GET",
+    "owner_generation": "0",
+    "path": "/v2/relay/duplex",
+    "protocol": "iscp.relay.duplex.v1",
+    "purpose": "authenticate",
+    "relay_id": "relay-test",
+    "request_id": "1"
+  },
+  "context_canonical": "{\"access_token_sha256\":\"TF3Jt3CJBfd_Xl0WMWtd-0JeaMsybc1VqGDpCncHAx4\",\"challenge\":\"AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM\",\"challenge_id\":\"AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI\",\"connection_id\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"device_id\":\"device-test\",\"domain_id\":\"domain-test\",\"history_id\":\"AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE\",\"limits_sha256\":\"JbOt-VgyDcLNvVMLYsuq6Af0zIB4X_Puotqmi0_mRY8\",\"method\":\"GET\",\"owner_generation\":\"0\",\"path\":\"/v2/relay/duplex\",\"protocol\":\"iscp.relay.duplex.v1\",\"purpose\":\"authenticate\",\"relay_id\":\"relay-test\",\"request_id\":\"1\"}",
+  "envelope": {
+    "ciphertext": "BgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgY",
+    "domain_id": "domain-test",
+    "message_id": "message-test",
+    "nonce": "BQUFBQUFBQUFBQUF",
+    "payload_type": "iscp.workbench.request.v1",
+    "recipient_device_id": "recipient-test",
+    "route": {
+      "priority": 5,
+      "relay_id": "relay-test",
+      "ttl_seconds": 30
+    },
+    "sender_device_id": "device-test",
+    "sequence": 1,
+    "session_id": "session-test",
+    "type": "iscp.secure_envelope.v2"
+  },
+  "envelope_canonical": "{\"ciphertext\":\"BgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgY\",\"domain_id\":\"domain-test\",\"message_id\":\"message-test\",\"nonce\":\"BQUFBQUFBQUFBQUF\",\"payload_type\":\"iscp.workbench.request.v1\",\"recipient_device_id\":\"recipient-test\",\"route\":{\"priority\":5,\"relay_id\":\"relay-test\",\"ttl_seconds\":30},\"sender_device_id\":\"device-test\",\"sequence\":1,\"session_id\":\"session-test\",\"type\":\"iscp.secure_envelope.v2\"}",
+  "envelope_digest": "ltb7xZCOJTMKbKE_wQAECUVvm08o3YNptW8ahFet6gg",
+  "frames": [
+    {
+      "challenge": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM",
+      "challenge_id": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI",
+      "connection_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "domain_id": "domain-test",
+      "expires_at": "2026-10-19T00:00:10Z",
+      "history_id": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE",
+      "kind": "challenge",
+      "limits": {
+        "max_control_bytes": 65536,
+        "max_envelope_bytes": 1048576,
+        "max_frame_bytes": 1114112,
+        "max_ttl_seconds": 86400,
+        "query_recovery_seconds": 604800
+      },
+      "relay_id": "relay-test",
+      "v": 1
+    },
+    {
+      "access_token": "test-token",
+      "challenge_id": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI",
+      "connection_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "kind": "authenticate",
+      "proof": {
+        "audience": "relay-test",
+        "challenge": "ztgbgIFC8M-jWkH-qAaODa7VVTNpPL73ut8RRKH7WxU",
+        "device_id": "device-test",
+        "domain_id": "domain-test",
+        "issued_at": "2026-10-19T00:00:00Z",
+        "nonce": "BAQEBAQEBAQEBAQEBAQEBA",
+        "signature": {
+          "alg": "Ed25519",
+          "kid": "test-key-only",
+          "value": "zuM2xzWt5DlB4DS5BnL1DDvup3r3XgNpvajfKg19hVJ-yi_3KZPlZ9ghM-c7bg-dHek55aP9FP8h8r__w83zCQ"
+        },
+        "type": "iscp.device.proof.v2"
+      },
+      "request_id": "1",
+      "v": 1
+    },
+    {
+      "authority_expires_at": "2026-10-19T00:15:00Z",
+      "connection_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "device_id": "device-test",
+      "domain_id": "domain-test",
+      "history_id": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE",
+      "kind": "ready",
+      "limits": {
+        "max_control_bytes": 65536,
+        "max_envelope_bytes": 1048576,
+        "max_frame_bytes": 1114112,
+        "max_ttl_seconds": 86400,
+        "query_recovery_seconds": 604800
+      },
+      "owner_generation": "1",
+      "request_id": "1",
+      "v": 1
+    },
+    {
+      "connection_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "envelope": {
+        "ciphertext": "BgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgY",
+        "domain_id": "domain-test",
+        "message_id": "message-test",
+        "nonce": "BQUFBQUFBQUFBQUF",
+        "payload_type": "iscp.workbench.request.v1",
+        "recipient_device_id": "recipient-test",
+        "route": {
+          "priority": 5,
+          "relay_id": "relay-test",
+          "ttl_seconds": 30
+        },
+        "sender_device_id": "device-test",
+        "sequence": 1,
+        "session_id": "session-test",
+        "type": "iscp.secure_envelope.v2"
+      },
+      "envelope_digest": "ltb7xZCOJTMKbKE_wQAECUVvm08o3YNptW8ahFet6gg",
+      "history_id": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE",
+      "kind": "submit",
+      "message_id": "message-test",
+      "not_after": "2026-10-19T00:00:30Z",
+      "owner_generation": "1",
+      "request_id": "2",
+      "v": 1
+    },
+    {
+      "connection_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "envelope_digest": "ltb7xZCOJTMKbKE_wQAECUVvm08o3YNptW8ahFet6gg",
+      "kind": "accepted",
+      "message_id": "message-test",
+      "owner_generation": "1",
+      "receipt": {
+        "accepted_at": "2026-10-19T00:00:01Z",
+        "domain_id": "domain-test",
+        "envelope_digest": "ltb7xZCOJTMKbKE_wQAECUVvm08o3YNptW8ahFet6gg",
+        "expires_at": "2026-10-19T00:00:30Z",
+        "history_id": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE",
+        "message_id": "message-test",
+        "not_after": "2026-10-19T00:00:30Z",
+        "receipt_id": "BwcHBwcHBwcHBwcHBwcHBw",
+        "recipient_device_id": "recipient-test",
+        "relay_id": "relay-test",
+        "sender_device_id": "device-test",
+        "signature": {
+          "alg": "Ed25519",
+          "kid": "test-key-only",
+          "value": "EAoSehFpytdRTwss6_SFcrl4Yy1mxrKrxbKwn57Wia8wzMMBq3BvPiP9Halq5aOxz5km2_ymM9T2acoptirWDQ"
+        },
+        "type": "iscp.relay.acceptance.v1"
+      },
+      "request_id": "2",
+      "v": 1
+    },
+    {
+      "code": "message_conflict",
+      "connection_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "envelope_digest": "ltb7xZCOJTMKbKE_wQAECUVvm08o3YNptW8ahFet6gg",
+      "kind": "rejected",
+      "message_id": "message-test",
+      "owner_generation": "1",
+      "request_id": "3",
+      "v": 1
+    },
+    {
+      "connection_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "envelope": {
+        "ciphertext": "BgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgY",
+        "domain_id": "domain-test",
+        "message_id": "message-test",
+        "nonce": "BQUFBQUFBQUFBQUF",
+        "payload_type": "iscp.workbench.request.v1",
+        "recipient_device_id": "recipient-test",
+        "route": {
+          "priority": 5,
+          "relay_id": "relay-test",
+          "ttl_seconds": 30
+        },
+        "sender_device_id": "device-test",
+        "sequence": 1,
+        "session_id": "session-test",
+        "type": "iscp.secure_envelope.v2"
+      },
+      "envelope_digest": "ltb7xZCOJTMKbKE_wQAECUVvm08o3YNptW8ahFet6gg",
+      "kind": "delivery",
+      "message_id": "message-test",
+      "owner_generation": "1",
+      "v": 1
+    },
+    {
+      "connection_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "envelope_digest": "ltb7xZCOJTMKbKE_wQAECUVvm08o3YNptW8ahFet6gg",
+      "history_id": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE",
+      "kind": "submit.query",
+      "message_id": "message-test",
+      "not_after": "2026-10-19T00:00:30Z",
+      "owner_generation": "1",
+      "request_id": "4",
+      "v": 1
+    },
+    {
+      "connection_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "envelope_digest": "ltb7xZCOJTMKbKE_wQAECUVvm08o3YNptW8ahFet6gg",
+      "kind": "submit.status",
+      "message_id": "message-test",
+      "owner_generation": "1",
+      "receipt": {
+        "accepted_at": "2026-10-19T00:00:01Z",
+        "domain_id": "domain-test",
+        "envelope_digest": "ltb7xZCOJTMKbKE_wQAECUVvm08o3YNptW8ahFet6gg",
+        "expires_at": "2026-10-19T00:00:30Z",
+        "history_id": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE",
+        "message_id": "message-test",
+        "not_after": "2026-10-19T00:00:30Z",
+        "receipt_id": "BwcHBwcHBwcHBwcHBwcHBw",
+        "recipient_device_id": "recipient-test",
+        "relay_id": "relay-test",
+        "sender_device_id": "device-test",
+        "signature": {
+          "alg": "Ed25519",
+          "kid": "test-key-only",
+          "value": "EAoSehFpytdRTwss6_SFcrl4Yy1mxrKrxbKwn57Wia8wzMMBq3BvPiP9Halq5aOxz5km2_ymM9T2acoptirWDQ"
+        },
+        "type": "iscp.relay.acceptance.v1"
+      },
+      "request_id": "4",
+      "state": "accepted",
+      "v": 1
+    },
+    {
+      "connection_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "envelope_digest": "ltb7xZCOJTMKbKE_wQAECUVvm08o3YNptW8ahFet6gg",
+      "kind": "submit.status",
+      "message_id": "message-test",
+      "owner_generation": "1",
+      "receipt": {
+        "accepted_at": "2026-10-19T00:00:01Z",
+        "domain_id": "domain-test",
+        "envelope_digest": "ltb7xZCOJTMKbKE_wQAECUVvm08o3YNptW8ahFet6gg",
+        "expires_at": "2026-10-19T00:00:30Z",
+        "history_id": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE",
+        "message_id": "message-test",
+        "not_after": "2026-10-19T00:00:30Z",
+        "receipt_id": "BwcHBwcHBwcHBwcHBwcHBw",
+        "recipient_device_id": "recipient-test",
+        "relay_id": "relay-test",
+        "sender_device_id": "device-test",
+        "signature": {
+          "alg": "Ed25519",
+          "kid": "test-key-only",
+          "value": "EAoSehFpytdRTwss6_SFcrl4Yy1mxrKrxbKwn57Wia8wzMMBq3BvPiP9Halq5aOxz5km2_ymM9T2acoptirWDQ"
+        },
+        "type": "iscp.relay.acceptance.v1"
+      },
+      "request_id": "4",
+      "state": "expired",
+      "v": 1
+    },
+    {
+      "connection_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "envelope_digest": "ltb7xZCOJTMKbKE_wQAECUVvm08o3YNptW8ahFet6gg",
+      "kind": "submit.status",
+      "message_id": "message-test",
+      "owner_generation": "1",
+      "request_id": "4",
+      "state": "absent",
+      "v": 1
+    },
+    {
+      "connection_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "envelope_digest": "ltb7xZCOJTMKbKE_wQAECUVvm08o3YNptW8ahFet6gg",
+      "kind": "submit.status",
+      "message_id": "message-test",
+      "owner_generation": "1",
+      "reason": "commit_unknown",
+      "request_id": "4",
+      "state": "unknown",
+      "v": 1
+    },
+    {
+      "connection_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "kind": "reauth.request",
+      "owner_generation": "1",
+      "request_id": "5",
+      "v": 1
+    },
+    {
+      "challenge": "CQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQk",
+      "challenge_id": "CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg",
+      "connection_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "expires_at": "2026-10-19T00:01:10Z",
+      "kind": "reauth.challenge",
+      "owner_generation": "1",
+      "request_id": "5",
+      "v": 1
+    },
+    {
+      "access_token": "test-token",
+      "challenge_id": "CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg",
+      "connection_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "kind": "reauthenticate",
+      "owner_generation": "1",
+      "proof": {
+        "audience": "relay-test",
+        "challenge": "WbacGWyK08Om9TgSFV80BU-xz2dQMQS-NubzbOEQbuc",
+        "device_id": "device-test",
+        "domain_id": "domain-test",
+        "issued_at": "2026-10-19T00:01:00Z",
+        "nonce": "CgoKCgoKCgoKCgoKCgoKCg",
+        "signature": {
+          "alg": "Ed25519",
+          "kid": "test-key-only",
+          "value": "_Y0hB-tu_9uSw315H6TEWCKEWrgJBnjjdjsvCaPXzkMjuFp9nCFoUhUROhfk3ocjV-JP7K_KCm1KunMkqva2Dg"
+        },
+        "type": "iscp.device.proof.v2"
+      },
+      "request_id": "5",
+      "v": 1
+    },
+    {
+      "authority_expires_at": "2026-10-19T00:16:00Z",
+      "connection_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "kind": "reauthenticated",
+      "owner_generation": "1",
+      "request_id": "5",
+      "v": 1
+    },
+    {
+      "code": "maintenance",
+      "connection_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "kind": "closing",
+      "owner_generation": "1",
+      "v": 1
+    }
+  ],
+  "proof": {
+    "audience": "relay-test",
+    "challenge": "ztgbgIFC8M-jWkH-qAaODa7VVTNpPL73ut8RRKH7WxU",
+    "device_id": "device-test",
+    "domain_id": "domain-test",
+    "issued_at": "2026-10-19T00:00:00Z",
+    "nonce": "BAQEBAQEBAQEBAQEBAQEBA",
+    "signature": {
+      "alg": "Ed25519",
+      "kid": "test-key-only",
+      "value": "zuM2xzWt5DlB4DS5BnL1DDvup3r3XgNpvajfKg19hVJ-yi_3KZPlZ9ghM-c7bg-dHek55aP9FP8h8r__w83zCQ"
+    },
+    "type": "iscp.device.proof.v2"
+  },
+  "proof_challenge": "ztgbgIFC8M-jWkH-qAaODa7VVTNpPL73ut8RRKH7WxU",
+  "proof_signature_input_hex": "495343502d56322d5349474e415455524500697363702e6465766963652e70726f6f662e7632007b2261756469656e6365223a2272656c61792d74657374222c226368616c6c656e6765223a227a74676267494643384d2d6a576b482d7141614f4461375656544e70504c373375743852524b4837577855222c226465766963655f6964223a226465766963652d74657374222c22646f6d61696e5f6964223a22646f6d61696e2d74657374222c226973737565645f6174223a22323032362d31302d31395430303a30303a30305a222c226e6f6e6365223a2242415145424151454241514542415145424151454241222c2274797065223a22697363702e6465766963652e70726f6f662e7632227d",
+  "reauth_context": {
+    "access_token_sha256": "TF3Jt3CJBfd_Xl0WMWtd-0JeaMsybc1VqGDpCncHAx4",
+    "challenge": "CQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQk",
+    "challenge_id": "CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg",
+    "connection_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "device_id": "device-test",
+    "domain_id": "domain-test",
+    "history_id": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE",
+    "limits_sha256": "JbOt-VgyDcLNvVMLYsuq6Af0zIB4X_Puotqmi0_mRY8",
+    "method": "GET",
+    "owner_generation": "1",
+    "path": "/v2/relay/duplex",
+    "protocol": "iscp.relay.duplex.v1",
+    "purpose": "reauthenticate",
+    "relay_id": "relay-test",
+    "request_id": "5"
+  },
+  "reauth_proof": {
+    "audience": "relay-test",
+    "challenge": "WbacGWyK08Om9TgSFV80BU-xz2dQMQS-NubzbOEQbuc",
+    "device_id": "device-test",
+    "domain_id": "domain-test",
+    "issued_at": "2026-10-19T00:01:00Z",
+    "nonce": "CgoKCgoKCgoKCgoKCgoKCg",
+    "signature": {
+      "alg": "Ed25519",
+      "kid": "test-key-only",
+      "value": "_Y0hB-tu_9uSw315H6TEWCKEWrgJBnjjdjsvCaPXzkMjuFp9nCFoUhUROhfk3ocjV-JP7K_KCm1KunMkqva2Dg"
+    },
+    "type": "iscp.device.proof.v2"
+  },
+  "reauth_signature_input_hex": "495343502d56322d5349474e415455524500697363702e6465766963652e70726f6f662e7632007b2261756469656e6365223a2272656c61792d74657374222c226368616c6c656e6765223a22576261634757794b30384f6d395467534656383042552d787a3264514d51532d4e75627a624f4551627563222c226465766963655f6964223a226465766963652d74657374222c22646f6d61696e5f6964223a22646f6d61696e2d74657374222c226973737565645f6174223a22323032362d31302d31395430303a30313a30305a222c226e6f6e6365223a2243676f4b43676f4b43676f4b43676f4b43676f4b4367222c2274797065223a22697363702e6465766963652e70726f6f662e7632227d",
+  "receipt": {
+    "accepted_at": "2026-10-19T00:00:01Z",
+    "domain_id": "domain-test",
+    "envelope_digest": "ltb7xZCOJTMKbKE_wQAECUVvm08o3YNptW8ahFet6gg",
+    "expires_at": "2026-10-19T00:00:30Z",
+    "history_id": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE",
+    "message_id": "message-test",
+    "not_after": "2026-10-19T00:00:30Z",
+    "receipt_id": "BwcHBwcHBwcHBwcHBwcHBw",
+    "recipient_device_id": "recipient-test",
+    "relay_id": "relay-test",
+    "sender_device_id": "device-test",
+    "signature": {
+      "alg": "Ed25519",
+      "kid": "test-key-only",
+      "value": "EAoSehFpytdRTwss6_SFcrl4Yy1mxrKrxbKwn57Wia8wzMMBq3BvPiP9Halq5aOxz5km2_ymM9T2acoptirWDQ"
+    },
+    "type": "iscp.relay.acceptance.v1"
+  },
+  "receipt_signature_input_hex": "495343502d56322d5349474e415455524500697363702e72656c61792e616363657074616e63652e7631007b2261636365707465645f6174223a22323032362d31302d31395430303a30303a30315a222c22646f6d61696e5f6964223a22646f6d61696e2d74657374222c22656e76656c6f70655f646967657374223a226c746237785a434f4a544d4b624b455f77514145435556766d30386f33594e707457386168466574366767222c22657870697265735f6174223a22323032362d31302d31395430303a30303a33305a222c22686973746f72795f6964223a2241514542415145424151454241514542415145424151454241514542415145424151454241514542415145222c226d6573736167655f6964223a226d6573736167652d74657374222c226e6f745f6166746572223a22323032362d31302d31395430303a30303a33305a222c22726563656970745f6964223a2242776348427763484277634842776348427763484277222c22726563697069656e745f6465766963655f6964223a22726563697069656e742d74657374222c2272656c61795f6964223a2272656c61792d74657374222c2273656e6465725f6465766963655f6964223a226465766963652d74657374222c2274797065223a22697363702e72656c61792e616363657074616e63652e7631227d",
+  "status": "proposed; golden contract oracle only, not service qualification",
+  "test_key_seed_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "test_public_key": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg"
+}
