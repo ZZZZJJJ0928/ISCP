@@ -44,12 +44,23 @@ Activation reserves the complete audited key inventory as legacy tombstones. The
 
 The source audit cannot be inferred or manufactured by the CLI. An empty or incomplete manifest is not a remedy for missing historical evidence. Do not clear tables, substitute new identities, or alter the key semantics to make activation succeed.
 
+## Existing unmanaged refresh credentials
+
+After authority activation, the unmanaged HTTP refresh route accepts only an active, unrevoked, unexpired Refresh bound to the current credential generation. It revokes the prior pair, creates both replacement tokens with the next generation, and advances the authority in one transaction. The response is disclosed while holding the same authority guard used by revocation. Managed control recovery remains separate.
+
+A pinned local client can refresh its original identity immediately after a matching initial `authentication_failed` or an established-session `auth_required`, even when the rejected Access has nominal lifetime remaining. Live same-identity rotation reauthenticates the existing socket without changing its owner or E2E session. This does not relax Refresh validation.
+
+An earlier experimental package could write replacement tokens with a NULL generation. Such tokens are rejected, including NULL Refresh tokens; upgrading the executable does not repair that state. Preserve the failed database and enrollment evidence and keep that affected identity in maintenance until a separately authorized recovery is available. Do not backfill generation, clear revocation, alter expiry, or replace identity to conceal this failure.
+
 ## Qualification evidence and limits
 
 The focused Go tests exercise the real PostgreSQL repository and raw independent WebSocket client:
 
 - `TestDuplexWireExactByteLimits`: exact 1 MiB envelope and 1088 KiB whole-frame limits, each at minus one, exact, and plus one byte.
 - `TestDuplexEightDayTombstoneAndMissingHistory`: an admission explicitly timestamped eight days earlier, production guarded payload cleanup, byte-identical expired receipt, unknown query and rejected new admission when history becomes incomplete. This is a clock-boundary test, not a claim to have waited eight calendar days.
+- `TestDuplexUnmanagedHTTPRefreshAtomicGenerationAndReauth`: actual HTTP refresh, atomic generation/token rotation, original-owner reauthentication, replacement-owner authentication, old-token rejection, and one winner for concurrent refresh attempts.
+- `TestDuplexUnmanagedRefreshRejectsNULLAndFencedAuthorities` and `TestDuplexUnmanagedRefreshDisclosureBlocksPublicRevocation`: NULL credentials, revoked authority, and obsolete writer epoch fail closed; public revocation waits for an in-flight credential response.
+- `TestDuplexActualClientInvalidationRefreshKeepsSocketAndPersists`: the actual local Relay client recovers from a current-generation Access invalidation through HTTP refresh, persists the original identity, and either reconnects after initial rejection or reauthenticates the same live socket. The test invalidates Access only; it does not shorten TTL or bypass Refresh validation.
 - `TestDuplexPublicRevocationUsesSharedAuthority`: public operator revocation waits for the current disclosure guard, then atomically revokes credentials and closes the owner.
 - `TestDuplexCrossOwnerUnfinishedCommitCannotProveAbsence`: an unfinished original transaction blocks new ownership; timeout does not install a new owner or prove absence; eventual commit is returned by the original-key query.
 - `SC_RELAY_LONG_QUALIFICATION=1`: 57 seconds of empty healthy socket, actual credential generation/token rotation on the same owner, then network reconnection and original receipt reconciliation. Queued byte and frame counts remain zero during idle.
