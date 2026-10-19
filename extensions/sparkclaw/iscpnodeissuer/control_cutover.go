@@ -20,8 +20,8 @@ func (i *Issuer) ActivateControlHistory(ctx context.Context, invitationID, evide
 	if !i.cfg.EnableControlV2 || !ValidActivationEvidence(evidence) {
 		return ErrInvalid
 	}
-	if store, ok := i.store.(*PostgresStore); ok && store.writerEpoch == "" {
-		return ErrWriterFenced
+	if err := i.store.RequireControlWriter(ctx); err != nil {
+		return err
 	}
 	return i.store.Update(ctx, invitationID, func(s *State) error {
 		if s.State != "active" || s.Device == nil || !s.RevokedAt.IsZero() {

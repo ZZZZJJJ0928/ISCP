@@ -128,6 +128,17 @@ func (r *RelayClient) ConfigureServiceCredentialProvider(issuer identity.DeviceI
 			resource = state.Pending.Intent.Preconditions.ResourceVersion
 			scopes = state.Pending.Intent.Payload.RequestedScopes
 		} else {
+			// Obtain a fresh operation-correlated authority response first. A
+			// revoked service gets the signed typed terminal error here; an
+			// unsigned snapshot HTTP failure must never be interpreted as revoke.
+			probe := control.Request{Action: "lookup", Key: control.Key{DomainID: subject.DomainID, DeviceID: subject.DeviceID, Namespace: control.RelayNamespace, OperationID: "authority-" + control.RandomID()}, SemanticDigest: control.RandomID()}
+			status, err := transport.Attempt(ctx, probe, "")
+			if err != nil {
+				return nil, err
+			}
+			if status.Status == nil || status.Status.State != "absent" || !status.Status.HistoryComplete {
+				return nil, control.ErrUnknown
+			}
 			snapshot, err := transport.Authority(ctx, subject, target)
 			if err != nil {
 				return nil, err

@@ -12,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	control "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpcontrol"
 	c "github.com/Infinimesh-ai/ISCP/pkg/iscp/crypto"
 )
 
@@ -21,13 +20,15 @@ import (
 // installation has succeeded. The provider never calls it with a socket lock.
 type CredentialRecovery func(context.Context, CredentialBinding, CredentialGeneration) (CredentialLease, error)
 type credentialState struct {
-	Binding               CredentialBinding
-	Lease                 *CredentialLease
-	Generation            CredentialGeneration
-	AuthorizationRevision string
-	Version               uint64
-	Reason                CredentialEventReason
-	Invalidated           bool
+	Binding                    CredentialBinding
+	Lease                      *CredentialLease
+	Generation                 CredentialGeneration
+	AuthorizationRevision      string
+	Version                    uint64
+	Reason                     CredentialEventReason
+	Invalidated                bool
+	TerminalAuthorityPublicKey string
+	TerminalAuthorityRevision  string
 }
 type credentialFlight struct {
 	done  chan struct{}
@@ -181,6 +182,7 @@ func (p *managedCredentialProvider) EnsureAccess(ctx context.Context, binding Cr
 	if err := CheckLegacyCredentialPending(p.relay.enrollmentPath); err != nil {
 		return CredentialLease{}, err
 	}
+retry:
 	p.mu.Lock()
 	if p.closed {
 		p.mu.Unlock()
@@ -210,10 +212,20 @@ func (p *managedCredentialProvider) EnsureAccess(ctx context.Context, binding Cr
 		p.mu.Unlock()
 		if p.installed != nil {
 			if err := p.installed(ctx, lease); err != nil {
+				if persistErr := p.observeTerminal(err); persistErr != nil {
+					return CredentialLease{}, persistErr
+				}
 				return CredentialLease{}, err
 			}
 		}
-		return lease, nil
+		current, err := p.leaseCurrent(ctx, lease)
+		if err != nil {
+			return CredentialLease{}, err
+		}
+		if current {
+			return lease, nil
+		}
+		goto retry
 	}
 	f := p.flight
 	if f == nil {
@@ -228,8 +240,39 @@ func (p *managedCredentialProvider) EnsureAccess(ctx context.Context, binding Cr
 	case <-ctx.Done():
 		return CredentialLease{}, ctx.Err()
 	case <-f.done:
-		return copyCredentialLease(f.lease), f.err
+		if f.err != nil {
+			return CredentialLease{}, f.err
+		}
+		// Installation/ACK runs outside the provider lock. During that window
+		// a cached reader may reject this generation, or another process may
+		// replace it. A waiter must recheck durable state before returning the
+		// completed flight, otherwise it can return the just-rejected token.
+		current, err := p.leaseCurrent(ctx, f.lease)
+		if err != nil {
+			return CredentialLease{}, err
+		}
+		if current {
+			return copyCredentialLease(f.lease), nil
+		}
+		goto retry
 	}
+}
+
+// leaseCurrent is the linearization check after any installation callback. That
+// callback performs network I/O without provider/file locks, so both cached and
+// flight paths must reload the durable authority before returning credentials.
+func (p *managedCredentialProvider) leaseCurrent(ctx context.Context, lease CredentialLease) (bool, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	unlock, err := lockCredentialFile(ctx, p.path+".lock")
+	if err != nil {
+		return false, err
+	}
+	defer unlock()
+	if err = p.load(); err != nil {
+		return false, err
+	}
+	return !p.closed && !p.state.Invalidated && p.state.Lease != nil && p.state.Version == lease.StateVersion && time.Now().Before(p.state.Lease.ExpiresAt), nil
 }
 func (p *managedCredentialProvider) recover(f *credentialFlight, expected CredentialGeneration, version uint64) {
 	ctx, cancel := context.WithTimeout(p.root, 30*time.Second)
@@ -240,6 +283,11 @@ func (p *managedCredentialProvider) recover(f *credentialFlight, expected Creden
 		p.mu.Unlock()
 		if f.err == nil && p.installed != nil {
 			f.err = p.installed(ctx, copyCredentialLease(f.lease))
+			if f.err != nil {
+				if persistErr := p.observeTerminal(f.err); persistErr != nil {
+					f.err = persistErr
+				}
+			}
 		}
 		p.mu.Lock()
 		p.flight = nil
@@ -274,29 +322,13 @@ func (p *managedCredentialProvider) recover(f *credentialFlight, expected Creden
 	}
 
 	if err != nil {
-		var typed *control.Error
-		if errors.As(err, &typed) && (typed.Code == "authorization_revoked" || typed.Code == "authorization_ended") && typed.AuthorizationRevision != nil {
-			newRev, revErr := strconv.ParseUint(string(*typed.AuthorizationRevision), 10, 64)
-			oldRev, _ := strconv.ParseUint(p.state.AuthorizationRevision, 10, 64)
-			if revErr != nil || newRev < oldRev {
-				f.err = err
-				return
-			}
-			next := p.state
-			next.Lease = nil
-			next.Version++
-			next.Reason = CredentialRevoked
-			next.AuthorizationRevision = string(*typed.AuthorizationRevision)
-			if e := p.persist(next); e == nil {
-				p.state = next
-				p.publishLocked()
-			} else {
-				err = e
-			}
+		if persistErr := p.recordTerminalLocked(err); persistErr != nil {
+			err = persistErr
 		}
 		f.err = err
 		return
 	}
+
 	nextGen, e := strconv.ParseUint(string(lease.CredentialGeneration), 10, 64)
 	oldGen, _ := strconv.ParseUint(string(expected), 10, 64)
 	if e != nil || nextGen == 0 || nextGen < oldGen || (p.state.Invalidated && nextGen == oldGen) || lease.Binding != p.binding || lease.Enrollment.DomainID != p.binding.DomainID || lease.Enrollment.DeviceID != p.binding.DeviceID || lease.Enrollment.RelayID != p.binding.TargetServiceID || lease.Enrollment.RelaySignerIdentity == nil || lease.Enrollment.RelaySignerIdentity.PublicKey.Public != p.binding.RelayPublicKey || lease.ExpiresAt.IsZero() || !time.Now().Before(lease.ExpiresAt) || lease.ExpiresAt.After(lease.Enrollment.Access.ExpiresAt) {

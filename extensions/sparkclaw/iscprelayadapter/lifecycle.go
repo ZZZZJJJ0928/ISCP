@@ -145,7 +145,7 @@ func (a *Adapter) Revoke(ctx context.Context, op, dev string, revision uint64) e
 	if e != nil && e != pgx.ErrNoRows {
 		return unavailable()
 	}
-	if e == nil && revision <= prior {
+	if a.controlEpoch == "" && e == nil && revision <= prior {
 		return conflict("revocation_revision_conflict")
 	}
 	if e = a.revokeAuthority(ctx, tx, dev, revision); e != nil {

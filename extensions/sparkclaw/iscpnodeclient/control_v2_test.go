@@ -8,6 +8,7 @@ import (
 	node "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
 	c "github.com/Infinimesh-ai/ISCP/pkg/iscp/crypto"
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/identity"
+	"github.com/Infinimesh-ai/ISCP/pkg/iscp/trust"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -144,6 +145,10 @@ func TestControlHTTPSRecoveryNestedPinsIndependentGenerationsAndInstallACK(t *te
 	journal, err = (clientControlStore{again}).Load(t.Context())
 	if err != nil || journal.Pending != nil || journal.Generation != "2" {
 		t.Fatal("ACK not finalized", err)
+	}
+	saved := false
+	if _, err = again.PersistControlGrant(t.Context(), lease, func(trust.Grant) error { saved = true; return nil }); !errors.Is(err, control.ErrJournalCAS) || saved {
+		t.Fatal("old helper overwrote Grant after journal advanced", err)
 	}
 	relay.CredentialProvider().Close()
 }

@@ -140,7 +140,9 @@ func (a *Adapter) revokeAuthority(ctx context.Context, tx pgx.Tx, dev string, re
 	if a.controlEpoch == "" {
 		return nil
 	}
-	tag, err := tx.Exec(ctx, `UPDATE iscp_relay.device_authority SET authorization_revision=$4,state='revoked',state_version=state_version+1 WHERE scope_id=$1 AND domain_id=$2 AND device_id=$3 AND authorization_revision<$4 AND state_version<18446744073709551615`, a.cfg.RelayID, a.cfg.DomainID, dev, strconv.FormatUint(revision, 10))
+	// The caller's revision belongs to the issuer's standing authorization.
+	// This row is the independent Relay authority and advances its own counter.
+	tag, err := tx.Exec(ctx, `UPDATE iscp_relay.device_authority SET authorization_revision=authorization_revision+1,state='revoked',state_version=state_version+1 WHERE scope_id=$1 AND domain_id=$2 AND device_id=$3 AND authorization_revision<18446744073709551615 AND state_version<18446744073709551615`, a.cfg.RelayID, a.cfg.DomainID, dev)
 	if err != nil {
 		return unavailable()
 	}

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"time"
 
 	bridge "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
@@ -114,6 +115,18 @@ func (cl *Client) controlLifecycleLocked(ctx context.Context, kind string) (node
 	return out, nil
 }
 
+func (cl *Client) controlAuthorityError(err error) error {
+	var terminal *control.Error
+	if errors.As(err, &terminal) && (terminal.Code == "authorization_revoked" || terminal.Code == "authorization_ended") && terminal.AuthorizationRevision != nil {
+		revision, parseErr := strconv.ParseUint(string(*terminal.AuthorizationRevision), 10, 64)
+		if parseErr != nil || revision < cl.cfg.Revision {
+			return errors.New("issuer terminal authorization revision regressed")
+		}
+		return &bridge.CredentialAuthorityTermination{AuthorityPublicKey: cl.cfg.IssuerIdentity.PublicKey.Public, AuthorizationRevision: string(*terminal.AuthorizationRevision), Cause: err}
+	}
+	return err
+}
+
 // RecoverCredentialLease is the real provider callback. Both target signatures
 // and independent target generations are verified before returning the lease.
 // The encrypted pending result remains until CredentialLeaseInstalled is called.
@@ -125,7 +138,7 @@ func (cl *Client) RecoverCredentialLease(ctx context.Context, binding bridge.Cre
 	}
 	result, err := cl.controlResultLocked(ctx, "credential.recover")
 	if err != nil {
-		return bridge.CredentialLease{}, err
+		return bridge.CredentialLease{}, cl.controlAuthorityError(err)
 	}
 	child := result.Payload.Body.RelayResult
 	tokens := child.Payload.Body.RelayCredentials
@@ -227,7 +240,7 @@ func (cl *Client) CredentialLeaseInstalled(ctx context.Context, lease bridge.Cre
 	if err != nil {
 		return err
 	}
-	return coordinator.Installed(ctx, result.ResultDigest)
+	return cl.controlAuthorityError(coordinator.Installed(ctx, result.ResultDigest))
 }
 func (cl *Client) commitControlRenewalLocked() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)

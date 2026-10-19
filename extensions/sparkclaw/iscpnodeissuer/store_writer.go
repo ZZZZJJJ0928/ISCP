@@ -52,6 +52,20 @@ func (s *PostgresStore) ConfigureControlWriter(ctx context.Context, epoch string
 	s.writerEpoch = epoch
 	return nil
 }
+
+// RequireControlWriter is part of Store's explicit maintenance contract.
+// Update repeats this check under the aggregate transaction's writer lock.
+func (s *PostgresStore) RequireControlWriter(ctx context.Context) error {
+	if s.writerEpoch == "" {
+		return ErrWriterFenced
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	return s.lockWriter(ctx, tx)
+}
 func (s *PostgresStore) lockWriter(ctx context.Context, tx pgx.Tx) error {
 	var epoch, role string
 	var enabled bool

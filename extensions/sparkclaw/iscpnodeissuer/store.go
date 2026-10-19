@@ -72,6 +72,7 @@ type Operation struct {
 	Grant             *trust.Grant             `json:"grant,omitempty"`
 }
 type Store interface {
+	RequireControlWriter(context.Context) error
 	Create(context.Context, string, *State) error
 	Update(context.Context, string, func(*State) error) error
 	Read(context.Context, string) (*State, error)
@@ -241,6 +242,8 @@ type MemoryStore struct {
 
 func NewMemoryStore() *MemoryStore { return &MemoryStore{rows: map[string][]byte{}} }
 func (s *MemoryStore) Close()      {}
+
+func (s *MemoryStore) RequireControlWriter(context.Context) error { return nil }
 func (s *MemoryStore) Create(_ context.Context, id string, v *State) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
