@@ -562,32 +562,39 @@ func (e *Endpoint) acceptReady(ctx context.Context, env envelope.SecureEnvelope)
 }
 
 func (e *Endpoint) sendPayload(ctx context.Context, payloadType string, raw []byte, id string) error {
-	if err := ctx.Err(); err != nil {
+	wait, err := e.enqueuePayload(ctx, payloadType, raw, id)
+	if err != nil {
 		return err
+	}
+	return wait(ctx)
+}
+func (e *Endpoint) enqueuePayload(ctx context.Context, payloadType string, raw []byte, id string) (func(context.Context) error, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 	if (payloadType == RequestType || payloadType == ResponseType) && ctx.Value(streamSendContextKey{}) == nil {
 		started := latencytrace.Clock()
 		err := e.checkAuthorization(ctx)
 		latencytrace.Record(ctx, "rpc.send_authorization", started, err, 0)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 	if len(raw) > MaxMessageBytes {
-		return errors.New("workbench payload exceeds limit")
+		return nil, errors.New("workbench payload exceeds limit")
 	}
 	if err := verifyGrant(e.config, e.grantMaterial(), time.Now().UTC()); err != nil {
-		return err
+		return nil, err
 	}
 	e.mu.Lock()
 	s := e.session
 	if e.closed || s == nil || s.id != id || s.state == nil || !s.state.Ready() || (payloadType != manifestType && !s.manifest) {
 		e.mu.Unlock()
-		return errors.New("workbench encrypted session is not ready")
+		return nil, errors.New("workbench encrypted session is not ready")
 	}
 	if auth, ok := ctx.Value(streamSendContextKey{}).(streamSendAuthorization); ok && (!e.streamAuthorityValidLocked(auth.session, auth.generation) || auth.session != s) {
 		e.mu.Unlock()
-		return errStreamAuthority
+		return nil, errStreamAuthority
 	}
 	priority := 5
 	if class, ok := ctx.Value(capacityContextKey{}).(string); ok {
@@ -597,26 +604,36 @@ func (e *Endpoint) sendPayload(ctx context.Context, payloadType string, raw []by
 		priority = 9
 	}
 	env, err := envelope.Encrypt(e.provider, s.state, newUUID(), payloadType, envelope.Route{RelayID: e.material.enrollment.RelayID, TTLSeconds: 30, Priority: priority}, raw)
-	e.mu.Unlock()
+
 	if err != nil {
-		return errors.New("encrypt workbench payload")
+		e.mu.Unlock()
+		return nil, fmt.Errorf("encrypt workbench payload: %w", err)
 	}
-	ctx, cancel := context.WithTimeout(ctx, requestTimeout)
-	defer cancel()
-	if err := e.relay.Submit(ctx, env); err != nil {
-		// Preserve only the context classification, not private Relay error
-		// details. A single POST deadline is not evidence of a dead receive
-		// connection, and delivery may already have happened.
-		cause := ctx.Err()
-		if cause == nil {
-			cause = callContextError(err)
+	var wait func(context.Context) error
+	if sender, ok := e.relay.(interface {
+		Enqueue(context.Context, any) (*iscpbridge.ReceiptFuture, error)
+	}); ok {
+		future, err := sender.Enqueue(ctx, env)
+		e.mu.Unlock()
+		if err != nil {
+			return nil, fmt.Errorf("enqueue encrypted workbench payload: %w", err)
 		}
-		if cause != nil {
-			return fmt.Errorf("submit encrypted workbench payload: %w", cause)
+		wait = func(ctx context.Context) error { _, err := future.Wait(ctx); return err }
+	} else {
+		e.mu.Unlock()
+		if err := e.relay.Submit(ctx, env); err != nil {
+			return nil, fmt.Errorf("submit encrypted workbench payload: %w", err)
 		}
-		return errors.New("submit encrypted workbench payload")
+		wait = func(context.Context) error { return nil }
 	}
-	return nil
+	return func(ctx context.Context) error {
+		ctx, cancel := context.WithTimeout(ctx, requestTimeout)
+		defer cancel()
+		if err := wait(ctx); err != nil {
+			return fmt.Errorf("submit encrypted workbench payload: %w", err)
+		}
+		return nil
+	}, nil
 }
 
 func (e *Endpoint) acceptEncrypted(ctx context.Context, env envelope.SecureEnvelope) error {

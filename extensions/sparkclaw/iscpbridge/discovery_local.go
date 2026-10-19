@@ -100,7 +100,7 @@ func LocalRelayWebSocketURL(baseURL string) (string, error) {
 		return "", errors.New("invalid local Relay URL")
 	}
 	u.Scheme = "ws"
-	u.Path = "/v2/relay/connect"
+	u.Path = "/v2/relay/duplex"
 	ws := u.String()
 	if err := ValidateWorkbenchRelayURLs(ProfileLocalLab, baseURL, ws); err != nil {
 		return "", err

@@ -63,6 +63,25 @@ type NodeResponder struct {
 // the shared device queue. NodeResponder is the sole actual receive owner.
 type submitOnlyTransport struct{ relay RelayTransport }
 
+type asyncSubmitOnlyTransport struct{ submitOnlyTransport }
+
+func wrapSubmitOnlyTransport(relay RelayTransport) RelayTransport {
+	base := submitOnlyTransport{relay}
+	if _, ok := relay.(interface {
+		Enqueue(context.Context, any) (*iscpbridge.ReceiptFuture, error)
+	}); ok {
+		return asyncSubmitOnlyTransport{base}
+	}
+	return base
+}
+func (t asyncSubmitOnlyTransport) Enqueue(ctx context.Context, v any) (*iscpbridge.ReceiptFuture, error) {
+	if sender, ok := t.relay.(interface {
+		Enqueue(context.Context, any) (*iscpbridge.ReceiptFuture, error)
+	}); ok {
+		return sender.Enqueue(ctx, v)
+	}
+	return nil, errors.New("duplex asynchronous sender unavailable")
+}
 func (t submitOnlyTransport) Submit(ctx context.Context, v any) error { return t.relay.Submit(ctx, v) }
 func (t submitOnlyTransport) RunOnceReady(ctx context.Context, _ func(context.Context, json.RawMessage) error, ready func()) error {
 	if ready != nil {
@@ -212,7 +231,7 @@ func (n *NodeResponder) syncPeers(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		e, err := newEndpoint(cfg, m, submitOnlyTransport{n.relay}, handler, nil)
+		e, err := newEndpoint(cfg, m, wrapSubmitOnlyTransport(n.relay), handler, nil)
 		if err != nil {
 			return err
 		}

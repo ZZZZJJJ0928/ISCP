@@ -52,6 +52,7 @@ func (s *pendingStream) fail(err error) {
 }
 
 type streamSender struct {
+	receipts     []func(context.Context) error
 	latestOpenAt time.Time
 	mu           sync.Mutex
 	e            *Endpoint
@@ -82,6 +83,9 @@ func (e *Endpoint) streamLocalCheck(s *activeSession, g uint64) error {
 func (w *streamSender) Send(ctx context.Context, body json.RawMessage) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	if len(w.receipts) >= maxSessionMessages {
+		return errors.New("stream receipt window exhausted")
+	}
 	if w.ctx.Err() != nil {
 		return w.ctx.Err()
 	}
@@ -96,9 +100,11 @@ func (w *streamSender) Send(ctx context.Context, body json.RawMessage) error {
 	if err != nil || len(raw) > appstream.MaxBytes {
 		return appstream.ErrInvalid
 	}
-	if err = w.e.sendPayload(streamSendContext(ctx, w.session, w.generation), appstream.Type, raw, w.session.id); err != nil {
+	wait, err := w.e.enqueuePayload(streamSendContext(ctx, w.session, w.generation), appstream.Type, raw, w.session.id)
+	if err != nil {
 		return err
 	}
+	w.receipts = append(w.receipts, wait)
 	w.seq++
 	return nil
 }
@@ -564,7 +570,17 @@ func (e *Endpoint) runStreamRequest(ctx context.Context, r Request, latest time.
 	}
 	w.mu.Lock()
 	last := w.seq
+	receipts := append([]func(context.Context) error(nil), w.receipts...)
+	w.receipts = nil
 	w.mu.Unlock()
+	// All preview frames are queued before this barrier; receipt latency never
+	// serializes generation of each delta. Application completion is separate.
+	for _, wait := range receipts {
+		if wait(ctx) != nil {
+			terminal.Reason = "preview_unavailable"
+			break
+		}
+	}
 	completion := appstream.Completion{SchemaVersion: 1, LastStreamSeq: last, Reason: terminal.Reason}
 	if completion.Validate() != nil {
 		completion.Reason = "preview_unavailable"

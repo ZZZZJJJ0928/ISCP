@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
 	"github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
 	c "github.com/Infinimesh-ai/ISCP/pkg/iscp/crypto"
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/envelope"
@@ -245,10 +246,23 @@ func (p *Peer) sendForSession(ctx context.Context, msg rpc, sessionID string) er
 		return iscpnodeissuer.ErrUnavailable
 	}
 	env, e := envelope.Encrypt(c.NewProvider(), p.state, "ctl-rpc-"+c.Base64URL(c.RandomBytes(18)), payloadType, envelope.Route{RelayID: p.cfg.RelayID, TTLSeconds: 60}, raw)
-	p.mu.Unlock()
+
 	if e != nil {
+		p.mu.Unlock()
 		return e
 	}
+	if sender, ok := p.relay.(interface {
+		Enqueue(context.Context, any) (*iscpbridge.ReceiptFuture, error)
+	}); ok {
+		future, err := sender.Enqueue(ctx, env)
+		p.mu.Unlock()
+		if err != nil {
+			return err
+		}
+		_, err = future.Wait(ctx)
+		return err
+	}
+	p.mu.Unlock()
 	return p.relay.Submit(ctx, env)
 }
 func (p *Peer) Call(ctx context.Context, method string, input, out any) error {
@@ -309,7 +323,6 @@ func (p *Peer) Run(ctx context.Context) error {
 			}
 			continue
 		}
-		_ = p.begin(ctx)
 		_ = p.receiveContinuous(ctx)
 		timer := time.NewTimer(2 * time.Second)
 		select {
@@ -351,7 +364,7 @@ func (p *Peer) receiveContinuous(ctx context.Context) error {
 			}
 		}
 	}()
-	err := p.relay.RunOnceReady(ctx, p.receive, func() {})
+	err := p.relay.RunOnceReady(ctx, p.receive, func() { _ = p.begin(ctx) })
 	cancel()
 	<-done
 	return err

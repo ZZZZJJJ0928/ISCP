@@ -42,7 +42,7 @@ func ValidateWorkbenchRelayURLs(profile, baseURL, websocketURL string) error {
 		if host != "localhost" && host != "iscp-relay" && (ip == nil || !ip.IsLoopback()) {
 			return errors.New("local-lab Relay host must be loopback or iscp-relay")
 		}
-		if (i == 0 && strings.Trim(u.Path, "/") != "") || (i == 1 && u.Path != "/v2/relay/connect") {
+		if (i == 0 && strings.Trim(u.Path, "/") != "") || (i == 1 && u.Path != "/v2/relay/duplex") {
 			return errors.New("local-lab Relay endpoint path is invalid")
 		}
 	}
@@ -61,7 +61,7 @@ func ValidateNodeRelayURLs(baseURL, websocketURL string) error {
 	if err != nil {
 		return errors.New("invalid node Relay WSS endpoint")
 	}
-	if base.Scheme != "https" || ws.Scheme != "wss" || net.ParseIP(base.Hostname()) == nil || base.Host != ws.Host || base.User != nil || ws.User != nil || base.Path != "" || ws.Path != "/v2/relay/connect" || base.RawQuery != "" || ws.RawQuery != "" || base.Fragment != "" || ws.Fragment != "" || base.Opaque != "" || ws.Opaque != "" || baseURL != base.String() || websocketURL != ws.String() {
+	if base.Scheme != "https" || ws.Scheme != "wss" || net.ParseIP(base.Hostname()) == nil || base.Host != ws.Host || base.User != nil || ws.User != nil || base.Path != "" || ws.Path != "/v2/relay/duplex" || base.RawQuery != "" || ws.RawQuery != "" || base.Fragment != "" || ws.Fragment != "" || base.Opaque != "" || ws.Opaque != "" || baseURL != base.String() || websocketURL != ws.String() {
 		return errors.New("node-managed Relay requires one canonical IP HTTPS/WSS origin")
 	}
 	return nil
