@@ -302,7 +302,7 @@ func (cl *Client) verifyResult(r iscpnodeissuer.EnrollmentResult) error {
 	if r.Version != 1 || r.InvitationID != cl.cfg.InvitationID || iscpnodeissuer.Digest(r.Identity) != iscpnodeissuer.Digest(cl.device.Identity) || r.Binding != cl.cfg.Binding || r.AuthorizationRevision != cl.cfg.Revision || iscpnodeissuer.Digest(r.Scopes) != iscpnodeissuer.Digest(cl.cfg.Scopes) || r.Enrollment.RelayID != cl.cfg.RelayID || r.Enrollment.RelayBaseURL != cl.cfg.Origin || r.Enrollment.DeviceID != cl.device.Identity.DeviceID || r.Enrollment.Mode != iscpnodeissuer.NodeBundleMode || iscpnodeissuer.Digest(r.IssuerIdentity) != iscpnodeissuer.Digest(cl.cfg.IssuerIdentity) || iscpnodeissuer.Digest(r.ResponderIdentity) != iscpnodeissuer.Digest(cl.cfg.ResponderIdentity) || r.Enrollment.RelaySignerIdentity == nil || iscpnodeissuer.Digest(*r.Enrollment.RelaySignerIdentity) != iscpnodeissuer.Digest(cl.cfg.RelaySignerIdentity) {
 		return iscpnodeissuer.ErrDenied
 	}
-	if r.Enrollment.DomainID != cl.device.Identity.DomainID || r.Enrollment.RelayWebSocketURL != "wss"+cl.cfg.Origin[5:]+"/v2/relay/connect" || r.Enrollment.TLSCertificatePEM != cl.cfg.TLSCertificatePEM || r.Enrollment.InvitationSignerIdentity == nil {
+	if r.Enrollment.DomainID != cl.device.Identity.DomainID || r.Enrollment.RelayWebSocketURL != "wss"+cl.cfg.Origin[5:]+"/v2/relay/duplex" || r.Enrollment.TLSCertificatePEM != cl.cfg.TLSCertificatePEM || r.Enrollment.InvitationSignerIdentity == nil {
 		return iscpnodeissuer.ErrDenied
 	}
 	for _, token := range []iscpbridge.RelayCredential{r.Enrollment.Access, r.Enrollment.Refresh} {

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
@@ -67,7 +68,7 @@ func (r *RelayClient) CredentialBinding() CredentialBinding {
 // original subject/resource/pins have been verified. No binding is guessed from
 // transport URLs. It must precede starting the socket owner.
 func (r *RelayClient) ConfigureCredentialProvider(binding CredentialBinding, recovery CredentialRecovery) error {
-	if recovery == nil || binding.TLSCertificateSHA256 != c.Base64URL(c.SHA256([]byte(r.enrollment.TLSCertificatePEM))) || binding.DomainID != r.device.Identity.DomainID || binding.DeviceID != r.device.Identity.DeviceID || binding.ResourceBindingID == "" || binding.TargetServiceID == "" || binding.RelayPublicKey == "" || binding.IssuerPublicKey == "" || binding.TLSCertificateSHA256 == "" {
+	if !filepath.IsAbs(r.enrollmentPath) || recovery == nil || binding.TLSCertificateSHA256 != c.Base64URL(c.SHA256([]byte(r.enrollment.TLSCertificatePEM))) || binding.DomainID != r.device.Identity.DomainID || binding.DeviceID != r.device.Identity.DeviceID || binding.ResourceBindingID == "" || binding.TargetServiceID == "" || binding.RelayPublicKey == "" || binding.IssuerPublicKey == "" || binding.TLSCertificateSHA256 == "" {
 		return errors.New("credential provider needs original verified binding and pins")
 	}
 	key, e := c.NewProvider().HKDF(r.device.Private.BytesForDevStore(), nil, []byte("iscp/credential-state/v2\x00"+r.device.Identity.PublicKey.KID), 32)
@@ -76,7 +77,14 @@ func (r *RelayClient) ConfigureCredentialProvider(binding CredentialBinding, rec
 	}
 	root, cancel := context.WithCancel(context.Background())
 	p := &managedCredentialProvider{relay: r, binding: binding, recovery: recovery, root: root, cancel: cancel, key: key, path: r.enrollmentPath + ".credentials.v2", subscribers: map[chan CredentialEvent]struct{}{}, state: credentialState{Binding: binding}}
-	if e = p.load(); e != nil {
+	unlock, e := lockCredentialFile(root, p.path+".lock")
+	if e != nil {
+		cancel()
+		return e
+	}
+	e = p.load()
+	unlock()
+	if e != nil {
 		cancel()
 		return e
 	}
@@ -95,6 +103,9 @@ func (r *RelayClient) ConfigureCredentialProvider(binding CredentialBinding, rec
 func (p *managedCredentialProvider) load() error {
 	info, e := os.Lstat(p.path)
 	if errors.Is(e, os.ErrNotExist) {
+		if p.state.Version != 0 {
+			return errors.New("durable credential history disappeared")
+		}
 		return nil
 	}
 	if e != nil {
@@ -122,7 +133,23 @@ func (p *managedCredentialProvider) load() error {
 	if state.Lease != nil && (state.Lease.Binding != p.binding || state.Lease.CredentialGeneration != state.Generation || state.Lease.StateVersion != state.Version) {
 		return errors.New("credential state CAS metadata differs")
 	}
+	if state.Version < p.state.Version {
+		return errors.New("durable credential state version regressed")
+	}
+	previous := p.state
 	p.state = state
+	if state.Lease != nil {
+		p.relay.mu.Lock()
+		p.relay.enrollment = state.Lease.Enrollment
+		p.relay.mu.Unlock()
+	}
+	if state.Version > previous.Version {
+		event := p.eventLocked()
+		if previous.AuthorizationRevision != "" && previous.AuthorizationRevision != state.AuthorizationRevision && event.Reason != CredentialRevoked {
+			event.Reason = ScopeChanged
+		}
+		p.publishEventLocked(event)
+	}
 	return nil
 }
 func (p *managedCredentialProvider) persist(state credentialState) error {
@@ -135,7 +162,10 @@ func (p *managedCredentialProvider) persist(state credentialState) error {
 	if e != nil {
 		return e
 	}
-	return writeSecretFile(p.path, []byte(c.Base64URL(append(nonce, ct...))))
+	if e = writeSecretFile(p.path, []byte(c.Base64URL(append(nonce, ct...)))); e != nil {
+		return e
+	}
+	return syncCredentialDirectory(filepath.Dir(p.path))
 }
 func (p *managedCredentialProvider) EnsureAccess(ctx context.Context, binding CredentialBinding) (CredentialLease, error) {
 	p.mu.Lock()
@@ -146,6 +176,17 @@ func (p *managedCredentialProvider) EnsureAccess(ctx context.Context, binding Cr
 	if binding != p.binding {
 		p.mu.Unlock()
 		return CredentialLease{}, errors.New("credential binding changed")
+	}
+	unlock, err := lockCredentialFile(ctx, p.path+".lock")
+	if err != nil {
+		p.mu.Unlock()
+		return CredentialLease{}, err
+	}
+	err = p.load()
+	unlock()
+	if err != nil {
+		p.mu.Unlock()
+		return CredentialLease{}, err
 	}
 	if p.state.Reason == CredentialRevoked {
 		p.mu.Unlock()
@@ -161,7 +202,8 @@ func (p *managedCredentialProvider) EnsureAccess(ctx context.Context, binding Cr
 		f = &credentialFlight{done: make(chan struct{})}
 		p.flight = f
 		expected := p.state.Generation
-		go p.recover(f, expected)
+		version := p.state.Version
+		go p.recover(f, expected, version)
 	}
 	p.mu.Unlock()
 	select {
@@ -171,7 +213,7 @@ func (p *managedCredentialProvider) EnsureAccess(ctx context.Context, binding Cr
 		return copyCredentialLease(f.lease), f.err
 	}
 }
-func (p *managedCredentialProvider) recover(f *credentialFlight, expected CredentialGeneration) {
+func (p *managedCredentialProvider) recover(f *credentialFlight, expected CredentialGeneration, version uint64) {
 	ctx, cancel := context.WithTimeout(p.root, 30*time.Second)
 	defer cancel()
 	lease, err := p.recovery(ctx, p.binding, expected)
@@ -183,13 +225,38 @@ func (p *managedCredentialProvider) recover(f *credentialFlight, expected Creden
 		f.err = context.Canceled
 		return
 	}
-	if expected != p.state.Generation {
-		f.err = errors.New("credential recovery CAS lost")
+	unlock, lockErr := lockCredentialFile(ctx, p.path+".lock")
+	if lockErr != nil {
+		f.err = lockErr
 		return
 	}
+	defer unlock()
+	if e := p.load(); e != nil {
+		f.err = e
+		return
+	}
+	if expected != p.state.Generation || version != p.state.Version {
+		if p.state.Lease != nil && !p.state.Invalidated && time.Now().Before(p.state.Lease.ExpiresAt) {
+			f.lease = copyCredentialLease(*p.state.Lease)
+			p.relay.mu.Lock()
+			p.relay.enrollment = f.lease.Enrollment
+			p.relay.mu.Unlock()
+			p.publishLocked()
+			return
+		}
+		f.err = errors.New("credential recovery lost durable CAS")
+		return
+	}
+
 	if err != nil {
 		var typed *control.Error
 		if errors.As(err, &typed) && (typed.Code == "authorization_revoked" || typed.Code == "authorization_ended") && typed.AuthorizationRevision != nil {
+			newRev, revErr := strconv.ParseUint(string(*typed.AuthorizationRevision), 10, 64)
+			oldRev, _ := strconv.ParseUint(p.state.AuthorizationRevision, 10, 64)
+			if revErr != nil || newRev < oldRev {
+				f.err = err
+				return
+			}
 			next := p.state
 			next.Lease = nil
 			next.Version++
@@ -259,11 +326,27 @@ func (p *managedCredentialProvider) Invalidate(binding CredentialBinding, expect
 	if p.closed {
 		return context.Canceled
 	}
+	ctx, cancel := context.WithTimeout(p.root, 5*time.Second)
+	defer cancel()
+	unlock, e := lockCredentialFile(ctx, p.path+".lock")
+	if e != nil {
+		return e
+	}
+	defer unlock()
+	if e = p.load(); e != nil {
+		return e
+	}
 	if expected != p.state.Generation || p.state.Reason == CredentialRevoked || p.state.Invalidated {
 		return nil
 	}
 	next := p.state
 	next.Invalidated = true
+	next.Version++
+	if next.Lease != nil {
+		lease := copyCredentialLease(*next.Lease)
+		lease.StateVersion = next.Version
+		next.Lease = &lease
+	}
 	if e := p.persist(next); e != nil {
 		return e
 	}
@@ -278,17 +361,26 @@ func (p *managedCredentialProvider) eventLocked() CredentialEvent {
 	}
 	return event
 }
-func (p *managedCredentialProvider) publishLocked() {
-	event := p.eventLocked()
+func (p *managedCredentialProvider) publishLocked() { p.publishEventLocked(p.eventLocked()) }
+func (p *managedCredentialProvider) publishEventLocked(event CredentialEvent) {
 	for ch := range p.subscribers {
 		select {
 		case ch <- event:
 		default:
+			next := event
 			select {
-			case <-ch:
+			case pending := <-ch:
+				if pending.Reason == CredentialRevoked {
+					next.Reason = CredentialRevoked
+					next.Lease = nil
+				} else if pending.Reason == IdentityChanged && next.Reason != CredentialRevoked {
+					next.Reason = IdentityChanged
+				} else if pending.Reason == ScopeChanged && next.Reason != CredentialRevoked && next.Reason != IdentityChanged {
+					next.Reason = ScopeChanged
+				}
 			default:
 			}
-			ch <- event
+			ch <- next
 		}
 	}
 }
