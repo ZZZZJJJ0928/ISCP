@@ -100,6 +100,9 @@ func (s *Server) stopReceiver(domain, device string) {
 func (s *Server) Close() {
 	s.duplexMu.Lock()
 	s.duplexClosed = true
+	if s.maintenanceCancel != nil {
+		s.maintenanceCancel()
+	}
 	for c := range s.duplexAll {
 		c.cancel()
 		c.ws.Close()

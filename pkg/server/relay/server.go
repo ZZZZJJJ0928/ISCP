@@ -69,34 +69,35 @@ type ManagedRegistrationDiscloser interface {
 }
 
 type Server struct {
-	duplexMu        sync.Mutex
-	duplexOwners    map[string]*duplexConnection
-	duplexAll       map[*duplexConnection]struct{}
-	duplexClosed    bool
-	duplexWG        sync.WaitGroup
-	admissionCommit func(context.Context, pgx.Tx) error
-	cfg             Config
-	provider        crypto.Provider
-	signer          identity.Device
-	writerEpoch     string
-	mux             *http.ServeMux
-	replay          *replay.Cache
-	queue           *queue.Queue
-	repo            *repository.RelayRepository
-	upgrader        websocket.Upgrader
-	mu              sync.RWMutex
-	devices         map[string]identity.DeviceIdentity
-	access          map[string]credential
-	refresh         map[string]credential
-	revoked         map[string]struct{}
-	tickets         map[string]ticketState
-	connections     map[string]connectionState
-	startedAt       time.Time
-	receiveMu       sync.Mutex
-	receivers       map[string]*receiveSlot
-	receiveClosed   bool
-	queueMu         sync.Mutex
-	reservedBytes   int
+	duplexMu          sync.Mutex
+	duplexOwners      map[string]*duplexConnection
+	duplexAll         map[*duplexConnection]struct{}
+	duplexClosed      bool
+	duplexWG          sync.WaitGroup
+	maintenanceCancel context.CancelFunc
+	admissionCommit   func(context.Context, pgx.Tx) error
+	cfg               Config
+	provider          crypto.Provider
+	signer            identity.Device
+	writerEpoch       string
+	mux               *http.ServeMux
+	replay            *replay.Cache
+	queue             *queue.Queue
+	repo              *repository.RelayRepository
+	upgrader          websocket.Upgrader
+	mu                sync.RWMutex
+	devices           map[string]identity.DeviceIdentity
+	access            map[string]credential
+	refresh           map[string]credential
+	revoked           map[string]struct{}
+	tickets           map[string]ticketState
+	connections       map[string]connectionState
+	startedAt         time.Time
+	receiveMu         sync.Mutex
+	receivers         map[string]*receiveSlot
+	receiveClosed     bool
+	queueMu           sync.Mutex
+	reservedBytes     int
 }
 
 type credential struct {
@@ -176,6 +177,7 @@ func New(cfg Config) (*Server, error) {
 		receivers:   map[string]*receiveSlot{},
 	}
 	s.routes()
+	s.startDuplexCleanup()
 	return s, nil
 }
 
@@ -483,8 +485,13 @@ func (s *Server) revokeAccess(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusForbidden, iscperrors.New(iscperrors.CodeAccessInvalid, "access credential cannot revoke another device"))
 		return
 	}
+	if s.repo != nil {
+		if err := s.revokePersistentDevice(r.Context(), req.DeviceID, bearerToken(r), s.adminAuthorized(r)); err != nil {
+			httpx.WriteError(w, http.StatusServiceUnavailable, err)
+			return
+		}
+	}
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.revoked[req.DeviceID] = struct{}{}
 	for k, cred := range s.access {
 		if cred.DeviceID == req.DeviceID {
@@ -498,17 +505,14 @@ func (s *Server) revokeAccess(w http.ResponseWriter, r *http.Request) {
 			s.refresh[k] = cred
 		}
 	}
+	s.mu.Unlock()
 	s.stopReceiver(s.cfg.DomainID, req.DeviceID)
-	if s.repo != nil {
-		now := time.Now().UTC()
-		if err := s.repo.RevokeDevice(r.Context(), repository.DomainID(s.cfg.DomainID), req.DeviceID, now); err != nil {
-			httpx.WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
-		if err := s.repo.RevokeDeviceCredentials(r.Context(), repository.DomainID(s.cfg.DomainID), req.DeviceID, now); err != nil {
-			httpx.WriteError(w, http.StatusInternalServerError, err)
-			return
-		}
+	s.duplexMu.Lock()
+	owner := s.duplexOwners[receiveKey(s.cfg.DomainID, req.DeviceID)]
+	s.duplexMu.Unlock()
+	if owner != nil {
+		owner.cancel()
+		_ = owner.ws.Close()
 	}
 	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "revoked"})
 }
