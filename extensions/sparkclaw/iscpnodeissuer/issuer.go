@@ -17,6 +17,8 @@ import (
 )
 
 type Config struct {
+	ControlRelay     ControlRelay
+	EnableControlV2  bool
 	Template         Credential
 	Issuer           identity.Device
 	InvitationSigner identity.Device
@@ -104,6 +106,9 @@ func (i *Issuer) createInvitation(ctx context.Context, name string, ttl time.Dur
 		return "", ErrInvalid
 	}
 	st := &State{Credential: v, ClientName: name, State: "client_pending", Revision: 1, Operations: map[string]*Operation{}}
+	if i.cfg.EnableControlV2 {
+		st.Control = newControlState()
+	}
 	e = i.store.Create(ctx, id, st)
 	if errors.Is(e, ErrConflict) {
 		st, e = i.store.Read(ctx, id)
@@ -509,6 +514,16 @@ func (i *Issuer) Registry(ctx context.Context) (PeerRegistry, error) {
 		for _, o := range s.Operations {
 			if o.Grant != nil && o.Grant.NotBefore.After(grant.NotBefore) {
 				grant = *o.Grant
+			}
+		}
+		if s.Control != nil {
+			for _, record := range s.Control.Records {
+				if record.State == "succeeded" && record.Result != nil && record.Result.Payload.Body.Grant != nil {
+					g := record.Result.Payload.Body.Grant
+					if g.NotBefore.After(grant.NotBefore) {
+						grant = *g
+					}
+				}
 			}
 		}
 		out.Peers = append(out.Peers, RegistryPeer{*s.Device, grant, result.Binding, result.Scopes, result.InstallationID, s.Revision, s.State == "revoked"})

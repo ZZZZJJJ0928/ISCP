@@ -20,23 +20,26 @@ import (
 )
 
 type Config struct {
-	SchemaVersion    int                       `json:"schema_version,omitempty"`
-	DomainID         string                    `json:"domain_id"`
-	RelayID          string                    `json:"relay_id"`
-	InvitationSigner identity.DeviceIdentity   `json:"invitation_signer"`
-	GrantSigner      identity.DeviceIdentity   `json:"grant_signer"`
-	Responder        identity.DeviceIdentity   `json:"responder"`
-	ServicePeers     []identity.DeviceIdentity `json:"service_peers,omitempty"`
-	issuerRoute      string
+	ControlIssuerActor *identity.DeviceIdentity  `json:"control_issuer_actor,omitempty"`
+	SchemaVersion      int                       `json:"schema_version,omitempty"`
+	DomainID           string                    `json:"domain_id"`
+	RelayID            string                    `json:"relay_id"`
+	InvitationSigner   identity.DeviceIdentity   `json:"invitation_signer"`
+	GrantSigner        identity.DeviceIdentity   `json:"grant_signer"`
+	Responder          identity.DeviceIdentity   `json:"responder"`
+	ServicePeers       []identity.DeviceIdentity `json:"service_peers,omitempty"`
+	issuerRoute        string
 }
 
 type Adapter struct {
-	cfg         Config
-	db          *pgxpool.Pool
-	Invalidate  func(string)
-	MarkRevoked func(string)
-	Now         func() time.Time
-	authority   string
+	controlEpoch   string
+	controlBackend *ControlBackend
+	cfg            Config
+	db             *pgxpool.Pool
+	Invalidate     func(string)
+	MarkRevoked    func(string)
+	Now            func() time.Time
+	authority      string
 }
 
 type Error struct {

@@ -298,6 +298,21 @@ func (a *Adapter) storeGrant(ctx context.Context, tx pgx.Tx, id identity.DeviceI
 	}
 	return nil
 }
+func (a *Adapter) issueGeneration(ctx context.Context, tx pgx.Tx, dev, generation string) (node.RelayCredentials, error) {
+	tokens, e := a.issue(ctx, tx, dev)
+	if e != nil {
+		return tokens, e
+	}
+	tag, e := tx.Exec(ctx, "UPDATE iscp_relay.access_tokens SET credential_generation=$4 WHERE domain_id=$1 AND device_id=$2 AND token_hash=$3", a.cfg.DomainID, dev, c.SHA256([]byte(tokens.Access.Token)), generation)
+	if e != nil || tag.RowsAffected() != 1 {
+		return node.RelayCredentials{}, unavailable()
+	}
+	tag, e = tx.Exec(ctx, "UPDATE iscp_relay.refresh_tokens SET credential_generation=$4 WHERE domain_id=$1 AND device_id=$2 AND refresh_hash=$3", a.cfg.DomainID, dev, c.SHA256([]byte(tokens.Refresh.Token)), generation)
+	if e != nil || tag.RowsAffected() != 1 {
+		return node.RelayCredentials{}, unavailable()
+	}
+	return tokens, nil
+}
 func (a *Adapter) issue(ctx context.Context, tx pgx.Tx, dev string) (node.RelayCredentials, error) {
 	if e := a.owned(ctx, tx, dev); e != nil {
 		return node.RelayCredentials{}, e

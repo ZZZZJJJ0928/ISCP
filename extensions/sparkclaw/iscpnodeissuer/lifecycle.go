@@ -123,6 +123,9 @@ func (i *Issuer) lifecycle(ctx context.Context, x Exchange) (ExchangeResponse, e
 	if e != nil {
 		return ExchangeResponse{}, e
 	}
+	if s.Control != nil && i.cfg.EnableControlV2 && (req.Kind == "renew" || req.Kind == "recover") {
+		return ExchangeResponse{}, ErrDenied
+	}
 	if s.Device == nil || Digest(*s.Device) != Digest(req.Identity) {
 		return ExchangeResponse{}, ErrDenied
 	}

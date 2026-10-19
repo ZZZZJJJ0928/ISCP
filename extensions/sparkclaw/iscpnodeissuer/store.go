@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"errors"
+	control "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpcontrol"
 	c "github.com/Infinimesh-ai/ISCP/pkg/iscp/crypto"
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/identity"
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/trust"
@@ -17,6 +18,7 @@ import (
 // State is one encrypted aggregate, locked in PostgreSQL for every transition.
 // Invitation binding and operation receipts therefore cannot race consumption.
 type State struct {
+	Control             *ControlState            `json:"control_v2,omitempty"`
 	Credential          Credential               `json:"credential"`
 	ClientName          string                   `json:"client_name"`
 	State               string                   `json:"state"`
@@ -27,6 +29,25 @@ type State struct {
 	RevocationOperation string                   `json:"revocation_operation,omitempty"`
 	RevokedAt           time.Time                `json:"revoked_at,omitempty"`
 	RelayRevoked        bool                     `json:"relay_revoked"`
+}
+
+// ControlState is never inferred from a missing legacy record. New bindings
+// create a fresh namespace; restore/import requires an explicit history gate.
+type ControlState struct {
+	HistoryID       string                     `json:"history_id"`
+	HistoryComplete bool                       `json:"history_complete"`
+	Closed          bool                       `json:"closed"`
+	Generation      control.Counter            `json:"credential_generation"`
+	Records         map[string]*control.Record `json:"records"`
+	Parents         map[string]*ControlParent  `json:"parents"`
+}
+type ControlParent struct {
+	ChildAck         *control.Ack         `json:"child_ack,omitempty"`
+	Grant            *trust.Grant         `json:"grant,omitempty"`
+	ChildIntent      *control.Intent      `json:"child_intent,omitempty"`
+	ChildResult      *control.Result      `json:"child_result,omitempty"`
+	ChildDisposition *control.Disposition `json:"child_disposition,omitempty"`
+	ChildIndex       control.Counter      `json:"child_index"`
 }
 type Operation struct {
 	AppliedAt         time.Time                `json:"applied_at,omitempty"`
