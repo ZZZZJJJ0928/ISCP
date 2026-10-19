@@ -142,6 +142,13 @@ func newEndpoint(cfg Config, m material, relay RelayTransport, handler Handler, 
 		return nil, errors.New("workbench responder requires a handler")
 	}
 	e := &Endpoint{config: cfg, material: m, provider: iscpcrypto.NewProvider(), relay: relay, handler: handler, onState: onState, pending: map[string]*pendingCall{}, slots: make(chan struct{}, MaxConcurrent), classSlots: map[string]chan struct{}{"control": make(chan struct{}, CapacityLimit("control")), "bulk": make(chan struct{}, CapacityLimit("bulk")), "events": make(chan struct{}, CapacityLimit("events")), "audio": make(chan struct{}, CapacityLimit("audio"))}}
+	if sender, ok := relay.(interface{ SetSessionUsable(func(string) bool) }); ok {
+		sender.SetSessionUsable(func(id string) bool {
+			e.mu.Lock()
+			defer e.mu.Unlock()
+			return !e.closed && e.session != nil && e.session.id == id && e.session.state != nil && e.session.state.Ready() && e.session.ctx.Err() == nil
+		})
+	}
 	if cfg.Mode == "node-managed" && cfg.Role == RoleInitiator {
 		client, err := newNodeLifecycle(cfg, m)
 		if err != nil {
@@ -755,4 +762,14 @@ func newUUID() string {
 	raw[6] = (raw[6] & 15) | 64
 	raw[8] = (raw[8] & 63) | 128
 	return fmt.Sprintf("%x-%x-%x-%x-%x", raw[:4], raw[4:6], raw[6:8], raw[8:10], raw[10:])
+}
+
+// RelaySubmissionStatus exposes recovery metadata without ciphertext to helper IPC.
+func (e *Endpoint) RelaySubmissionStatus(messageID string) (iscpbridge.RelaySubmissionStatus, bool) {
+	if source, ok := e.relay.(interface {
+		SubmissionStatus(string) (iscpbridge.RelaySubmissionStatus, bool)
+	}); ok {
+		return source.SubmissionStatus(messageID)
+	}
+	return iscpbridge.RelaySubmissionStatus{}, false
 }

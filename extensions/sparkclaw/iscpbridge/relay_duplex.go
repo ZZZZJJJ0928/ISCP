@@ -29,13 +29,16 @@ type RelaySubmission = duplex.Submission
 type AcceptanceReceipt = duplex.Receipt
 
 type ReceiptFuture struct {
-	Submission RelaySubmission
-	done       chan struct{}
-	mu         sync.Mutex
-	result     *AcceptanceReceipt
-	err        error
-	written    bool
-	completed  bool
+	owner        *RelayClient
+	sessionCheck func(string) bool
+	uncertain    bool
+	Submission   RelaySubmission
+	done         chan struct{}
+	mu           sync.Mutex
+	result       *AcceptanceReceipt
+	err          error
+	written      bool
+	completed    bool
 }
 
 func (f *ReceiptFuture) finish(r *AcceptanceReceipt, e error) {
@@ -56,6 +59,12 @@ func (f *ReceiptFuture) Wait(ctx context.Context) (*AcceptanceReceipt, error) {
 		defer f.mu.Unlock()
 		return f.result, f.err
 	case <-ctx.Done():
+		f.mu.Lock()
+		f.uncertain = true
+		f.mu.Unlock()
+		if f.owner != nil {
+			f.owner.markRelayUnknown(f.Submission)
+		}
 		return nil, &UnknownAcceptance{Submission: f.Submission, Cause: ctx.Err()}
 	}
 }
@@ -164,6 +173,9 @@ func (c *RelayClient) Resubmit(ctx context.Context, sub RelaySubmission) (*Recei
 	return s.enqueue(sub, false)
 }
 func (s *relaySocket) enqueue(sub RelaySubmission, query bool) (*ReceiptFuture, error) {
+	return s.enqueueWithSession(sub, query, nil)
+}
+func (s *relaySocket) enqueueWithSession(sub RelaySubmission, query bool, check func(string) bool) (*ReceiptFuture, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.ctx.Err() != nil {
@@ -187,7 +199,7 @@ func (s *relaySocket) enqueue(sub RelaySubmission, query bool) (*ReceiptFuture, 
 	if s.bytes+len(raw) > 8*duplex.MaxFrameBytes {
 		return nil, &NotSent{Cause: errors.New("Relay send queue exhausted")}
 	}
-	future := &ReceiptFuture{Submission: sub, done: make(chan struct{})}
+	future := &ReceiptFuture{owner: s.owner, sessionCheck: check, Submission: sub, done: make(chan struct{})}
 	select {
 	case s.data <- relayWrite{frame: f, future: future}:
 		s.queued[future] = len(raw)
@@ -214,6 +226,9 @@ func (c *RelayClient) RunOnceReady(ctx context.Context, handle func(context.Cont
 	epoch := c.connectionEpoch
 	c.socketMu.Unlock()
 	defer func() { c.socketMu.Lock(); c.running = false; c.socket = nil; c.socketMu.Unlock() }()
+	if e := c.initRelayJournal(); e != nil {
+		return e
+	}
 	if e := c.ensureAccess(ctx); e != nil {
 		return e
 	}
@@ -298,7 +313,8 @@ func (c *RelayClient) RunOnceReady(ctx context.Context, handle func(context.Cont
 		return ws.WriteControl(websocket.PongMessage, []byte(data), time.Now().Add(5*time.Second))
 	})
 	_ = ws.SetReadDeadline(time.Now().Add(60 * time.Second))
-	s.workers.Add(3)
+	s.workers.Add(4)
+	go func() { defer s.workers.Done(); s.recoverPending() }()
 	go func() { defer s.workers.Done(); s.writer() }()
 	go func() { defer s.workers.Done(); s.credentials() }()
 	go func() {
@@ -397,6 +413,28 @@ func (s *relaySocket) writer() {
 // Allocate request IDs at the single writer, so control frames may overtake
 // paused data without causing the peer to observe decreasing request IDs.
 func (s *relaySocket) write(w relayWrite) error {
+	if w.future != nil && w.frame.Kind == "submit" {
+		if w.future.sessionCheck != nil && !w.future.sessionCheck(w.future.Submission.SessionID) {
+			w.future.finish(nil, &NotSent{Cause: errors.New("original E2E session ended")})
+			s.mu.Lock()
+			s.bytes -= s.queued[w.future]
+			delete(s.queued, w.future)
+			s.mu.Unlock()
+			return nil
+		}
+		w.future.mu.Lock()
+		uncertain := w.future.uncertain
+		w.future.mu.Unlock()
+		if err := s.owner.journalBeforeWrite(w.future.Submission, uncertain); err != nil {
+			w.future.finish(nil, &NotSent{Cause: err})
+			s.mu.Lock()
+			s.bytes -= s.queued[w.future]
+			delete(s.queued, w.future)
+			s.mu.Unlock()
+			return nil
+		}
+	}
+
 	s.mu.Lock()
 	if w.frame.Kind != "reauthenticate" {
 		if s.request == ^uint64(0) {
@@ -424,6 +462,7 @@ func (s *relaySocket) failPending() {
 		f.mu.Unlock()
 		var e error = &NotSent{Cause: errors.New("Relay disconnected before write")}
 		if written {
+			s.owner.markRelayUnknown(f.Submission)
 			e = &UnknownAcceptance{Submission: f.Submission, Cause: errors.New("Relay disconnected before acceptance")}
 		}
 		f.finish(nil, e)
@@ -510,6 +549,14 @@ func (s *relaySocket) receive(f duplex.Frame) error {
 			s.bytes = 0
 		}
 		s.mu.Unlock()
+		state := f.State
+		if f.Kind == "accepted" {
+			state = "accepted"
+		}
+		if f.Kind == "rejected" {
+			state = "rejected"
+		}
+		s.owner.resolveRelaySubmission(future.Submission, state, f.Receipt)
 		future.finish(f.Receipt, err)
 		return nil
 	default:

@@ -32,6 +32,8 @@ type RelayClient struct {
 	credentialOnly     bool
 	credentialProvider CredentialProvider
 
+	journal         *relayJournal
+	sessionUsable   func(string) bool
 	socketMu        sync.Mutex
 	socket          *relaySocket
 	running         bool

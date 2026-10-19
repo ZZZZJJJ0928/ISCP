@@ -24,6 +24,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -273,10 +274,11 @@ func TestDuplexPostgresClientCallbackMayWaitForReceipt(t *testing.T) {
 	if e = tx.Commit(context.Background()); e != nil {
 		t.Fatal(e)
 	}
+	journalDirectory := t.TempDir()
 	makeClient := func(id identity.Device, token string) *iscpbridge.RelayClient {
 		now := time.Now()
 		bundle := iscpbridge.EnrollmentBundle{DomainID: "domain-a", DeviceID: id.Identity.DeviceID, RelayID: "relay-a", RelayBaseURL: h.URL, RelayWebSocketURL: "ws" + strings.TrimPrefix(h.URL, "http") + duplex.Path, RelaySignerIdentity: &s.signer.Identity, Access: iscpbridge.RelayCredential{DomainID: "domain-a", DeviceID: id.Identity.DeviceID, Token: token, ExpiresAt: now.Add(time.Hour)}, ExpiresAt: now.Add(time.Hour)}
-		client, e := iscpbridge.NewRelayClient(iscpbridge.ProfileLocalLab, "", bundle, id, 5*time.Second)
+		client, e := iscpbridge.NewRelayClient(iscpbridge.ProfileLocalLab, filepath.Join(journalDirectory, id.Identity.DeviceID+".json"), bundle, id, 5*time.Second)
 		if e != nil {
 			t.Fatal(e)
 		}
@@ -358,9 +360,53 @@ func TestDuplexPostgresClientCallbackMayWaitForReceipt(t *testing.T) {
 			t.Fatal(ctx.Err())
 		}
 	}
+	// The verified unknown survives helper replacement and is reconciled by
+	// the next socket owner, without involving a business resubmission.
+	s.duplexMu.Lock()
+	s.admissionCommit = func(ctx context.Context, tx pgx.Tx) error {
+		if err := tx.Commit(ctx); err != nil {
+			return err
+		}
+		return io.ErrUnexpectedEOF
+	}
+	s.duplexMu.Unlock()
+	unknownEnv := makeEnvelope(a.Identity.DeviceID, b.Identity.DeviceID, "restart-unknown")
+	unknownEnv.Sequence = 22
+	var unknown *iscpbridge.UnknownAcceptance
+	if err := one.Submit(ctx, unknownEnv); !errors.As(err, &unknown) {
+		t.Fatal("wanted typed unknown", err)
+	}
 	cancel()
 	for i := 0; i < 2; i++ {
 		<-done
+	}
+	s.duplexMu.Lock()
+	s.admissionCommit = nil
+	s.duplexMu.Unlock()
+	restarted := makeClient(a, ca.Token)
+	recoveryCtx, stopRecovery := context.WithTimeout(context.Background(), 5*time.Second)
+	defer stopRecovery()
+	recoveredDone := make(chan error, 1)
+	go func() { recoveredDone <- restarted.RunOnceReady(recoveryCtx, nil, nil) }()
+	ticker := time.NewTicker(20 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			state, ok := restarted.SubmissionStatus("restart-unknown")
+			if ok && state.State == "accepted" {
+				if state.MessageID != unknown.Submission.MessageID || state.EnvelopeDigest != unknown.Submission.EnvelopeDigest || state.NotAfter != unknown.Submission.NotAfter || state.SessionID != unknown.Submission.SessionID || state.Receipt == nil {
+					t.Fatal(state)
+				}
+				stopRecovery()
+				<-recoveredDone
+				return
+			}
+		case err := <-recoveredDone:
+			t.Fatal(err)
+		case <-recoveryCtx.Done():
+			t.Fatal("pending unknown not automatically reconciled")
+		}
 	}
 }
 
