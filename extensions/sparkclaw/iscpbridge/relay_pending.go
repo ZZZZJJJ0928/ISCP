@@ -27,12 +27,15 @@ type RelaySubmissionStatus struct {
 	Receipt        *AcceptanceReceipt `json:"receipt,omitempty"`
 }
 type relayPendingRecord struct {
+	Order      uint64
 	Submission RelaySubmission
 	State      string
 	Receipt    *AcceptanceReceipt
 	Uncertain  bool
+	Consumed   bool
 }
 type relayPendingState struct {
+	NextOrder                   uint64
 	DomainID, DeviceID, RelayID string
 	Records                     map[string]relayPendingRecord
 }
@@ -178,7 +181,7 @@ func (c *RelayClient) journalBeforeWrite(sub RelaySubmission, uncertain bool) er
 		var oldest string
 		var deadline time.Time
 		for key, r := range j.state.Records {
-			if r.State == "unknown" || r.State == "pending" {
+			if !r.Consumed || r.Uncertain || r.State == "unknown" || r.State == "pending" {
 				continue
 			}
 			t := duplex.Time(r.Submission.NotAfter)
@@ -191,7 +194,15 @@ func (c *RelayClient) journalBeforeWrite(sub RelaySubmission, uncertain bool) er
 		}
 		delete(j.state.Records, oldest)
 	}
-	r := relayPendingRecord{Submission: sub, State: "pending", Uncertain: old.Uncertain || uncertain}
+	order := old.Order
+	if !exists {
+		if j.state.NextOrder == ^uint64(0) {
+			return errors.New("Relay journal order exhausted")
+		}
+		j.state.NextOrder++
+		order = j.state.NextOrder
+	}
+	r := relayPendingRecord{Order: order, Submission: sub, State: "pending", Uncertain: old.Uncertain || uncertain}
 	r.Submission.Envelope = append(json.RawMessage(nil), sub.Envelope...)
 	j.state.Records[sub.MessageID] = r
 	if err := j.persist(); err != nil {
@@ -220,10 +231,9 @@ func (c *RelayClient) markRelayUnknown(sub RelaySubmission) {
 	if !ok {
 		return
 	}
-	if r.State == "accepted" || r.State == "expired" {
-		return
+	if r.State != "accepted" && r.State != "expired" {
+		r.State = "unknown"
 	}
-	r.State = "unknown"
 	r.Uncertain = true
 	j.state.Records[sub.MessageID] = r
 	_ = j.persist()
@@ -253,10 +263,6 @@ func (c *RelayClient) resolveRelaySubmission(sub RelaySubmission, state string, 
 	if state == "unknown" {
 		r.Uncertain = true
 		r.State = "unknown"
-	} else if !r.Uncertain {
-		delete(j.state.Records, sub.MessageID)
-		_ = j.persist()
-		return
 	} else {
 		r.State = state
 		r.Receipt = receipt
@@ -321,17 +327,28 @@ func (s *relaySocket) recoverPendingOnce() {
 		j.mu.Unlock()
 		return
 	}
-	var pending []RelaySubmission
+	var pending []relayPendingRecord
 	for _, r := range j.state.Records {
-		if r.State == "unknown" && r.Submission.HistoryID == s.ready.HistoryID && time.Now().Before(duplex.Time(r.Submission.NotAfter).Add(duplex.QueryRecoverySeconds*time.Second)) {
-			pending = append(pending, r.Submission)
+		if r.State != "accepted" && r.Submission.HistoryID == s.ready.HistoryID && time.Now().Before(duplex.Time(r.Submission.NotAfter).Add(duplex.QueryRecoverySeconds*time.Second)) {
+			pending = append(pending, r)
 		}
 	}
 	check := j.sessionUsable
 	unlock()
 	j.mu.Unlock()
-	sort.Slice(pending, func(i, k int) bool { return pending[i].MessageID < pending[k].MessageID })
-	for _, sub := range pending {
+	sort.Slice(pending, func(i, k int) bool { return pending[i].Order < pending[k].Order })
+	blocked := map[string]bool{}
+	for _, record := range pending {
+		sub := record.Submission
+		if blocked[sub.SessionID] {
+			continue
+		}
+		// An unadmitted predecessor is part of the same encrypted sequence. Never
+		// send a later original ciphertext until this predecessor is accepted.
+		blocked[sub.SessionID] = true
+		if record.State != "unknown" && record.State != "absent" {
+			continue
+		}
 		if s.ctx.Err() != nil {
 			return
 		}
@@ -340,10 +357,15 @@ func (s *relaySocket) recoverPendingOnce() {
 			continue
 		}
 		ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
-		_, err = future.Wait(ctx)
+		receipt, waitErr := future.Wait(ctx)
+		err = waitErr
 		cancel()
+		if err == nil && receipt != nil && time.Now().Before(duplex.Time(receipt.ExpiresAt)) {
+			blocked[sub.SessionID] = false
+			continue
+		}
 		var absent *AbsentSubmission
-		if !errors.As(err, &absent) || check == nil || !time.Now().Before(duplex.Time(sub.NotAfter)) || !check(sub.SessionID) {
+		if !errors.As(err, &absent) || record.Order == 0 || check == nil || !time.Now().Before(duplex.Time(sub.NotAfter)) || !check(sub.SessionID) {
 			continue
 		}
 		// Resubmission is the same immutable tuple. The writer rechecks the session
@@ -353,7 +375,34 @@ func (s *relaySocket) recoverPendingOnce() {
 			continue
 		}
 		ctx, cancel = context.WithTimeout(s.ctx, 5*time.Second)
-		_, _ = retry.Wait(ctx)
+		receipt, err = retry.Wait(ctx)
 		cancel()
+		if err == nil && receipt != nil {
+			blocked[sub.SessionID] = false
+		}
 	}
+}
+
+// acknowledgeRelayResult runs only after Wait selected a completed result.
+// Before this acknowledgement, even a known accepted record cannot be evicted:
+// a canceled waiter may still expose its original tuple as Unknown.
+func (c *RelayClient) acknowledgeRelayResult(sub RelaySubmission) {
+	if c.journal == nil {
+		return
+	}
+	j := c.journal
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	unlock, err := j.lockAndReload()
+	if err != nil {
+		return
+	}
+	defer unlock()
+	r, ok := j.state.Records[sub.MessageID]
+	if !ok || r.Submission.EnvelopeDigest != sub.EnvelopeDigest || r.State == "unknown" || r.State == "pending" {
+		return
+	}
+	r.Consumed = true
+	j.state.Records[sub.MessageID] = r
+	_ = j.persist()
 }

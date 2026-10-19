@@ -377,6 +377,56 @@ func TestDuplexPostgresClientCallbackMayWaitForReceipt(t *testing.T) {
 			t.Fatal(ctx.Err())
 		}
 	}
+	// Three rolled-back submissions lose their response, then reconcile absent.
+	// Reverse lexical IDs must not reorder the original encrypted sequence.
+	one.SetSessionUsable(func(id string) bool { return id == "session-client" })
+	s.duplexMu.Lock()
+	s.admissionCommit = func(ctx context.Context, tx pgx.Tx) error { _ = tx.Rollback(ctx); return io.ErrUnexpectedEOF }
+	s.duplexMu.Unlock()
+	var originals []*iscpbridge.ReceiptFuture
+	for i, name := range []string{"z-recover", "y-recover", "x-recover"} {
+		env := makeEnvelope(a.Identity.DeviceID, b.Identity.DeviceID, name)
+		env.Sequence = uint64(22 + i)
+		future, err := one.Enqueue(ctx, env)
+		if err != nil {
+			t.Fatal(err)
+		}
+		originals = append(originals, future)
+	}
+	for _, future := range originals {
+		_, err := future.Wait(ctx)
+		var unknown *iscpbridge.UnknownAcceptance
+		if !errors.As(err, &unknown) {
+			t.Fatal("wanted rollback-uncertain", err)
+		}
+	}
+	s.duplexMu.Lock()
+	firstRetryLost := false
+	s.admissionCommit = func(ctx context.Context, tx pgx.Tx) error {
+		var original bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM iscp_relay.messages WHERE message_id='z-recover')`).Scan(&original); err != nil {
+			return err
+		}
+		if original && !firstRetryLost {
+			firstRetryLost = true
+			_ = tx.Rollback(ctx)
+			return io.ErrUnexpectedEOF
+		}
+		return tx.Commit(ctx)
+	}
+	s.duplexMu.Unlock()
+	for i := uint64(22); i <= 24; i++ {
+		select {
+		case got := <-ordered:
+			if got != i {
+				t.Fatal("original ciphertext reordered", got, i)
+			}
+		case err := <-done:
+			t.Fatal(err)
+		case <-ctx.Done():
+			t.Fatal(ctx.Err())
+		}
+	}
 	// The verified unknown survives helper replacement and is reconciled by
 	// the next socket owner, without involving a business resubmission.
 	s.duplexMu.Lock()
@@ -388,7 +438,7 @@ func TestDuplexPostgresClientCallbackMayWaitForReceipt(t *testing.T) {
 	}
 	s.duplexMu.Unlock()
 	unknownEnv := makeEnvelope(a.Identity.DeviceID, b.Identity.DeviceID, "restart-unknown")
-	unknownEnv.Sequence = 22
+	unknownEnv.Sequence = 25
 	var unknown *iscpbridge.UnknownAcceptance
 	if err := one.Submit(ctx, unknownEnv); !errors.As(err, &unknown) {
 		t.Fatal("wanted typed unknown", err)

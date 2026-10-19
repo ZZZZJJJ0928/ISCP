@@ -82,6 +82,13 @@ func newPeer(cfg PeerConfig, relay Relay, h Handler, standing, active bool, gran
 	if e := p.loadHelloWatermark(); e != nil {
 		return nil, e
 	}
+	if sender, ok := relay.(interface{ SetSessionUsable(func(string) bool) }); ok {
+		sender.SetSessionUsable(func(id string) bool {
+			p.mu.Lock()
+			defer p.mu.Unlock()
+			return p.state != nil && p.state.SessionID == id && p.state.Ready() && p.verifyGrant() == nil
+		})
+	}
 	return p, nil
 }
 func (p *Peer) verifyGrant() error {

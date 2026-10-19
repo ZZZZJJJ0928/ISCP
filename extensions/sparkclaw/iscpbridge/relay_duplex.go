@@ -55,18 +55,23 @@ func (f *ReceiptFuture) finish(r *AcceptanceReceipt, e error) {
 func (f *ReceiptFuture) Wait(ctx context.Context) (*AcceptanceReceipt, error) {
 	select {
 	case <-f.done:
-		f.mu.Lock()
-		defer f.mu.Unlock()
-		return f.result, f.err
 	case <-ctx.Done():
-		f.mu.Lock()
-		f.uncertain = true
+	}
+	f.mu.Lock()
+	if f.completed {
+		result, err := f.result, f.err
 		f.mu.Unlock()
 		if f.owner != nil {
-			f.owner.markRelayUnknown(f.Submission)
+			f.owner.acknowledgeRelayResult(f.Submission)
 		}
-		return nil, &UnknownAcceptance{Submission: f.Submission, Cause: ctx.Err()}
+		return result, err
 	}
+	f.uncertain = true
+	f.mu.Unlock()
+	if f.owner != nil {
+		f.owner.markRelayUnknown(f.Submission)
+	}
+	return nil, &UnknownAcceptance{Submission: f.Submission, Cause: ctx.Err()}
 }
 
 type relayWrite struct {

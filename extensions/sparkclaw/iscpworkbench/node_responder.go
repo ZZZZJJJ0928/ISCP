@@ -114,6 +114,29 @@ func newNodeResponder(cfg Config, m material, relay RelayTransport, factory Node
 		return nil, errors.New("node responder requires explicit authority, registry and live Client validation")
 	}
 	n := &NodeResponder{config: cfg, material: m, relay: relay, factory: factory, validate: validate, onState: onState, peers: map[string]*nodePeer{}}
+	if sender, ok := relay.(interface{ SetSessionUsable(func(string) bool) }); ok {
+		sender.SetSessionUsable(func(id string) bool {
+			n.mu.Lock()
+			peers := make([]*Endpoint, 0, len(n.peers))
+			for _, peer := range n.peers {
+				peers = append(peers, peer.endpoint)
+			}
+			closed := n.closed
+			n.mu.Unlock()
+			if closed {
+				return false
+			}
+			for _, e := range peers {
+				e.mu.Lock()
+				valid := !e.closed && e.session != nil && e.session.id == id && e.session.state != nil && e.session.state.Ready() && e.session.ctx.Err() == nil
+				e.mu.Unlock()
+				if valid {
+					return true
+				}
+			}
+			return false
+		})
+	}
 	n.verifyDiscovery = func(ctx context.Context) error {
 		return iscpbridge.VerifyWorkbenchRelayDiscovery(ctx, cfg.EffectiveRelayProfile(), m.enrollment)
 	}

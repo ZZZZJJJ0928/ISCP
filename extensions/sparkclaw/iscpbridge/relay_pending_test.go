@@ -100,3 +100,44 @@ func TestRelayJournalStaleProcessCannotLoseNewerKeys(t *testing.T) {
 		t.Fatal("stale writer lost another process key")
 	}
 }
+
+func TestRelayJournalCancellationBetweenCheckpointAndFutureCompletion(t *testing.T) {
+	p := crypto.NewProvider()
+	id, _ := identity.NewDevice(p, "domain", "sender", time.Now())
+	path := filepath.Join(t.TempDir(), "enrollment.json")
+	makeClient := func() *RelayClient {
+		c := &RelayClient{provider: p, device: id, enrollmentPath: path, enrollment: EnrollmentBundle{DomainID: "domain", DeviceID: "sender", RelayID: "relay"}}
+		if err := c.initRelayJournal(); err != nil {
+			t.Fatal(err)
+		}
+		return c
+	}
+	c := makeClient()
+	sub := RelaySubmission{MessageID: "accepted-before-finish", EnvelopeDigest: duplex.RandomID(), HistoryID: duplex.RandomID(), NotAfter: duplex.Timestamp(time.Now().Add(time.Minute)), SessionID: "original-session", Envelope: json.RawMessage(`{"ciphertext":"original"}`)}
+	if err := c.journalBeforeWrite(sub, false); err != nil {
+		t.Fatal(err)
+	}
+	receipt := &AcceptanceReceipt{MessageID: sub.MessageID}
+	f := &ReceiptFuture{owner: c, Submission: sub, done: make(chan struct{})}
+	// Pause the reader exactly after the terminal checkpoint, before finish.
+	c.resolveRelaySubmission(sub, "accepted", receipt)
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	_, err := f.Wait(ctx)
+	var unknown *UnknownAcceptance
+	if !errors.As(err, &unknown) {
+		t.Fatalf("expected uncertain waiter, got %v", err)
+	}
+	restored := makeClient()
+	status, ok := restored.SubmissionStatus(sub.MessageID)
+	if !ok || status.State != "accepted" || status.HistoryID != sub.HistoryID || status.NotAfter != sub.NotAfter || status.SessionID != sub.SessionID {
+		t.Fatal("lost original terminal checkpoint", status)
+	}
+	f.finish(receipt, nil)
+	// A simultaneous canceled context and completed future returns known truth.
+	for i := 0; i < 100; i++ {
+		if got, err := f.Wait(ctx); err != nil || got != receipt {
+			t.Fatal("completed result became unknown", err)
+		}
+	}
+}
