@@ -584,3 +584,42 @@ func TestDuplexAdmissionLatencyObservation(t *testing.T) {
 		}
 	}
 }
+
+func TestDuplexAuthenticationChallengeTimeoutCannotBecomeReady(t *testing.T) {
+	q := newDuplexQualification(t)
+	ws, _, err := (&websocket.Dialer{Subprotocols: []string{duplex.Protocol}}).Dial("ws"+strings.TrimPrefix(q.http.URL, "http")+duplex.Path, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ws.Close()
+	p := &duplexTestPeer{ws: ws}
+	challenge := p.read(t)
+	// The server's initial authentication read deadline is a real 10 seconds.
+	// Waiting here validates the runtime gate, independently of timestamp vectors.
+	time.Sleep(10200 * time.Millisecond)
+	hash, err := duplex.AuthChallenge(challenge, "authenticate", "1", "0", q.token, q.a.Identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	proof, err := q.a.CreateProof(crypto.NewProvider(), "relay-a", hash, crypto.Base64URL(crypto.RandomBytes(16)), time.Now().UTC().Truncate(time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := duplex.Encode(duplex.Frame{V: 1, Kind: "authenticate", ConnectionID: challenge.ConnectionID, RequestID: "1", ChallengeID: challenge.ChallengeID, AccessToken: q.token, Proof: &proof})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = ws.WriteMessage(websocket.TextMessage, raw)
+	_ = ws.SetReadDeadline(time.Now().Add(time.Second))
+	_, reply, err := ws.ReadMessage()
+	if err == nil {
+		f, e := duplex.Decode(reply)
+		if e != nil || f.Kind != "closing" {
+			t.Fatal("late proof installed owner", f, e)
+		}
+	}
+	var gen string
+	if err = q.pool.QueryRow(t.Context(), `SELECT owner_generation::text FROM iscp_relay.connection_owners WHERE device_id=$1`, q.a.Identity.DeviceID).Scan(&gen); err != nil || gen != "0" {
+		t.Fatal("timeout mutated owner", gen, err)
+	}
+}

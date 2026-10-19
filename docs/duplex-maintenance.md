@@ -60,3 +60,23 @@ The focused Go tests exercise the real PostgreSQL repository and raw independent
 The PostgreSQL tests otherwise require an isolated `SC_RELAY_TEST_DSN` and create independent databases. The existing old-binary test uses the actual pre-change executable and demonstrates database rejection of its writes after activation.
 
 No previous release has been qualified as a rollback binary against the new schema. If the compatible package cannot restart safely, remain in maintenance. The current-compatible-code/database restart test is evidence for restart recovery only; it is not proof of an older-version rollback. Five-node production deployment and actual legacy production history audits have not been performed by these tests.
+
+## Coverage after retiring the split transport fixtures
+
+Positive tests specific to the retired `POST /envelopes` plus receive-drain transport were replaced, rather than enabling a production fallback. Still-applicable security and session behavior maps to the following current tests:
+
+| Retained behavior | Current test evidence |
+| --- | --- |
+| Relay descriptor signature, domain and signer/TLS pin | `TestSignedRelayDiscoveryPinnedCloudRoot`, `TestLocalRelaySignatureDomainAndSignerPin`, `TestNodeTLSCertificateCannotTrustUnknownReplacement` |
+| Signed acceptance and exact original tuple | `TestAcceptanceSignatureAndOriginalBinding`, `TestDuplexPostgresBidirectionalAdmissionQueryAndFences` |
+| Fresh connection-bound proof, replay/time validity | `TestDuplexReadinessRequiresFreshProof`, `TestDuplexCandidateAuthenticationReplaysAndTime`, live cross-connection proof replay in `TestDuplexPostgresBidirectionalAdmissionQueryAndFences` |
+| Actual initial authentication timeout | `TestDuplexAuthenticationChallengeTimeoutCannotBecomeReady`: real 10-second server deadline, later validly signed proof cannot create an owner |
+| Scope revision and rotated credential fences | `TestDuplexPostgresBidirectionalAdmissionQueryAndFences`, `TestCredentialScopeSnapshotDoesNotDisconnectNewOwner` |
+| Owner replacement and unfinished transaction | `TestDuplexPostgresBidirectionalAdmissionQueryAndFences`, `TestDuplexCrossOwnerUnfinishedCommitCannotProveAbsence` |
+| Socket timeout cannot release guarded data later | `TestDuplexTimedOutQueuedWriteCannotOutliveAuthority` |
+| Healthy idle and dead socket liveness | `TestRelayIdlePingTrafficExtendsLivenessDeadline`, `TestRelaySilentConnectionStillTimesOut`, opt-in `TestDuplexLongIdleRealCredentialRotationAndReconnect` |
+| Original-key crash/reconnect recovery, FIFO, no duplicate callback | `TestDuplexPostgresClientCallbackMayWaitForReceipt`, `TestRelayJournalCancellationBetweenCheckpointAndFutureCompletion`, `TestReceiptConsumedNormallyPrunesButConcurrentUnknownSurvives` |
+| Durable immutable admission and actual old writer rejection | `TestDuplexPostgresBidirectionalAdmissionQueryAndFences` invokes the pre-change executable against the upgraded database and verifies no message overwrite |
+| Retired drain frame cannot be treated as v0.3 | `TestRelayRejectsRetiredDrainFrame` |
+
+These names identify the new transport tests. Legacy-route positive tests are not cited as v0.3 evidence, and elapsed-time boundary tests are distinguished from actual calendar-duration or production deployment evidence.
