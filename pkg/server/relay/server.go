@@ -430,6 +430,9 @@ func (s *Server) refreshAccess(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusBadRequest, err)
 		return
 	}
+	if s.refreshDuplexCredentials(w, r, req.Refresh) {
+		return
+	}
 	hash := string(crypto.SHA256([]byte(req.Refresh)))
 	s.mu.Lock()
 	cred, ok := s.refresh[hash]

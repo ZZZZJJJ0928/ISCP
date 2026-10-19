@@ -302,6 +302,12 @@ func (c *RelayClient) RunOnceReady(ctx context.Context, handle func(context.Cont
 	if e != nil {
 		return e
 	}
+	if ready.Kind == "closing" && ready.Code == "authentication_failed" && ready.ConnectionID == challenge.ConnectionID && ready.OwnerGeneration == "0" && c.profile == ProfileLocalLab && bundle.Mode == BundleModeWorkbenchLocalLab && c.CredentialProvider() == nil {
+		if err := c.refreshRejectedAccess(life, bundle.Access.Token); err != nil {
+			return fmt.Errorf("Relay rejected access; original refresh failed: %w", err)
+		}
+		return errors.New("Relay rejected access; original refresh rotated credentials for reconnect")
+	}
 	if ready.Kind != "ready" || ready.ConnectionID != challenge.ConnectionID || ready.RequestID != "1" || ready.DomainID != bundle.DomainID || ready.DeviceID != bundle.DeviceID || ready.HistoryID != challenge.HistoryID || ready.Limits == nil || *ready.Limits != limits || !time.Now().Before(duplex.Time(ready.AuthorityExpiresAt)) {
 		return errors.New("Relay ready binding mismatch")
 	}
@@ -638,7 +644,11 @@ func (s *relaySocket) credentials() {
 			}
 			next, e = p.EnsureAccess(s.ctx, lease.Binding)
 		} else {
-			e = s.owner.ensureAccess(s.ctx)
+			if reason != "" && s.owner.profile == ProfileLocalLab && lease.Enrollment.Mode == BundleModeWorkbenchLocalLab {
+				e = s.owner.refreshRejectedAccess(s.ctx, lease.Enrollment.Access.Token)
+			} else {
+				e = s.owner.ensureAccess(s.ctx)
+			}
 			next = CredentialLease{Enrollment: s.owner.Enrollment(), ExpiresAt: s.owner.Enrollment().Access.ExpiresAt}
 		}
 		if e != nil {
