@@ -59,7 +59,7 @@ func TestRelayJournalPersistsOriginalUnknownAndHidesCiphertext(t *testing.T) {
 }
 func TestReceiptCancellationRetainsTypedOriginalLineage(t *testing.T) {
 	sub := RelaySubmission{MessageID: "id", EnvelopeDigest: duplex.RandomID(), HistoryID: duplex.RandomID(), NotAfter: duplex.Timestamp(time.Now().Add(time.Minute)), SessionID: "session", Envelope: json.RawMessage(`{}`)}
-	f := &ReceiptFuture{Submission: sub, done: make(chan struct{})}
+	f := &ReceiptFuture{Submission: sub, done: make(chan struct{}), written: true}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	_, e := f.Wait(ctx)
@@ -119,7 +119,7 @@ func TestRelayJournalCancellationBetweenCheckpointAndFutureCompletion(t *testing
 		t.Fatal(err)
 	}
 	receipt := &AcceptanceReceipt{MessageID: sub.MessageID}
-	f := &ReceiptFuture{owner: c, Submission: sub, done: make(chan struct{})}
+	f := &ReceiptFuture{owner: c, Submission: sub, done: make(chan struct{}), written: true}
 	// Pause the reader exactly after the terminal checkpoint, before finish.
 	c.resolveRelaySubmission(sub, "accepted", receipt)
 	ctx, cancel := context.WithCancel(t.Context())
@@ -164,5 +164,24 @@ func TestRelayJournalReclaimsConsumedTerminalAfterRecoveryWindow(t *testing.T) {
 	}
 	if len(c.journal.state.Records) != 4096 {
 		t.Fatal("journal lost its bound")
+	}
+}
+
+func TestReceiptCancellationBeforeFirstWriteIsNotSent(t *testing.T) {
+	f := &ReceiptFuture{Submission: RelaySubmission{MessageID: "queued"}, done: make(chan struct{})}
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	_, err := f.Wait(ctx)
+	var notSent *NotSent
+	if !errors.As(err, &notSent) || !errors.Is(err, context.Canceled) {
+		t.Fatal("queued cancellation became uncertain", err)
+	}
+	// No socket or journal exists: a winning cancellation must never reach them.
+	socket := &relaySocket{queued: map[*ReceiptFuture]int{f: 123}, bytes: 123}
+	if err := socket.write(relayWrite{future: f, frame: duplex.Frame{Kind: "submit"}}); err != nil {
+		t.Fatal(err)
+	}
+	if socket.bytes != 0 || len(socket.queued) != 0 {
+		t.Fatal("canceled frame kept queue reservation")
 	}
 }

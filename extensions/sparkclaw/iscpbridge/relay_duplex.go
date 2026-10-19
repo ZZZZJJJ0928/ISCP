@@ -66,6 +66,14 @@ func (f *ReceiptFuture) Wait(ctx context.Context) (*AcceptanceReceipt, error) {
 		}
 		return result, err
 	}
+	if !f.written {
+		f.err = &NotSent{Cause: ctx.Err()}
+		f.completed = true
+		close(f.done)
+		err := f.err
+		f.mu.Unlock()
+		return nil, err
+	}
 	f.uncertain = true
 	f.mu.Unlock()
 	if f.owner != nil {
@@ -389,11 +397,6 @@ func (s *relaySocket) writer() {
 		if pending != nil && valid {
 			w := *pending
 			pending = nil
-			if w.future != nil {
-				w.future.mu.Lock()
-				w.future.written = true
-				w.future.mu.Unlock()
-			}
 			if s.write(w) != nil {
 				s.cancel()
 				return
@@ -418,26 +421,32 @@ func (s *relaySocket) writer() {
 // Allocate request IDs at the single writer, so control frames may overtake
 // paused data without causing the peer to observe decreasing request IDs.
 func (s *relaySocket) write(w relayWrite) error {
-	if w.future != nil && w.frame.Kind == "submit" {
-		if w.future.sessionCheck != nil && !w.future.sessionCheck(w.future.Submission.SessionID) {
-			w.future.finish(nil, &NotSent{Cause: errors.New("original E2E session ended")})
-			s.mu.Lock()
-			s.bytes -= s.queued[w.future]
-			delete(s.queued, w.future)
-			s.mu.Unlock()
+	if w.future != nil {
+		f := w.future
+		// Journal the original before any waiter may observe a potentially written
+		// request. Cancellation before this lock wins and is definitively NotSent.
+		f.mu.Lock()
+		if f.completed {
+			f.mu.Unlock()
+			s.releaseQueued(f)
 			return nil
 		}
-		w.future.mu.Lock()
-		uncertain := w.future.uncertain
-		w.future.mu.Unlock()
-		if err := s.owner.journalBeforeWrite(w.future.Submission, uncertain); err != nil {
-			w.future.finish(nil, &NotSent{Cause: err})
-			s.mu.Lock()
-			s.bytes -= s.queued[w.future]
-			delete(s.queued, w.future)
-			s.mu.Unlock()
-			return nil
+		if w.frame.Kind == "submit" {
+			if f.sessionCheck != nil && !f.sessionCheck(f.Submission.SessionID) {
+				f.mu.Unlock()
+				f.finish(nil, &NotSent{Cause: errors.New("original E2E session ended")})
+				s.releaseQueued(f)
+				return nil
+			}
+			if err := s.owner.journalBeforeWrite(f.Submission, f.uncertain); err != nil {
+				f.mu.Unlock()
+				f.finish(nil, &NotSent{Cause: err})
+				s.releaseQueued(f)
+				return nil
+			}
 		}
+		f.written = true
+		f.mu.Unlock()
 	}
 
 	s.mu.Lock()
@@ -458,6 +467,13 @@ func (s *relaySocket) write(w relayWrite) error {
 	s.mu.Unlock()
 	return writeDuplex(s.ws, w.frame)
 }
+func (s *relaySocket) releaseQueued(f *ReceiptFuture) {
+	s.mu.Lock()
+	s.bytes -= s.queued[f]
+	delete(s.queued, f)
+	s.mu.Unlock()
+}
+
 func (s *relaySocket) failPending() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
