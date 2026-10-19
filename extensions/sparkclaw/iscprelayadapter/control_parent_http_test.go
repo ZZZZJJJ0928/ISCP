@@ -28,17 +28,24 @@ import (
 
 // Business authority is the only fake in this chain. Both credential services,
 // their encrypted stores, signatures, HTTPS clients, router and ACKs are real.
-type parentHTTPManagement struct{ binding node.Binding }
-
-func (m parentHTTPManagement) Identity(context.Context) (node.Binding, error) { return m.binding, nil }
-func (m parentHTTPManagement) Client(_ context.Context, id string) (bool, error) {
-	return id == m.binding.ClientID, nil
+type parentHTTPManagement struct {
+	binding node.Binding
+	revoked atomic.Bool
 }
-func (parentHTTPManagement) CreateClient(context.Context, string, string) (string, error) {
+
+func (m *parentHTTPManagement) Identity(context.Context) (node.Binding, error) { return m.binding, nil }
+func (m *parentHTTPManagement) Client(_ context.Context, id string) (bool, error) {
+	return id == m.binding.ClientID && !m.revoked.Load(), nil
+}
+func (*parentHTTPManagement) CreateClient(context.Context, string, string) (string, error) {
 	return "", errors.New("recovery must not create a business client")
 }
-func (parentHTTPManagement) RevokeManagedClient(context.Context, string) error {
-	return errors.New("unexpected management mutation")
+func (m *parentHTTPManagement) RevokeManagedClient(_ context.Context, id string) error {
+	if id != m.binding.ClientID {
+		return errors.New("revoked a different business client")
+	}
+	m.revoked.Store(true)
+	return nil
 }
 
 func TestControlParentHTTPSPostgresLostResultReopensOriginalAndInstalls(t *testing.T) {
@@ -148,7 +155,7 @@ func TestControlParentHTTPSPostgresLostResultReopensOriginalAndInstalls(t *testi
 	if err = store.Create(ctx, credential.InvitationID, state); err != nil {
 		t.Fatal(err)
 	}
-	issuer, err := node.New(node.Config{EnableControlV2: true, ControlRelay: relayClient, Template: credential, Issuer: f.signer, InvitationSigner: f.invite, GrantTTL: 10 * time.Minute}, store, parentHTTPManagement{f.preparation.Binding}, f.adapter)
+	issuer, err := node.New(node.Config{EnableControlV2: true, ControlRelay: relayClient, Template: credential, Issuer: f.signer, InvitationSigner: f.invite, GrantTTL: 10 * time.Minute}, store, &parentHTTPManagement{binding: f.preparation.Binding}, f.adapter)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -245,4 +252,56 @@ func TestControlParentHTTPSPostgresLostResultReopensOriginalAndInstalls(t *testi
 		t.Fatal("parent install ACK did not bind original result")
 	}
 	assertLifecycleGeneration(t, f, "2")
+	// Revocation must advance each target's own authority revision. The issuer's
+	// signed terminal revision 2 must neither be compared with nor replace the
+	// installed Relay lease's revision 7.
+	events := transport.CredentialProvider().Subscribe(ctx, binding)
+	select {
+	case <-events:
+	case <-time.After(time.Second):
+		t.Fatal("verified provider snapshot missing")
+	}
+	if err = issuer.Revoke(ctx, credential.InvitationID, "parent-http-actual-revocation", 1); err != nil {
+		t.Fatal("issuer and Relay revocation counters were mixed", err)
+	}
+	var relayRevision, relayState string
+	if err = f.pool.QueryRow(ctx, `SELECT authorization_revision::text,state FROM iscp_relay.device_authority WHERE device_id=$1`, f.client.Identity.DeviceID).Scan(&relayRevision, &relayState); err != nil || relayRevision != "8" || relayState != "revoked" {
+		t.Fatal("Relay did not advance its own revocation", relayRevision, relayState, err)
+	}
+	revoked, err := store.Read(ctx, credential.InvitationID)
+	if err != nil || revoked.Revision != 2 || !revoked.RelayRevoked {
+		t.Fatal("issuer revocation did not close", err)
+	}
+	if err = transport.CredentialProvider().Invalidate(binding, lease.CredentialGeneration, bridge.AccessRejected); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = transport.CredentialProvider().EnsureAccess(ctx, binding); err == nil {
+		t.Fatal("revoked issuer returned a usable lease")
+	}
+	select {
+	case event := <-events:
+		if event.Reason != bridge.CredentialRevoked || event.Lease != nil || event.AuthorizationRevision != "7" {
+			t.Fatal("issuer terminal state did not fence Relay lease independently", event)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("verified issuer revocation was ignored against higher Relay revision")
+	}
+	if err = transport.CredentialProvider().Close(); err != nil {
+		t.Fatal(err)
+	}
+	reopened, err := bridge.NewRelayCredentialClient(bridge.ProfileProduction, path, lease.Enrollment, f.client, 5*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var recoveredAfterRevoke atomic.Int32
+	if err = reopened.ConfigureCredentialProvider(binding, func(context.Context, bridge.CredentialBinding, bridge.CredentialGeneration) (bridge.CredentialLease, error) {
+		recoveredAfterRevoke.Add(1)
+		return lease, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	defer reopened.CredentialProvider().Close()
+	if _, err = reopened.CredentialProvider().EnsureAccess(ctx, binding); !errors.Is(err, bridge.ErrAuthorizationRevoked) || recoveredAfterRevoke.Load() != 0 {
+		t.Fatal("restart forgot the independently verified terminal authority", err)
+	}
 }
