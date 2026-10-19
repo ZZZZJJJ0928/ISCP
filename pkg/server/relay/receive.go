@@ -98,6 +98,12 @@ func (s *Server) stopReceiver(domain, device string) {
 // Close stops upgraded WebSockets, which http.Server.Shutdown does not own.
 // It is idempotent and rejects receive loops that finish authentication later.
 func (s *Server) Close() {
+	s.duplexMu.Lock()
+	for _, c := range s.duplexOwners {
+		c.cancel()
+		c.ws.Close()
+	}
+	s.duplexMu.Unlock()
 	s.receiveMu.Lock()
 	s.receiveClosed = true
 	var slots []*receiveSlot

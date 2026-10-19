@@ -21,6 +21,7 @@ import (
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/config"
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/crypto"
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/descriptor"
+	"github.com/Infinimesh-ai/ISCP/pkg/iscp/duplex"
 	iscperrors "github.com/Infinimesh-ai/ISCP/pkg/iscp/errors"
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/identity"
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/provisioning"
@@ -61,6 +62,8 @@ type ManagedAdapter interface {
 }
 
 type Server struct {
+	duplexMu      sync.Mutex
+	duplexOwners  map[string]*duplexConnection
 	cfg           Config
 	provider      crypto.Provider
 	signer        identity.Device
@@ -170,8 +173,9 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/v2/relay/devices/refresh-access", s.refreshAccess)
 	s.mux.HandleFunc("/api/sparkclaw/iscp-control/v1/service-recover", s.serviceRecover)
 	s.mux.HandleFunc("/v2/relay/devices/revoke-access", s.revokeAccess)
-	s.mux.HandleFunc("/v2/relay/envelopes", s.envelopes)
-	s.mux.HandleFunc("/v2/relay/connect", s.connect)
+	s.mux.HandleFunc("/v2/relay/envelopes", s.retiredTransport)
+	s.mux.HandleFunc("/v2/relay/connect", s.retiredTransport)
+	s.mux.HandleFunc(duplex.Path, s.duplexConnect)
 	s.mux.HandleFunc("/v2/relay/admin/devices", s.adminDevices)
 	s.mux.HandleFunc("/v2/relay/admin/connections", s.adminConnections)
 	s.mux.HandleFunc("/v2/relay/admin/messages", s.adminMessages)
@@ -197,7 +201,7 @@ func (s *Server) wellKnown(w http.ResponseWriter, _ *http.Request) {
 		RelayID:      s.cfg.RelayID,
 		DomainID:     s.cfg.DomainID,
 		BaseURL:      s.cfg.BaseURL,
-		WebSocketURL: s.cfg.WebSocketURL,
+		WebSocketURL: strings.TrimRight(strings.Replace(strings.Replace(s.cfg.BaseURL, "https://", "wss://", 1), "http://", "ws://", 1), "/") + duplex.Path,
 		SigningKeys: []descriptor.PublicKey{{
 			KTY:    "Ed25519",
 			Use:    "descriptor-signature",
@@ -210,6 +214,12 @@ func (s *Server) wellKnown(w http.ResponseWriter, _ *http.Request) {
 	if s.cfg.Managed != nil {
 		relayDesc.Metadata = s.cfg.Managed.Metadata()
 	}
+	if relayDesc.Metadata == nil {
+		relayDesc.Metadata = map[string]string{}
+	}
+	relayDesc.Metadata["duplex_protocol"] = duplex.Protocol
+	relayDesc.Metadata["duplex_path"] = duplex.Path
+	relayDesc.Metadata["duplex_limits_sha256"], _ = duplex.Digest(duplex.DefaultLimits())
 	signed, err := descriptor.Sign(s.provider, s.signer, relayDesc.Type, relayDesc, now)
 	if err != nil {
 		httpx.WriteError(w, http.StatusInternalServerError, err)
