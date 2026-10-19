@@ -56,7 +56,26 @@ func main() {
 	configPath := flag.String("config", "", "private workbench configuration")
 	controlOnly := flag.Bool("control-only", false, "serve proof-bound authorization deletion and receipt control without Relay")
 	check := flag.Bool("check", false, "validate private profile without contacting Relay")
+	upgradeControl := flag.Bool("upgrade-node-control-v2", false, "explicitly activate the maintained control history for an existing node profile")
+	activationEvidence := flag.String("activation-evidence-sha256", "", "accepted activation evidence digest for explicit control maintenance")
 	flag.Parse()
+	if *upgradeControl {
+		if *configPath == "" || *activationEvidence == "" || *enroll || *controlOnly || *check || flag.NArg() != 0 {
+			fmt.Fprintln(os.Stderr, "control upgrade requires -config and -activation-evidence-sha256 without enrollment or runtime modes")
+			os.Exit(2)
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := iscpworkbench.UpgradeNodeControlV2(ctx, *configPath, *activationEvidence); err != nil {
+			fmt.Fprintln(os.Stderr, "control history upgrade failed:", err)
+			os.Exit(1)
+		}
+		return
+	}
+	if *activationEvidence != "" {
+		fmt.Fprintln(os.Stderr, "activation evidence requires -upgrade-node-control-v2")
+		os.Exit(2)
+	}
 	if *enroll {
 		if *configPath != "" || *controlOnly || *check || flag.NArg() != 0 {
 			fmt.Fprintln(os.Stderr, "enrollment flags conflict")
