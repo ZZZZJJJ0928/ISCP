@@ -3,7 +3,6 @@ package cleanup
 import (
 	"context"
 	"github.com/Infinimesh-ai/ISCP/pkg/server/authority"
-	"github.com/Infinimesh-ai/ISCP/pkg/server/repository"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"time"
 )
@@ -20,7 +19,14 @@ func ExpiredDuplexRelayMessages(ctx context.Context, pool *pgxpool.Pool, scope, 
 	if _, err = authority.Lock(ctx, tx, authority.Request{ScopeID: scope, DomainID: domain, ExpectedWriterEpoch: epoch, RequireContinuousHistory: true}); err != nil {
 		return Result{}, err
 	}
-	result, err := ExpiredRelayMessages(ctx, tx, repository.DomainID(domain), now, dryRun)
+	result := Result{Name: "expired_duplex_relay_messages", DryRun: dryRun}
+	if dryRun {
+		err = tx.QueryRow(ctx, `SELECT count(*) FROM iscp_relay.messages m WHERE domain_id=$1 AND expires_at<$2 AND EXISTS(SELECT 1 FROM iscp_relay.admissions a WHERE a.domain_id=m.domain_id AND a.message_id=m.message_id)`, domain, now).Scan(&result.WouldDelete)
+	} else {
+		tag, e := tx.Exec(ctx, `DELETE FROM iscp_relay.messages m WHERE domain_id=$1 AND expires_at<$2 AND EXISTS(SELECT 1 FROM iscp_relay.admissions a WHERE a.domain_id=m.domain_id AND a.message_id=m.message_id)`, domain, now)
+		err = e
+		result.Deleted = tag.RowsAffected()
+	}
 	if err != nil {
 		return Result{}, err
 	}

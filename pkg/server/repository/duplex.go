@@ -118,8 +118,9 @@ func (r RelayRepository) ClaimDuplexPendingMessage(ctx context.Context, domain D
 	rows, err := r.db.Query(ctx, `WITH claim AS (
  SELECT m.id FROM iscp_relay.messages m
  WHERE m.domain_id=$1 AND m.recipient_device_id=$2 AND m.delivered_at IS NULL AND m.expires_at>$3
+ AND EXISTS(SELECT 1 FROM iscp_relay.admissions a WHERE a.domain_id=m.domain_id AND a.message_id=m.message_id)
  AND (m.delivery_claimed_until IS NULL OR m.delivery_claimed_until<=$3)
- AND NOT EXISTS(SELECT 1 FROM iscp_relay.messages earlier WHERE earlier.domain_id=m.domain_id AND earlier.recipient_device_id=m.recipient_device_id AND earlier.sender_device_id=m.sender_device_id AND earlier.session_id=m.session_id AND earlier.delivered_at IS NULL AND earlier.expires_at>$3 AND earlier.admission_order<m.admission_order)
+ AND NOT EXISTS(SELECT 1 FROM iscp_relay.messages earlier WHERE earlier.domain_id=m.domain_id AND earlier.recipient_device_id=m.recipient_device_id AND earlier.sender_device_id=m.sender_device_id AND earlier.session_id=m.session_id AND earlier.delivered_at IS NULL AND earlier.expires_at>$3 AND earlier.admission_order<m.admission_order AND EXISTS(SELECT 1 FROM iscp_relay.admissions a WHERE a.domain_id=earlier.domain_id AND a.message_id=earlier.message_id))
  ORDER BY m.priority DESC,m.admission_order LIMIT 1 FOR UPDATE OF m SKIP LOCKED)
  UPDATE iscp_relay.messages m SET delivery_claimed_until=$4,delivery_attempts=delivery_attempts+1 FROM claim WHERE m.id=claim.id
  RETURNING m.id,m.domain_id,m.message_id,m.sender_device_id,m.recipient_device_id,m.session_id,m.payload_type,m.route_metadata::text,m.envelope_raw,m.envelope_canonical,m.priority,m.queued_at,m.expires_at`, string(domain), recipient, now, now.Add(lease))
