@@ -62,29 +62,33 @@ type ManagedAdapter interface {
 }
 
 type Server struct {
-	duplexMu      sync.Mutex
-	duplexOwners  map[string]*duplexConnection
-	cfg           Config
-	provider      crypto.Provider
-	signer        identity.Device
-	mux           *http.ServeMux
-	replay        *replay.Cache
-	queue         *queue.Queue
-	repo          *repository.RelayRepository
-	upgrader      websocket.Upgrader
-	mu            sync.RWMutex
-	devices       map[string]identity.DeviceIdentity
-	access        map[string]credential
-	refresh       map[string]credential
-	revoked       map[string]struct{}
-	tickets       map[string]ticketState
-	connections   map[string]connectionState
-	startedAt     time.Time
-	receiveMu     sync.Mutex
-	receivers     map[string]*receiveSlot
-	receiveClosed bool
-	queueMu       sync.Mutex
-	reservedBytes int
+	duplexMu        sync.Mutex
+	duplexOwners    map[string]*duplexConnection
+	duplexAll       map[*duplexConnection]struct{}
+	duplexClosed    bool
+	duplexWG        sync.WaitGroup
+	admissionCommit func(context.Context, pgx.Tx) error
+	cfg             Config
+	provider        crypto.Provider
+	signer          identity.Device
+	mux             *http.ServeMux
+	replay          *replay.Cache
+	queue           *queue.Queue
+	repo            *repository.RelayRepository
+	upgrader        websocket.Upgrader
+	mu              sync.RWMutex
+	devices         map[string]identity.DeviceIdentity
+	access          map[string]credential
+	refresh         map[string]credential
+	revoked         map[string]struct{}
+	tickets         map[string]ticketState
+	connections     map[string]connectionState
+	startedAt       time.Time
+	receiveMu       sync.Mutex
+	receivers       map[string]*receiveSlot
+	receiveClosed   bool
+	queueMu         sync.Mutex
+	reservedBytes   int
 }
 
 type credential struct {

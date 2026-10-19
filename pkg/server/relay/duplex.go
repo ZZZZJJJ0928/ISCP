@@ -52,6 +52,16 @@ func (s *Server) retiredTransport(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"code": "transport_upgrade_required", "protocol": duplex.Protocol, "path": duplex.Path})
 }
 func (s *Server) duplexConnect(w http.ResponseWriter, r *http.Request) {
+	s.duplexMu.Lock()
+	if s.duplexClosed {
+		s.duplexMu.Unlock()
+		http.Error(w, "maintenance", 503)
+		return
+	}
+	s.duplexWG.Add(1)
+	s.duplexMu.Unlock()
+	defer s.duplexWG.Done()
+
 	if r.Method != http.MethodGet {
 		w.WriteHeader(405)
 		return
@@ -87,11 +97,24 @@ func (s *Server) duplexConnect(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithCancel(r.Context())
 	c := &duplexConnection{s: s, ws: ws, ctx: ctx, cancel: cancel, connection: duplex.RandomID(), generation: "0", epoch: epoch, history: history, writes: make(chan duplexWrite, 64), controlWrites: make(chan duplexWrite, 16), changed: make(chan struct{}, 1), keys: map[string]chan struct{}{}}
+	s.duplexMu.Lock()
+	if s.duplexClosed {
+		s.duplexMu.Unlock()
+		cancel()
+		ws.Close()
+		return
+	}
+	if s.duplexAll == nil {
+		s.duplexAll = map[*duplexConnection]struct{}{}
+	}
+	s.duplexAll[c] = struct{}{}
+	s.duplexMu.Unlock()
 	defer func() {
 		cancel()
 		ws.Close()
 		c.done.Wait()
 		s.duplexMu.Lock()
+		delete(s.duplexAll, c)
 		if s.duplexOwners[receiveKey(c.id.DomainID, c.id.DeviceID)] == c {
 			delete(s.duplexOwners, receiveKey(c.id.DomainID, c.id.DeviceID))
 		}
@@ -249,7 +272,16 @@ func (c *duplexConnection) close(code string, closeCode int) {
 	c.cancel()
 	c.ws.Close()
 }
-func (c *duplexConnection) send(f duplex.Frame, data bool) error {
+func (c *duplexConnection) send(f duplex.Frame, data bool) (result error) {
+	// A timeout must fence the actual socket before the caller releases its
+	// authority transaction; a queued frame may never outlive that guard.
+	defer func() {
+		if result != nil {
+			c.cancel()
+			_ = c.ws.Close()
+		}
+	}()
+
 	w := duplexWrite{f, data, make(chan error, 1)}
 	queue := c.controlWrites
 	if data {
@@ -404,6 +436,11 @@ func (c *duplexConnection) authenticate(f duplex.Frame, initial bool) error {
 		return errors.New("proof replay")
 	}
 	state := snap.Devices[p.DeviceID]
+	var tokenGeneration *string
+	if e = tx.QueryRow(ctx, `SELECT credential_generation::text FROM iscp_relay.access_tokens WHERE domain_id=$1 AND device_id=$2 AND token_hash=$3`, p.DomainID, p.DeviceID, crypto.SHA256([]byte(f.AccessToken))).Scan(&tokenGeneration); e != nil || tokenGeneration == nil || *tokenGeneration != state.CredentialGeneration {
+		return errors.New("auth_required")
+	}
+
 	if !initial {
 		c.mu.Lock()
 		same := state.AuthorizationRevision == c.revision
@@ -482,7 +519,15 @@ func (c *duplexConnection) locked(ctx context.Context, tx pgx.Tx, key string, hi
 	}
 	c.mu.Lock()
 	token := c.token
+	revision, generation := c.revision, c.credentialGeneration
 	c.mu.Unlock()
+	state := snap.Devices[c.id.DeviceID]
+	if state.AuthorizationRevision != revision || o.AuthorizationRevision != revision {
+		return snap, errors.New("authority_changed")
+	}
+	if state.CredentialGeneration != generation || o.CredentialGeneration != generation {
+		return snap, errors.New("auth_required")
+	}
 	cred, e := repository.NewRelayRepository(tx).GetAccessByHash(ctx, repository.DomainID(c.id.DomainID), crypto.SHA256([]byte(token)), time.Now())
 	if e != nil || cred.DeviceID != c.id.DeviceID || !time.Now().Before(o.ExpiresAt) {
 		return snap, errors.New("auth_required")
@@ -510,6 +555,10 @@ func (c *duplexConnection) process(f duplex.Frame) {
 	if e != nil {
 		if errors.Is(e, authority.ErrRevoked) {
 			c.close("revoked", 1008)
+			return
+		}
+		if e.Error() == "authority_changed" {
+			c.close("authentication_failed", 1008)
 			return
 		}
 		if e.Error() == "replaced" {
@@ -543,7 +592,13 @@ func (c *duplexConnection) process(f duplex.Frame) {
 			result = repository.AdmissionResult{State: "unknown", Reason: "commit_unknown"}
 		}
 	} else if result.Code == "" {
-		if e = tx.Commit(ctx); e != nil {
+		c.s.duplexMu.Lock()
+		commit := c.s.admissionCommit
+		c.s.duplexMu.Unlock()
+		if commit == nil {
+			commit = func(ctx context.Context, tx pgx.Tx) error { return tx.Commit(ctx) }
+		}
+		if e = commit(ctx, tx); e != nil {
 			result = repository.AdmissionResult{State: "unknown", Reason: "commit_unknown"}
 		}
 	}
@@ -589,6 +644,14 @@ func (c *duplexConnection) delivery() {
 			if e := c.deliverOne(); e != nil && c.ctx.Err() == nil {
 				if e.Error() == "auth_required" {
 					continue
+				}
+				if e.Error() == "authority_changed" {
+					c.close("authentication_failed", 1008)
+					return
+				}
+				if errors.Is(e, authority.ErrRevoked) {
+					c.close("revoked", 1008)
+					return
 				}
 				c.cancel()
 				c.ws.Close()

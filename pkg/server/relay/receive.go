@@ -99,11 +99,13 @@ func (s *Server) stopReceiver(domain, device string) {
 // It is idempotent and rejects receive loops that finish authentication later.
 func (s *Server) Close() {
 	s.duplexMu.Lock()
-	for _, c := range s.duplexOwners {
+	s.duplexClosed = true
+	for c := range s.duplexAll {
 		c.cancel()
 		c.ws.Close()
 	}
 	s.duplexMu.Unlock()
+	s.duplexWG.Wait()
 	s.receiveMu.Lock()
 	s.receiveClosed = true
 	var slots []*receiveSlot

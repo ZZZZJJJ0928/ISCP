@@ -1,16 +1,27 @@
 package iscprelayreference
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/config"
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/crypto"
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/duplex"
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/envelope"
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/identity"
+	"github.com/Infinimesh-ai/ISCP/pkg/server/authority"
 	"github.com/gorilla/websocket"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -96,7 +107,7 @@ func TestDuplexPostgresBidirectionalAdmissionQueryAndFences(t *testing.T) {
 	ctx := context.Background()
 	// Explicit genesis fixture: the test itself created every identity and has
 	// never admitted a message. Production migrations perform none of this.
-	_, e = pool.Exec(ctx, `INSERT INTO iscp_relay.writer_scopes(scope_id,writer_role,writes_enabled) VALUES('relay-a',current_user,true); INSERT INTO iscp_relay.domain_authority(scope_id,domain_id,history_id,history_state,history_evidence_sha256,activated_at) VALUES('relay-a','domain-a',repeat('A',43),'continuous',repeat('B',43),now()); INSERT INTO iscp_relay.device_authority SELECT 'relay-a',domain_id,device_id,1,1,1,'active' FROM iscp_relay.devices; INSERT INTO iscp_relay.connection_owners(scope_id,domain_id,device_id) SELECT scope_id,domain_id,device_id FROM iscp_relay.device_authority`)
+	_, e = pool.Exec(ctx, `INSERT INTO iscp_relay.writer_scopes(scope_id,writer_role,writes_enabled) VALUES('relay-a',current_user,true); INSERT INTO iscp_relay.domain_authority(scope_id,domain_id,history_id,history_state,history_evidence_sha256,activated_at) VALUES('relay-a','domain-a',repeat('A',43),'continuous',repeat('B',43),now()); INSERT INTO iscp_relay.device_authority SELECT 'relay-a',domain_id,device_id,1,1,1,'active' FROM iscp_relay.devices; INSERT INTO iscp_relay.connection_owners(scope_id,domain_id,device_id) SELECT scope_id,domain_id,device_id FROM iscp_relay.device_authority; UPDATE iscp_relay.access_tokens SET credential_generation=1; UPDATE iscp_relay.refresh_tokens SET credential_generation=1`)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -175,6 +186,36 @@ func TestDuplexPostgresBidirectionalAdmissionQueryAndFences(t *testing.T) {
 	if res.StatusCode != 426 {
 		t.Fatal(res.StatusCode)
 	}
+	// Inject only the lost COMMIT acknowledgement; PostgreSQL actually commits.
+	// The first response must be unknown, and the original key subsequently
+	// recovers its exact immutable receipt instead of executing a new admission.
+	s.duplexMu.Lock()
+	s.admissionCommit = func(ctx context.Context, tx pgx.Tx) error {
+		if err := tx.Commit(ctx); err != nil {
+			return err
+		}
+		return io.ErrUnexpectedEOF
+	}
+	s.duplexMu.Unlock()
+	uncertain := one.submit(t, b.Identity.DeviceID, "commit-unknown", "6")
+	if got := one.read(t); got.State != "unknown" || got.Reason != "commit_unknown" {
+		t.Fatal(got)
+	}
+	s.duplexMu.Lock()
+	s.admissionCommit = nil
+	s.duplexMu.Unlock()
+	uncertain.Kind = "submit.query"
+	uncertain.Envelope = nil
+	uncertain.RequestID = "7"
+	one.write(t, uncertain)
+	if got := one.read(t); got.State != "accepted" || got.Receipt == nil {
+		t.Fatal(got)
+	}
+	// Drain the already committed delivery before the independent scope test.
+	if got := two.read(t); got.Kind != "delivery" {
+		t.Fatal(got)
+	}
+	assertOldBinaryCannotOverwrite(t, pool, a, ca.Token, first)
 	replacement := connectDuplexTest(t, h.URL, a, ca.Token)
 	if replacement.ready.OwnerGeneration == one.ready.OwnerGeneration {
 		t.Fatal("generation not advanced")
@@ -185,5 +226,170 @@ func TestDuplexPostgresBidirectionalAdmissionQueryAndFences(t *testing.T) {
 	replacement.write(t, query)
 	if got := replacement.read(t); got.State != "accepted" {
 		t.Fatal(got)
+	}
+	if _, e = pool.Exec(ctx, `UPDATE iscp_relay.device_authority SET credential_generation=2 WHERE domain_id='domain-a' AND device_id=$1`, a.Identity.DeviceID); e != nil {
+		t.Fatal(e)
+	}
+	query.RequestID = "3"
+	replacement.write(t, query)
+	if got := replacement.read(t); got.Kind != "rejected" || got.Code != "auth_required" {
+		t.Fatal(got)
+	}
+	// An active row and unexpired old token never authorize a revised scope.
+	if _, e = pool.Exec(ctx, `UPDATE iscp_relay.device_authority SET authorization_revision=2 WHERE domain_id='domain-a' AND device_id=$1`, b.Identity.DeviceID); e != nil {
+		t.Fatal(e)
+	}
+	second.Kind = "submit.query"
+	second.Envelope = nil
+	second.RequestID = "3"
+	two.write(t, second)
+	if got := two.read(t); got.Kind != "closing" || got.Code != "authentication_failed" {
+		t.Fatal(got)
+	}
+}
+
+func TestDuplexPostgresClientCallbackMayWaitForReceipt(t *testing.T) {
+	pool := receiveDatabase(t)
+	s, e := New(Config{DomainID: "domain-a", RelayID: "relay-a", BaseURL: "http://relay.test", AllowedOrigins: []string{"http://relay.test"}, DB: pool, AdminToken: "admin-test-token", ProfileGate: config.DefaultGate(config.ProfileProduction)})
+	if e != nil {
+		t.Fatal(e)
+	}
+	h := httptest.NewServer(s.Handler())
+	t.Cleanup(func() { s.Close(); h.Close() })
+	p := crypto.NewProvider()
+	a, _ := identity.NewDevice(p, "domain-a", "client-a", time.Now())
+	b, _ := identity.NewDevice(p, "domain-a", "client-b", time.Now())
+	ca := bindDeviceForTest(t, s.Handler(), p, a, "relay-a", randomToken())
+	cb := bindDeviceForTest(t, s.Handler(), p, b, "relay-a", randomToken())
+	tx, e := pool.Begin(context.Background())
+	if e != nil {
+		t.Fatal(e)
+	}
+	if e = authority.BootstrapEmpty(context.Background(), tx, "relay-a", "domain-a", strings.Repeat("A", 43), strings.Repeat("B", 43), true); e != nil {
+		t.Fatal(e)
+	}
+	if e = tx.Commit(context.Background()); e != nil {
+		t.Fatal(e)
+	}
+	makeClient := func(id identity.Device, token string) *iscpbridge.RelayClient {
+		now := time.Now()
+		bundle := iscpbridge.EnrollmentBundle{DomainID: "domain-a", DeviceID: id.Identity.DeviceID, RelayID: "relay-a", RelayBaseURL: h.URL, RelayWebSocketURL: "ws" + strings.TrimPrefix(h.URL, "http") + duplex.Path, RelaySignerIdentity: &s.signer.Identity, Access: iscpbridge.RelayCredential{DomainID: "domain-a", DeviceID: id.Identity.DeviceID, Token: token, ExpiresAt: now.Add(time.Hour)}, ExpiresAt: now.Add(time.Hour)}
+		client, e := iscpbridge.NewRelayClient(iscpbridge.ProfileLocalLab, "", bundle, id, 5*time.Second)
+		if e != nil {
+			t.Fatal(e)
+		}
+		return client
+	}
+	one, two := makeClient(a, ca.Token), makeClient(b, cb.Token)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	ready := make(chan struct{}, 2)
+	done := make(chan error, 2)
+	received := make(chan struct{}, 1)
+	makeEnvelope := func(sender, recipient, msg string) envelope.SecureEnvelope {
+		return envelope.SecureEnvelope{Type: envelope.TypeSecureEnvelope, DomainID: "domain-a", MessageID: msg, SessionID: "session-client", SenderDeviceID: sender, RecipientDeviceID: recipient, Sequence: 1, Nonce: crypto.Base64URL(crypto.RandomBytes(12)), PayloadType: "test", Route: envelope.Route{RelayID: "relay-a", TTLSeconds: 30, Priority: 5}, Ciphertext: crypto.Base64URL(crypto.RandomBytes(32))}
+	}
+	go func() {
+		done <- one.RunOnceReady(ctx, func(context.Context, json.RawMessage) error { received <- struct{}{}; return nil }, func() { ready <- struct{}{} })
+	}()
+	go func() {
+		done <- two.RunOnceReady(ctx, func(ctx context.Context, _ json.RawMessage) error {
+			return two.Submit(ctx, makeEnvelope(b.Identity.DeviceID, a.Identity.DeviceID, "response"))
+		}, func() { ready <- struct{}{} })
+	}()
+	for i := 0; i < 2; i++ {
+		select {
+		case <-ready:
+		case e := <-done:
+			t.Fatal(e)
+		case <-ctx.Done():
+			t.Fatal(ctx.Err())
+		}
+	}
+	if e = one.Submit(ctx, makeEnvelope(a.Identity.DeviceID, b.Identity.DeviceID, "request")); e != nil {
+		t.Fatal(e)
+	}
+	select {
+	case <-received:
+	case e := <-done:
+		t.Fatal(e)
+	case <-ctx.Done():
+		t.Fatal(ctx.Err())
+	}
+	cancel()
+	for i := 0; i < 2; i++ {
+		<-done
+	}
+}
+
+func assertOldBinaryCannotOverwrite(t *testing.T, pool *pgxpool.Pool, id identity.Device, token string, original duplex.Frame) {
+	t.Helper()
+	binary := os.Getenv("SC_RELAY_OLD_BINARY")
+	if binary == "" {
+		binary = "/Users/dev/.cache/sparkclaw-iscp-parallel-20261019/baseline-iscp-public-relay"
+	}
+	raw, e := os.ReadFile(binary)
+	if e != nil {
+		t.Skip("real baseline binary unavailable; set SC_RELAY_OLD_BINARY")
+	}
+	hash := sha256.Sum256(raw)
+	if hex.EncodeToString(hash[:]) != "f47c8ae71a072dd10f1129d3f69f2c1067b3b45d20840604f839388131294899" {
+		t.Fatal("unexpected baseline binary digest")
+	}
+	listener, e := net.Listen("tcp", "127.0.0.1:0")
+	if e != nil {
+		t.Fatal(e)
+	}
+	addr := listener.Addr().String()
+	listener.Close()
+	cmd := exec.Command(binary)
+	cmd.Env = append(os.Environ(), "ISCP_DATABASE_URL="+pool.Config().ConnString(), "ISCP_RELAY_ADDR="+addr, "ISCP_DOMAIN_ID=domain-a", "ISCP_RELAY_ID=relay-a", "ISCP_RELAY_BASE_URL=http://"+addr, "ISCP_RELAY_WS_URL=ws://"+addr+"/v2/relay/connect", "ISCP_ALLOWED_ORIGINS=http://"+addr, "ISCP_SIGNER_FILE=", "ISCP_NODE_AUTHORITY_FILE=", "ISCP_ADMIN_TOKEN=admin-test-token")
+	if e = cmd.Start(); e != nil {
+		t.Fatal(e)
+	}
+	defer func() { _ = cmd.Process.Kill(); _ = cmd.Wait() }()
+	client := &http.Client{Timeout: time.Second}
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		res, err := client.Get("http://" + addr + "/.well-known/iscp/relay")
+		if err == nil {
+			res.Body.Close()
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("old binary did not start")
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	var before []byte
+	if e = pool.QueryRow(context.Background(), `SELECT envelope_raw FROM iscp_relay.messages WHERE domain_id='domain-a' AND message_id=$1`, original.MessageID).Scan(&before); e != nil {
+		t.Fatal(e)
+	}
+	var env map[string]any
+	_ = json.Unmarshal(original.Envelope, &env)
+	env["ciphertext"] = crypto.Base64URL(crypto.RandomBytes(64))
+	changed, _ := json.Marshal(env)
+	request, _ := http.NewRequest(http.MethodPost, "http://"+addr+"/v2/relay/envelopes", bytes.NewReader(changed))
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Authorization", "Bearer "+token)
+	request.Header.Set(accessProofHeader, accessProofHeaderValue(t, crypto.NewProvider(), id, token, http.MethodPost, "/v2/relay/envelopes", randomToken()))
+	response, e := client.Do(request)
+	if e != nil {
+		t.Fatal(e)
+	}
+	response.Body.Close()
+	if response.StatusCode == http.StatusAccepted {
+		t.Fatal("old executable admitted overwrite")
+	}
+	var after []byte
+	if e = pool.QueryRow(context.Background(), `SELECT envelope_raw FROM iscp_relay.messages WHERE domain_id='domain-a' AND message_id=$1`, original.MessageID).Scan(&after); e != nil {
+		t.Fatal(e)
+	}
+	if !bytes.Equal(before, after) {
+		t.Fatal("old executable changed immutable envelope")
+	}
+	var count int
+	if e = pool.QueryRow(context.Background(), `SELECT count(*) FROM iscp_relay.admissions WHERE domain_id='domain-a' AND message_id=$1`, original.MessageID).Scan(&count); e != nil || count != 1 {
+		t.Fatal("old executable damaged admission")
 	}
 }

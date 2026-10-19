@@ -35,7 +35,7 @@ func main() {
 		DomainID:       env("ISCP_DOMAIN_ID", "local"),
 		RelayID:        env("ISCP_RELAY_ID", "relay-local"),
 		BaseURL:        env("ISCP_RELAY_BASE_URL", "http://localhost:8080"),
-		WebSocketURL:   env("ISCP_RELAY_WS_URL", "ws://localhost:8080/v2/relay/connect"),
+		WebSocketURL:   env("ISCP_RELAY_WS_URL", "ws://localhost:8080/v2/relay/duplex"),
 		ProfileGate:    config.DefaultGate(config.LoadProfileFromEnv(config.ProfileLocalLab)),
 		DB:             db,
 		AdminToken:     os.Getenv("ISCP_ADMIN_TOKEN"),
