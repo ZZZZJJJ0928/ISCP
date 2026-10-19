@@ -7,6 +7,14 @@ ISCP, the Interoperable Secure Connectivity Protocol, is a protocol-first
 implementation of secure device identity, trust authorization, relay delivery,
 and end-to-end encrypted session messaging.
 
+This fork includes the [SparkClaw transport and authorization baseline](docs/sparkclaw-baseline.md)
+from `cf9b81de`: continuous Relay receive, application streams, node/local issuers,
+credential recovery, control peers and the SparkX helper. Generic components live
+in `pkg/`; SparkClaw-specific bindings live in `extensions/sparkclaw/`.
+Transport still uses HTTP submission plus continuous WebSocket receive. Duplex
+WebSocket is subsequent design work. Imported source retains the licensing and
+provenance recorded in [NOTICE](NOTICE).
+
 ## Origin
 
 ISCP began inside Infinimesh as the Infinimesh Secure Connectivity Protocol, a

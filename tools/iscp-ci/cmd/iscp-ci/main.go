@@ -76,6 +76,7 @@ var expectedMethods = []methodManifestEntry{
 	{Path: "/v2/relay/admin/devices", Method: "get"},
 	{Path: "/v2/relay/admin/connections", Method: "get"},
 	{Path: "/v2/relay/admin/messages", Method: "get"},
+	{Path: "/api/sparkclaw/iscp-control/v1/service-recover", Method: "post"},
 	{Path: "/.well-known/iscp/trust-root", Method: "get"},
 	{Path: "/v2/trust/devices/submit", Method: "post"},
 	{Path: "/v2/trust/devices/authorize", Method: "post"},
@@ -433,7 +434,7 @@ func generateSchemas(root *os.Root) error {
 
 func generateOpenAPI(root *os.Root) error {
 	routeSourceNames := []string{
-		"services/relay-reference/internal/relay/server.go",
+		"pkg/server/relay/server.go",
 		"services/trust-root-reference/internal/trust/server.go",
 	}
 
@@ -1111,7 +1112,7 @@ func extractOpenAPIPaths(content string) []string {
 func publicRoutes(routes []string) []string {
 	filtered := []string{}
 	for _, route := range routes {
-		if strings.HasPrefix(route, "/v2/") || strings.HasPrefix(route, "/.well-known/iscp/") {
+		if strings.HasPrefix(route, "/v2/") || strings.HasPrefix(route, "/.well-known/iscp/") || strings.HasPrefix(route, "/api/sparkclaw/iscp-control/") {
 			filtered = append(filtered, route)
 		}
 	}

@@ -12,7 +12,7 @@ MUST and MUST NOT to have executable evidence or an explicit blocking gap.
 | ISCP-SB-004 | Public key thumbprints MUST bind the key type and canonical public key bytes. | `pkg/iscp/crypto.Thumbprint`; identity/trust/session verification tests | Covered |
 | ISCP-SB-005 | Relay Access MUST NOT be treated as Trust Authorization. | Separate Relay and Trust services, grants, and access credentials; service conformance workflows | Covered |
 | ISCP-SB-006 | Relay MUST NOT hold E2E session keys. | Relay stores opaque envelopes only; relay response leakage tests | Covered |
-| ISCP-SB-007 | Relay MUST NOT decrypt business payloads. | `services/relay-reference/internal/relay`; conformance `P1-SVC-003` | Covered |
+| ISCP-SB-007 | Relay MUST NOT decrypt business payloads. | `pkg/server/relay`; conformance `P1-SVC-003` | Covered |
 | ISCP-SB-008 | Relay MUST NOT forge a SecureEnvelope accepted by the receiver. | AEAD envelope authentication and route AAD tests | Covered |
 | ISCP-SB-009 | Access revocation MUST invalidate refresh credentials and block new valid connections. | Relay revoke tests and conformance `P1-SVC-003` | Covered |
 | ISCP-SB-010 | Relay MUST enforce message size, queue TTL, deadline, rate limit, quota, and backpressure policies. | `pkg/server/queue`; relay metadata validation; rate limiter; conformance `P1-FEAT-002` | Covered |

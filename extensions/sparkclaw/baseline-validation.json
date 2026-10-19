@@ -1,0 +1,277 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-19",
+  "source_revision": "cf9b81dec39b8872efc43650080bb8facaa58511",
+  "upstream_revision": "47f1f6c231c56c92eff6b6c5d398e037ebcf9602",
+  "go_version": "go version go1.25.12 darwin/arm64",
+  "postgres": "18, disposable isolated container",
+  "unique_passed_tests": 433,
+  "test_count_note": "Includes subtests; union of full-repository race run and serial node PostgreSQL run. The first run had 12 environment-gated skips, all covered by the supplemental run. 19 packages have no test files.",
+  "checks": [
+    {
+      "name": "source mapping replay: 159 files and 3 extractions",
+      "status": "pass"
+    },
+    {
+      "name": "source SparkClaw selected package tests",
+      "status": "pass"
+    },
+    {
+      "name": "upstream pre-import go test ./...",
+      "status": "pass"
+    },
+    {
+      "name": "GOWORK=off full repository race tests with Relay PostgreSQL and long receive",
+      "status": "pass"
+    },
+    {
+      "name": "node PostgreSQL race tests with -p 1",
+      "status": "pass"
+    },
+    {
+      "name": "GOWORK=off go vet ./...",
+      "status": "pass"
+    },
+    {
+      "name": "GOWORK=off go build ./... (darwin/arm64)",
+      "status": "pass"
+    },
+    {
+      "name": "GOWORK=off GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build ./...",
+      "status": "pass"
+    },
+    {
+      "name": "operation registry projection",
+      "status": "pass"
+    },
+    {
+      "name": "generate-schemas",
+      "status": "pass"
+    },
+    {
+      "name": "generate-openapi",
+      "status": "pass"
+    },
+    {
+      "name": "traceability",
+      "status": "pass"
+    },
+    {
+      "name": "secret-scan",
+      "status": "pass"
+    },
+    {
+      "name": "reference PostgreSQL check",
+      "status": "pass"
+    },
+    {
+      "name": "live local reference service conformance",
+      "status": "pass"
+    }
+  ],
+  "fixture_correction": "Initial concurrent node package binaries raced creating the shared PostgreSQL schema. Rerun with -p 1 passed all 47 node test cases; CI and reproduction instructions use serial node packages. No production code was changed.",
+  "security": {
+    "release_ready": false,
+    "govulncheck": {
+      "status": "fail",
+      "dependency": "golang.org/x/text@v0.38.0",
+      "reachable_advisories": [
+        "GO-2026-6629",
+        "GO-2026-5970"
+      ],
+      "fix_versions": [
+        "v0.41.0",
+        "v0.39.0"
+      ]
+    },
+    "gosec": {
+      "status": "fail",
+      "count": 28,
+      "findings": [
+        {
+          "file": "extensions/sparkclaw/iscpnodecontrol/unix_listener.go",
+          "line": 24,
+          "rule": "G115",
+          "detail": "(CWE-190): integer overflow conversion int -> uint32 (Confidence: MEDIUM, Severity: HIGH)"
+        },
+        {
+          "file": "pkg/iscp/recovery/recovery.go",
+          "line": 14,
+          "rule": "G101",
+          "detail": "(CWE-798): Potential hardcoded credentials (Confidence: LOW, Severity: HIGH)"
+        },
+        {
+          "file": "extensions/sparkclaw/iscpnodeissuer/types.go",
+          "line": 30,
+          "rule": "G101",
+          "detail": "(CWE-798): Potential hardcoded credentials (Confidence: LOW, Severity: HIGH)"
+        },
+        {
+          "file": "extensions/sparkclaw/iscpnodeissuer/types.go",
+          "line": 29,
+          "rule": "G101",
+          "detail": "(CWE-798): Potential hardcoded credentials (Confidence: LOW, Severity: HIGH)"
+        },
+        {
+          "file": "internal/latencytrace/trace.go",
+          "line": 54,
+          "rule": "G703",
+          "detail": "(CWE-22): Path traversal via taint analysis (Confidence: HIGH, Severity: HIGH)"
+        },
+        {
+          "file": "pkg/server/relay/server.go",
+          "line": 369,
+          "rule": "G705",
+          "detail": "(CWE-79): XSS via taint analysis (Confidence: HIGH, Severity: MEDIUM)"
+        },
+        {
+          "file": "pkg/server/relay/managed.go",
+          "line": 20,
+          "rule": "G705",
+          "detail": "(CWE-79): XSS via taint analysis (Confidence: HIGH, Severity: MEDIUM)"
+        },
+        {
+          "file": "pkg/server/relay/persistent_signer.go",
+          "line": 99,
+          "rule": "G304",
+          "detail": "(CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)"
+        },
+        {
+          "file": "extensions/sparkclaw/iscpworkbench/config.go",
+          "line": 378,
+          "rule": "G304",
+          "detail": "(CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)"
+        },
+        {
+          "file": "extensions/sparkclaw/iscpnodeissuer/issuer.go",
+          "line": 568,
+          "rule": "G304",
+          "detail": "(CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)"
+        },
+        {
+          "file": "extensions/sparkclaw/iscpnodecontrol/config.go",
+          "line": 51,
+          "rule": "G304",
+          "detail": "(CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)"
+        },
+        {
+          "file": "extensions/sparkclaw/iscpnodeclient/client.go",
+          "line": 129,
+          "rule": "G304",
+          "detail": "(CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)"
+        },
+        {
+          "file": "extensions/sparkclaw/iscplocalenroll/enroll.go",
+          "line": 196,
+          "rule": "G304",
+          "detail": "(CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)"
+        },
+        {
+          "file": "extensions/sparkclaw/iscpbridge/relay_node_service_recovery.go",
+          "line": 98,
+          "rule": "G304",
+          "detail": "(CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)"
+        },
+        {
+          "file": "extensions/sparkclaw/iscpbridge/enrollment.go",
+          "line": 294,
+          "rule": "G304",
+          "detail": "(CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)"
+        },
+        {
+          "file": "extensions/sparkclaw/iscpbridge/enrollment.go",
+          "line": 266,
+          "rule": "G304",
+          "detail": "(CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)"
+        },
+        {
+          "file": "extensions/sparkclaw/iscpbridge/enrollment.go",
+          "line": 204,
+          "rule": "G304",
+          "detail": "(CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)"
+        },
+        {
+          "file": "extensions/sparkclaw/iscpbridge/config.go",
+          "line": 147,
+          "rule": "G304",
+          "detail": "(CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)"
+        },
+        {
+          "file": "extensions/sparkclaw/iscpbridge/config.go",
+          "line": 45,
+          "rule": "G304",
+          "detail": "(CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)"
+        },
+        {
+          "file": "cmd/iscp-workbench/enroll_node.go",
+          "line": 74,
+          "rule": "G304",
+          "detail": "(CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)"
+        },
+        {
+          "file": "cmd/iscp-node-provision/main.go",
+          "line": 45,
+          "rule": "G304",
+          "detail": "(CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)"
+        },
+        {
+          "file": "cmd/iscp-public-relay/main.go",
+          "line": 118,
+          "rule": "G302",
+          "detail": "(CWE-276): Expect file permissions to be 0600 or less (Confidence: HIGH, Severity: MEDIUM)"
+        },
+        {
+          "file": "extensions/sparkclaw/iscpbridge/enrollment.go",
+          "line": 176,
+          "rule": "G306",
+          "detail": "(CWE-276): Expect WriteFile permissions to be 0600 or less (Confidence: HIGH, Severity: MEDIUM)"
+        },
+        {
+          "file": "extensions/sparkclaw/iscpbridge/enroll_ticket.go",
+          "line": 502,
+          "rule": "G306",
+          "detail": "(CWE-276): Expect WriteFile permissions to be 0600 or less (Confidence: HIGH, Severity: MEDIUM)"
+        },
+        {
+          "file": "extensions/sparkclaw/iscprelayadapter/adapter.go",
+          "line": 77,
+          "rule": "G602",
+          "detail": "(CWE-118): slice index out of range (Confidence: HIGH, Severity: LOW)"
+        },
+        {
+          "file": "extensions/sparkclaw/iscprelayadapter/adapter.go",
+          "line": 77,
+          "rule": "G602",
+          "detail": "(CWE-118): slice index out of range (Confidence: HIGH, Severity: LOW)"
+        },
+        {
+          "file": "extensions/sparkclaw/iscpnodecontrol/unix_listener.go",
+          "line": 50,
+          "rule": "G104",
+          "detail": "(CWE-703): Errors unhandled (Confidence: HIGH, Severity: LOW)"
+        },
+        {
+          "file": "extensions/sparkclaw/iscpnodecontrol/unix_listener.go",
+          "line": 29,
+          "rule": "G104",
+          "detail": "(CWE-703): Errors unhandled (Confidence: HIGH, Severity: LOW)"
+        }
+      ]
+    },
+    "note": "Findings require separate triage/dependency remediation. Imported function bodies and source dependency versions are preserved; existing release gate remains enabled without suppressions."
+  },
+  "limitations": [
+    "No deployment, production credential or database change",
+    "SparkClaw consumer module pin is unchanged",
+    "No full duplex implementation",
+    "Native OS keyring and installed client not requalified by this import",
+    "This is not an upstream protocol acceptance or production release approval"
+  ],
+  "conformance": {
+    "case_count": 37,
+    "passed": 37,
+    "failed": 0,
+    "skipped": 0,
+    "mode": "Local independent Relay and Trust Root binaries with disposable PostgreSQL"
+  }
+}

@@ -1,11 +1,12 @@
-package relay
+// Derived from ISCP v0.2.0-rc.1 reference Relay; see UPSTREAM_LICENSE.txt.
+// Deployment adapters preserve its public protocol and persisted signer.
+package iscprelayreference
 
 import (
 	"context"
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/json"
-	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -26,12 +27,12 @@ import (
 	"github.com/Infinimesh-ai/ISCP/pkg/server/httpx"
 	"github.com/Infinimesh-ai/ISCP/pkg/server/postgres"
 	"github.com/Infinimesh-ai/ISCP/pkg/server/queue"
-	"github.com/Infinimesh-ai/ISCP/pkg/server/ratelimit"
 	"github.com/Infinimesh-ai/ISCP/pkg/server/replay"
 	"github.com/Infinimesh-ai/ISCP/pkg/server/repository"
 )
 
 type Config struct {
+	SignerFile     string
 	DomainID       string
 	RelayID        string
 	BaseURL        string
@@ -40,6 +41,7 @@ type Config struct {
 	DB             *pgxpool.Pool
 	AdminToken     string
 	AllowedOrigins []string
+	Managed        ManagedAdapter
 	// TicketIssuer is the Trust Root signer identity used to verify
 	// iscp.pairing_ticket.v3 signatures on register-with-ticket. Production
 	// profile refuses ticketed registration without it.
@@ -49,24 +51,37 @@ type Config struct {
 const accessProofHeader = "X-ISCP-Access-Proof"
 const relayMaxQueuedBytes = 1 << 20
 
+// ManagedAdapter is the deployment-owned transaction plane. It adds no public
+// request fields to the reference registration interface.
+type ManagedAdapter interface {
+	Register(context.Context, identity.DeviceIdentity, identity.DeviceProof, provisioning.PairingTicketV3) (json.RawMessage, error)
+	Refresh(*http.Request) (json.RawMessage, error)
+	ServiceRecover(*http.Request) (json.RawMessage, error)
+	Metadata() map[string]string
+}
+
 type Server struct {
-	cfg         Config
-	provider    crypto.Provider
-	signer      identity.Device
-	mux         *http.ServeMux
-	limiter     *ratelimit.Limiter
-	replay      *replay.Cache
-	queue       *queue.Queue
-	repo        *repository.RelayRepository
-	upgrader    websocket.Upgrader
-	mu          sync.RWMutex
-	devices     map[string]identity.DeviceIdentity
-	access      map[string]credential
-	refresh     map[string]credential
-	revoked     map[string]struct{}
-	tickets     map[string]ticketState
-	connections map[string]connectionState
-	startedAt   time.Time
+	cfg           Config
+	provider      crypto.Provider
+	signer        identity.Device
+	mux           *http.ServeMux
+	replay        *replay.Cache
+	queue         *queue.Queue
+	repo          *repository.RelayRepository
+	upgrader      websocket.Upgrader
+	mu            sync.RWMutex
+	devices       map[string]identity.DeviceIdentity
+	access        map[string]credential
+	refresh       map[string]credential
+	revoked       map[string]struct{}
+	tickets       map[string]ticketState
+	connections   map[string]connectionState
+	startedAt     time.Time
+	receiveMu     sync.Mutex
+	receivers     map[string]*receiveSlot
+	receiveClosed bool
+	queueMu       sync.Mutex
+	reservedBytes int
 }
 
 type credential struct {
@@ -96,7 +111,7 @@ type connectionState struct {
 func New(cfg Config) (*Server, error) {
 	provider := crypto.NewProvider()
 	now := time.Now().UTC()
-	signer, err := identity.NewDevice(provider, cfg.DomainID, cfg.RelayID+"-signer", now)
+	signer, err := persistentSigner(provider, cfg, now)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +137,6 @@ func New(cfg Config) (*Server, error) {
 		provider:    provider,
 		signer:      signer,
 		mux:         http.NewServeMux(),
-		limiter:     ratelimit.New(120, time.Minute),
 		replay:      replay.NewCache(),
 		queue:       queue.New(relayMaxQueuedBytes),
 		repo:        repo,
@@ -134,19 +148,14 @@ func New(cfg Config) (*Server, error) {
 		tickets:     map[string]ticketState{},
 		connections: map[string]connectionState{},
 		startedAt:   now,
+		receivers:   map[string]*receiveSlot{},
 	}
 	s.routes()
 	return s, nil
 }
 
 func (s *Server) Handler() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !s.limiter.Allow(clientKey(r), time.Now().UTC()) {
-			httpx.WriteError(w, http.StatusTooManyRequests, iscperrors.Retryable(iscperrors.CodeAccessInvalid, "rate limit exceeded"))
-			return
-		}
-		s.mux.ServeHTTP(w, r)
-	})
+	return s.mux
 }
 
 func (s *Server) routes() {
@@ -159,6 +168,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/v2/relay/devices/bind-self", s.bindSelf)
 	s.mux.HandleFunc("/v2/relay/devices/register-with-ticket", s.registerWithTicket)
 	s.mux.HandleFunc("/v2/relay/devices/refresh-access", s.refreshAccess)
+	s.mux.HandleFunc("/api/sparkclaw/iscp-control/v1/service-recover", s.serviceRecover)
 	s.mux.HandleFunc("/v2/relay/devices/revoke-access", s.revokeAccess)
 	s.mux.HandleFunc("/v2/relay/envelopes", s.envelopes)
 	s.mux.HandleFunc("/v2/relay/connect", s.connect)
@@ -197,6 +207,9 @@ func (s *Server) wellKnown(w http.ResponseWriter, _ *http.Request) {
 		IssuedAt:  now,
 		ExpiresAt: now.Add(24 * time.Hour),
 	}
+	if s.cfg.Managed != nil {
+		relayDesc.Metadata = s.cfg.Managed.Metadata()
+	}
 	signed, err := descriptor.Sign(s.provider, s.signer, relayDesc.Type, relayDesc, now)
 	if err != nil {
 		httpx.WriteError(w, http.StatusInternalServerError, err)
@@ -230,6 +243,14 @@ func (s *Server) bindSelf(w http.ResponseWriter, r *http.Request) {
 	if err := s.verifyProof(r.Context(), req.Identity, req.Proof, s.cfg.RelayID, req.Proof.Challenge, 5*time.Minute); err != nil {
 		httpx.WriteError(w, http.StatusUnauthorized, err)
 		return
+	}
+	if binder, ok := s.cfg.Managed.(interface {
+		OperatorBind(context.Context, identity.DeviceIdentity) error
+	}); ok {
+		if err := binder.OperatorBind(r.Context(), req.Identity); err != nil {
+			httpx.WriteError(w, managedStatus(err), err)
+			return
+		}
 	}
 	s.bindIdentity(w, r, req.Identity)
 }
@@ -274,6 +295,18 @@ func (s *Server) registerWithTicket(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) registerWithSignedTicket(w http.ResponseWriter, r *http.Request, req registerTicketRequest) {
+	if s.cfg.Managed != nil {
+		raw, err := s.cfg.Managed.Register(r.Context(), req.Identity, req.Proof, *req.Ticket)
+		if err != nil {
+			httpx.WriteError(w, managedStatus(err), err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-store")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(raw)
+		return
+	}
 	if s.cfg.TicketIssuer == nil {
 		httpx.WriteError(w, http.StatusServiceUnavailable, iscperrors.New(iscperrors.CodeConfigInvalid, "relay has no configured ticket issuer"))
 		return
@@ -325,6 +358,17 @@ func (s *Server) consumeTicket(ticketID string, maxUses int) error {
 }
 
 func (s *Server) refreshAccess(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.Managed != nil {
+		raw, err := s.cfg.Managed.Refresh(r)
+		if err != nil {
+			httpx.WriteError(w, managedStatus(err), err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-store")
+		_, _ = w.Write(raw)
+		return
+	}
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -406,6 +450,7 @@ func (s *Server) revokeAccess(w http.ResponseWriter, r *http.Request) {
 			s.refresh[k] = cred
 		}
 	}
+	s.stopReceiver(s.cfg.DomainID, req.DeviceID)
 	if s.repo != nil {
 		now := time.Now().UTC()
 		if err := s.repo.RevokeDevice(r.Context(), repository.DomainID(s.cfg.DomainID), req.DeviceID, now); err != nil {
@@ -528,7 +573,7 @@ func (s *Server) envelopes(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteError(w, http.StatusInternalServerError, err)
 			return
 		}
-	} else if !s.queue.Enqueue(queue.Message{
+	} else if !s.enqueueMemory(queue.Message{
 		DomainID:          meta.DomainID,
 		MessageID:         meta.MessageID,
 		SenderDeviceID:    meta.SenderDeviceID,
@@ -540,6 +585,7 @@ func (s *Server) envelopes(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusRequestEntityTooLarge, iscperrors.New(iscperrors.CodeEnvelopeInvalid, "message too large"))
 		return
 	}
+	s.wakeReceiver(meta.DomainID, meta.RecipientDeviceID)
 	httpx.WriteJSON(w, http.StatusAccepted, receipt)
 }
 
@@ -553,6 +599,9 @@ func (s *Server) connect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer c.Close()
+	c.SetReadLimit(64 << 10)
+	_ = c.SetReadDeadline(time.Now().Add(receiveIOTimeout))
+	_ = c.SetWriteDeadline(time.Now().Add(receiveIOTimeout))
 	challenge := randomToken()
 	if err := c.WriteJSON(map[string]string{"state": "challenge", "challenge": challenge}); err != nil {
 		return
@@ -596,23 +645,7 @@ func (s *Server) connect(w http.ResponseWriter, r *http.Request) {
 		LastSeenAt:   now,
 	})
 	defer s.closeConnection(connectionID)
-	_ = c.WriteJSON(map[string]string{"state": "ready"})
-	messages, err := s.dequeueMessages(r.Context(), id.DomainID, id.DeviceID, time.Now().UTC(), 100)
-	if err != nil {
-		_ = c.WriteJSON(map[string]string{"state": "closed", "error": "message dequeue failed"})
-		return
-	}
-	delivered := 0
-	for _, msg := range messages {
-		if err := c.WriteJSON(map[string]any{"state": "message", "message_id": msg.MessageID, "envelope": json.RawMessage(msg.Envelope)}); err != nil {
-			return
-		}
-		delivered++
-		if s.repo != nil {
-			_ = s.repo.MarkMessageDelivered(r.Context(), repository.DomainID(msg.DomainID), msg.MessageID, time.Now().UTC())
-		}
-	}
-	_ = c.WriteJSON(map[string]any{"state": "drained", "delivered": delivered})
+	s.receiveStream(r.Context(), c, id)
 }
 
 func (s *Server) adminDevices(w http.ResponseWriter, r *http.Request) {
@@ -660,30 +693,6 @@ func (s *Server) adminMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, s.queue.SnapshotMetadata(now))
-}
-
-func (s *Server) dequeueMessages(ctx context.Context, domainID, recipientDeviceID string, now time.Time, limit int) ([]queue.Message, error) {
-	if s.repo == nil {
-		return s.queue.DequeueFor(domainID, recipientDeviceID, now, limit), nil
-	}
-	claimed, err := s.repo.ClaimPendingMessagesFor(ctx, repository.DomainID(domainID), recipientDeviceID, now, time.Minute, limit)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]queue.Message, 0, len(claimed))
-	for _, msg := range claimed {
-		out = append(out, queue.Message{
-			DomainID:          string(msg.DomainID),
-			MessageID:         msg.MessageID,
-			SenderDeviceID:    msg.SenderDeviceID,
-			RecipientDeviceID: msg.RecipientDeviceID,
-			Envelope:          msg.EnvelopeRaw,
-			Priority:          msg.Priority,
-			QueuedAt:          msg.QueuedAt,
-			ExpiresAt:         msg.ExpiresAt,
-		})
-	}
-	return out, nil
 }
 
 func relayMessageMetadata(messages []repository.RelayMessage) []queue.MessageMetadata {
@@ -953,23 +962,6 @@ func bearerToken(r *http.Request) string {
 		return ""
 	}
 	return strings.TrimSpace(value[len(prefix):])
-}
-
-func clientKey(r *http.Request) string {
-	if forwarded := strings.TrimSpace(r.Header.Get("X-Forwarded-For")); forwarded != "" {
-		if idx := strings.IndexByte(forwarded, ','); idx >= 0 {
-			return strings.TrimSpace(forwarded[:idx])
-		}
-		return forwarded
-	}
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err == nil && host != "" {
-		return host
-	}
-	if r.RemoteAddr != "" {
-		return r.RemoteAddr
-	}
-	return "unknown"
 }
 
 func originAllowed(r *http.Request, allowed []string, fallbackURLs ...string) bool {

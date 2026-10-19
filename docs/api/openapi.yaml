@@ -85,6 +85,22 @@ paths:
       responses:
         "200": { description: Message metadata }
         "401": { description: Missing admin credential }
+  /api/sparkclaw/iscp-control/v1/service-recover:
+    post:
+      tags: [SparkClaw profile]
+      summary: Recover credentials for an existing operator service identity
+      description: >-
+        Optional SparkClaw binding. Requires a signed device proof and a pinned
+        receipt wrapping key. It cannot register a new identity. Available only
+        when the Relay is configured with the managed authority adapter.
+      responses:
+        "200": { description: Credentials sealed to the supplied receipt wrapping key }
+        "400": { description: Invalid recovery request }
+        "403": { description: Identity unapproved, revoked or invalid device proof }
+        "404": { description: Managed adapter disabled }
+        "405": { description: Method not allowed }
+        "409": { description: Recovery operation conflicts with existing state }
+        "503": { description: Managed authority unavailable }
   /.well-known/iscp/trust-root:
     get:
       summary: Fetch signed Trust Root descriptor

@@ -1,4 +1,6 @@
-package relay
+// Derived from ISCP v0.2.0-rc.1 reference Relay; see UPSTREAM_LICENSE.txt.
+// Deployment adapters preserve its public protocol and persisted signer.
+package iscprelayreference
 
 import (
 	"bytes"

@@ -1,0 +1,2134 @@
+{
+  "schema_version": 1,
+  "source_repository": "https://github.com/Infinimesh-ai/SparkClaw",
+  "source_revision": "cf9b81dec39b8872efc43650080bb8facaa58511",
+  "upstream_iscp_revision": "47f1f6c231c56c92eff6b6c5d398e037ebcf9602",
+  "scope": "Existing Relay, enrollment, authority, control peers, appstream, SparkClaw workbench and helper. No duplex implementation.",
+  "files": [
+    {
+      "source": "LICENSE",
+      "target": "extensions/sparkclaw/SPARKCLAW_LICENSE.txt",
+      "source_sha256": "3688798bfdeaf5c004ddea93cdf36ff22ba0dd4787cce693d97e0fa85964fdf2",
+      "target_sha256": "3688798bfdeaf5c004ddea93cdf36ff22ba0dd4787cce693d97e0fa85964fdf2",
+      "transforms": []
+    },
+    {
+      "source": "packages/protocol/application-stream.v1.schema.json",
+      "target": "schemas/candidates/application-stream.v1.json",
+      "source_sha256": "8363ce3762fb91a244f580cd2931843a0225c99b080f23fbcf7e8d15c8dd5322",
+      "target_sha256": "8363ce3762fb91a244f580cd2931843a0225c99b080f23fbcf7e8d15c8dd5322",
+      "transforms": []
+    },
+    {
+      "source": "packages/protocol/execution-stream.v1.schema.json",
+      "target": "extensions/sparkclaw/protocol/execution-stream.v1.schema.json",
+      "source_sha256": "5ff0fa1b58d1c79a2db21f43834ca0f632a7ad002c82c65eee6ea91b6770f80b",
+      "target_sha256": "5ff0fa1b58d1c79a2db21f43834ca0f632a7ad002c82c65eee6ea91b6770f80b",
+      "transforms": []
+    },
+    {
+      "source": "packages/protocol/fixtures/application-stream.v1.json",
+      "target": "conformance/fixtures/application-stream.v1.json",
+      "source_sha256": "a077b6ebb72ec7bca1b2cb6e8c80a5a0714652783187a46dca98564debaa6e2f",
+      "target_sha256": "a077b6ebb72ec7bca1b2cb6e8c80a5a0714652783187a46dca98564debaa6e2f",
+      "transforms": []
+    },
+    {
+      "source": "packages/protocol/fixtures/execution-stream.v1.json",
+      "target": "extensions/sparkclaw/protocol/fixtures/execution-stream.v1.json",
+      "source_sha256": "20338e3915c8a0f4bc4d2e2deb56255a2ef1e20ac26f25d5fb0566156d98de8a",
+      "target_sha256": "20338e3915c8a0f4bc4d2e2deb56255a2ef1e20ac26f25d5fb0566156d98de8a",
+      "transforms": []
+    },
+    {
+      "source": "packages/protocol/iscp-bridge.v1.schema.json",
+      "target": "extensions/sparkclaw/protocol/iscp-bridge.v1.schema.json",
+      "source_sha256": "6e8ca45421d214aca9193cc00db020a0969473b531f9d47c9626aeafefe63ec0",
+      "target_sha256": "6e8ca45421d214aca9193cc00db020a0969473b531f9d47c9626aeafefe63ec0",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/cmd/iscp-control-forwarder/main.go",
+      "target": "cmd/iscp-control-forwarder/main.go",
+      "source_sha256": "095b3c1e0ecc258bba2cbfe66afd87aa52ec6303b4404ec424d4c9360d0929be",
+      "target_sha256": "97d05072f3fcb60b9cf75cfbdf9acab2045897a5304a7de8b0abb39b1a7087e3",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodecontrol",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodecontrol"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/cmd/iscp-local-enroll/main.go",
+      "target": "cmd/iscp-local-enroll/main.go",
+      "source_sha256": "0d10926ed39781c7363975e557aa0f02e64e39f2578f7f33706e4f235de1f23b",
+      "target_sha256": "c61a2cb26fafc879dcacf2f3988e2eb0c636ec3946e473e8594fd665b2c539d2",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscplocalenroll",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscplocalenroll"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/cmd/iscp-local-issuer/main.go",
+      "target": "cmd/iscp-local-issuer/main.go",
+      "source_sha256": "25b3661b1eeabb3c7e3b2f95b6431045dedd93a325bca4acd89b722b8984cf0c",
+      "target_sha256": "e23c03d9224451327f8ed8a1527b5bfa2ebc35691eabd84e3f05a13e3814064a",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscplocalissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscplocalissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/cmd/iscp-local-issuer/main_test.go",
+      "target": "cmd/iscp-local-issuer/main_test.go",
+      "source_sha256": "269dcd378900e6e4bdc97615c17f50a515e742d073209f1062dc28d7e89cbb40",
+      "target_sha256": "269dcd378900e6e4bdc97615c17f50a515e742d073209f1062dc28d7e89cbb40",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/cmd/iscp-node-issuer/main.go",
+      "target": "cmd/iscp-node-issuer/main.go",
+      "source_sha256": "a8e91f43f8f26d7301a5b23aa4612feb45b2b302853ba8bd4546d8af7e9b5db9",
+      "target_sha256": "987bd8560a1ae43e9303e881216b3d582ddc772432d973e838513826008b98ad",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodecontrol",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodecontrol"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/cmd/iscp-node-provision/main.go",
+      "target": "cmd/iscp-node-provision/main.go",
+      "source_sha256": "7089f4da89af93f64e6ee2fa2b31ed0a6b2dddbc4e1c270c2c510c2feb187cfb",
+      "target_sha256": "8218d635e92972862a8d6540aa4ef3551b3b6139ac4ebd72b1a2d7aed90cbe73",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodecontrol",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodecontrol"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/cmd/iscp-public-relay/main.go",
+      "target": "cmd/iscp-public-relay/main.go",
+      "source_sha256": "5c2757546629bc854ba42bb3b30bd95b643c9c6d646de063d6a2d4ffe27175b2",
+      "target_sha256": "94e55c3966df8aa910ea63d5ed955a51f99a7f94fdfdedd270df70e0fa5b4cf7",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodecontrol",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodecontrol"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscprelayadapter",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscprelayadapter"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscprelayreference",
+            "github.com/Infinimesh-ai/ISCP/pkg/server/relay"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/cmd/iscp-workbench/enroll_node.go",
+      "target": "cmd/iscp-workbench/enroll_node.go",
+      "source_sha256": "731f945676e38e086c513dee4aa36eff974b43ea18d56e0dc2b29bd30c1c1e2d",
+      "target_sha256": "c364e21eb243c2b74ad78fe0113c6a289ae1d0f4568d377d0f0113866ec37a31",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeclient",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeclient"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpworkbench",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpworkbench"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/cmd/iscp-workbench/enroll_node_test.go",
+      "target": "cmd/iscp-workbench/enroll_node_test.go",
+      "source_sha256": "9437ff3924fd5e52dbed323ff16c90ee8cc3e3cfabcc75d1424bbaba8950a189",
+      "target_sha256": "556d64e318d82644b0a09fb0fafbc2ad52a168306b0eea86fbc73dbfe5330467",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpworkbench",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpworkbench"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/cmd/iscp-workbench/main.go",
+      "target": "cmd/iscp-workbench/main.go",
+      "source_sha256": "67a354ebcca15eb13ebdc5f41d7d54d45b49a2b8178e878ebbbe73c455cf50dc",
+      "target_sha256": "e502b38e73e51bd30490705c3544f7761610188bbc9b25d98709f70b10d9def9",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpworkbench",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpworkbench"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/cmd/iscp-workbench/main_test.go",
+      "target": "cmd/iscp-workbench/main_test.go",
+      "source_sha256": "4c7d1f92b0c4984c78866ad338ece0d5380b337b43059c1e0f7d4560ea7a0d2c",
+      "target_sha256": "8938797992984f7c3c7fd80695e8a5267242b5f25d11f7f27c7baaee6bf47a32",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpworkbench",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpworkbench"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/cmd/iscp-workbench/reverse.go",
+      "target": "cmd/iscp-workbench/reverse.go",
+      "source_sha256": "d6f68b77191370b0788c57d5971ae38af28e0035e88652ecff4a23ec70bb42d7",
+      "target_sha256": "85f16c7277634d64b947b684a9c43478980b67e04c4a0ad2c893fd1bb605f3b6",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpworkbench",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpworkbench"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/cmd/iscp-workbench/streams.go",
+      "target": "cmd/iscp-workbench/streams.go",
+      "source_sha256": "470853321e83d9ff591613246335dc0981b3c304324f7a423b416d736b89b07b",
+      "target_sha256": "470853321e83d9ff591613246335dc0981b3c304324f7a423b416d736b89b07b",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/cmd/iscp-workbench/streams_test.go",
+      "target": "cmd/iscp-workbench/streams_test.go",
+      "source_sha256": "2dddd748f2cf528e40977cfed35752460daa67ac04709fb24cf155c57e1433f1",
+      "target_sha256": "ce0631a4be5ff58eb5be13f22147dcd9a5b34395424241e7cd09fe9679d6516a",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpworkbench",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpworkbench"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/appstream/frame.go",
+      "target": "pkg/iscp/appstream/frame.go",
+      "source_sha256": "a895dc90dd82070753d503024ccee4a2295ad8d8e66c3058f3e9cf2d9172c017",
+      "target_sha256": "a895dc90dd82070753d503024ccee4a2295ad8d8e66c3058f3e9cf2d9172c017",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/appstream/frame_test.go",
+      "target": "pkg/iscp/appstream/frame_test.go",
+      "source_sha256": "0cefde6f5d22ff7ad0df5ece06aaad7f5878838b71dff31c1d4c6f88abc6472e",
+      "target_sha256": "d3f698eb7bf2dded8104d725f7cb41bfe6a4ec4ae94bffefdd5d03ad44c0c3fb",
+      "transforms": [
+        {
+          "replace": [
+            "../../../../packages/protocol/fixtures/application-stream.v1.json",
+            "../../../conformance/fixtures/application-stream.v1.json"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpauth/deletion.go",
+      "target": "extensions/sparkclaw/iscpauth/deletion.go",
+      "source_sha256": "8bd861dca59e3084041a85a06017777e35d4e4a78edef1839918c9aef2c76039",
+      "target_sha256": "8bd861dca59e3084041a85a06017777e35d4e4a78edef1839918c9aef2c76039",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpauth/policy.go",
+      "target": "extensions/sparkclaw/iscpauth/policy.go",
+      "source_sha256": "0f7fcab90397b3d146df23158cd98f97653ded1859ad3d0d892119cc0d48eb6d",
+      "target_sha256": "0f7fcab90397b3d146df23158cd98f97653ded1859ad3d0d892119cc0d48eb6d",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpauth/policy_test.go",
+      "target": "extensions/sparkclaw/iscpauth/policy_test.go",
+      "source_sha256": "f85d484075530acfe6519935078171009e355ab9cd6b7720752327260cc5d9b3",
+      "target_sha256": "f85d484075530acfe6519935078171009e355ab9cd6b7720752327260cc5d9b3",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/authorization_delete.go",
+      "target": "extensions/sparkclaw/iscpbridge/authorization_delete.go",
+      "source_sha256": "5c894cf2b044f73e494d5a463650db0dfe8b6ceef54cb7b7d119862275d8bd93",
+      "target_sha256": "de126ecf63db609b8f4e557d9ffa5ebecc179f3d87a6beb1e9c10fd9eeea1b0a",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/config.go",
+      "target": "extensions/sparkclaw/iscpbridge/config.go",
+      "source_sha256": "7b479846a6a9af3d3f2fbb64e760e90a554fc96d6292d72e36d9c6e82575acfd",
+      "target_sha256": "7b479846a6a9af3d3f2fbb64e760e90a554fc96d6292d72e36d9c6e82575acfd",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/contract.go",
+      "target": "extensions/sparkclaw/iscpbridge/contract.go",
+      "source_sha256": "d3b31977d87b88fcfb675efd3c96db14997f107f524fdaf1cfd8823b3b3968c6",
+      "target_sha256": "d3b31977d87b88fcfb675efd3c96db14997f107f524fdaf1cfd8823b3b3968c6",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/contract_test.go",
+      "target": "extensions/sparkclaw/iscpbridge/contract_test.go",
+      "source_sha256": "1db9b623da284aa673361eb3c36edfafb3c477e14a30712df83e4367fd7ef34b",
+      "target_sha256": "8c9c4e2b12b132f6117b2a3f150b70e3e3af7f30885e2b0c56980a38ae6e7519",
+      "transforms": [
+        {
+          "remove_function": "TestGatewayClientAllowsEmptyTokenForLoopbackNoAuthGateway"
+        },
+        {
+          "remove_function": "TestMockHandlerRequiresClientToken"
+        },
+        {
+          "replace": [
+            "\t\"context\"\n",
+            ""
+          ]
+        },
+        {
+          "replace": [
+            "\t\"net/http\"\n",
+            ""
+          ]
+        },
+        {
+          "replace": [
+            "\t\"net/http/httptest\"\n",
+            ""
+          ]
+        },
+        {
+          "replace": [
+            "\t\"time\"\n",
+            ""
+          ]
+        },
+        {
+          "replace": [
+            "../../../../packages/protocol/iscp-bridge.v1.schema.json",
+            "../protocol/iscp-bridge.v1.schema.json"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/discovery.go",
+      "target": "extensions/sparkclaw/iscpbridge/discovery.go",
+      "source_sha256": "162beef3cbcccfc42451c16e888ce4af3f7a5ae09ed9b6ff7f89be259565e0f2",
+      "target_sha256": "162beef3cbcccfc42451c16e888ce4af3f7a5ae09ed9b6ff7f89be259565e0f2",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/discovery_local.go",
+      "target": "extensions/sparkclaw/iscpbridge/discovery_local.go",
+      "source_sha256": "842eab913f46f7eaf9246748884df3f8022bd033646a3422e15f8bbcf7155ebb",
+      "target_sha256": "842eab913f46f7eaf9246748884df3f8022bd033646a3422e15f8bbcf7155ebb",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/discovery_local_test.go",
+      "target": "extensions/sparkclaw/iscpbridge/discovery_local_test.go",
+      "source_sha256": "df2c8210f65ca20387e5dce9ae2cd2444490dcc0419f3947c9d9f451fd1fc5e5",
+      "target_sha256": "df2c8210f65ca20387e5dce9ae2cd2444490dcc0419f3947c9d9f451fd1fc5e5",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/discovery_node.go",
+      "target": "extensions/sparkclaw/iscpbridge/discovery_node.go",
+      "source_sha256": "a5c00bebf5bc5aeb43497d6f520b951f705b90b7d0cfe84be80ee07dea1b69ce",
+      "target_sha256": "a5c00bebf5bc5aeb43497d6f520b951f705b90b7d0cfe84be80ee07dea1b69ce",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/discovery_test.go",
+      "target": "extensions/sparkclaw/iscpbridge/discovery_test.go",
+      "source_sha256": "e7b07da62e8290d43d268e7361de39a0c5ad1fa6d4f8f13e9501ecfd79e251fb",
+      "target_sha256": "e7b07da62e8290d43d268e7361de39a0c5ad1fa6d4f8f13e9501ecfd79e251fb",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/enroll_ticket.go",
+      "target": "extensions/sparkclaw/iscpbridge/enroll_ticket.go",
+      "source_sha256": "aa9c76b86df7388f70b2f98d346b4e9b18ce6d0d2622e049a51b9b0c7674b0d1",
+      "target_sha256": "aa9c76b86df7388f70b2f98d346b4e9b18ce6d0d2622e049a51b9b0c7674b0d1",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/enroll_ticket_test.go",
+      "target": "extensions/sparkclaw/iscpbridge/enroll_ticket_test.go",
+      "source_sha256": "4dae74b6ca73609cf6d0fe75ffd46a6176c5a310776cbd17a75341d0f03b3943",
+      "target_sha256": "4dae74b6ca73609cf6d0fe75ffd46a6176c5a310776cbd17a75341d0f03b3943",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/enrollment.go",
+      "target": "extensions/sparkclaw/iscpbridge/enrollment.go",
+      "source_sha256": "7859d2f79a4f5e9983b6d7460f5e730c56224a8cdb366157d414a983e23b96a1",
+      "target_sha256": "7859d2f79a4f5e9983b6d7460f5e730c56224a8cdb366157d414a983e23b96a1",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/enrollment_test.go",
+      "target": "extensions/sparkclaw/iscpbridge/enrollment_test.go",
+      "source_sha256": "632a457a9bfb91533150d84b18ab828454bfc0fc776db66fb2aef6f921c4f8d4",
+      "target_sha256": "632a457a9bfb91533150d84b18ab828454bfc0fc776db66fb2aef6f921c4f8d4",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/grant_authorization.go",
+      "target": "extensions/sparkclaw/iscpbridge/grant_authorization.go",
+      "source_sha256": "fca22f088585c4d2d8c852873be400c041d085f7817d761ba456c50147bb4697",
+      "target_sha256": "9558b2636c81b1b51699d63a0bb3a3930a1d4a4d36b4de14d2589591dab1c122",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/grant_lifecycle_client.go",
+      "target": "extensions/sparkclaw/iscpbridge/grant_lifecycle_client.go",
+      "source_sha256": "d530816298fe2a87e9388ef0a7fcb4b6a54a49b9a7b75fb5206d1c868d9b56cb",
+      "target_sha256": "e43f21bfed1547036f78cb3bb25d822ad9b2218670c89f4aeac1ed96a5d882f1",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/grant_lifecycle_client_test.go",
+      "target": "extensions/sparkclaw/iscpbridge/grant_lifecycle_client_test.go",
+      "source_sha256": "63c48b3cd3b6438745bc9e5d028b2430644df2f982293b346ccd208e23d91fa0",
+      "target_sha256": "63c48b3cd3b6438745bc9e5d028b2430644df2f982293b346ccd208e23d91fa0",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/grant_lifecycle_expired_test.go",
+      "target": "extensions/sparkclaw/iscpbridge/grant_lifecycle_expired_test.go",
+      "source_sha256": "0a0733cbd5156885e93e626526024b64dddeb06a0653bc626842417ce77ce820",
+      "target_sha256": "0a0733cbd5156885e93e626526024b64dddeb06a0653bc626842417ce77ce820",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/node_tls.go",
+      "target": "extensions/sparkclaw/iscpbridge/node_tls.go",
+      "source_sha256": "03f295c2739163ff16ba0f3089c6acd4de785ceb53b85979e8dfdf0a666e6f4a",
+      "target_sha256": "03f295c2739163ff16ba0f3089c6acd4de785ceb53b85979e8dfdf0a666e6f4a",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/relay.go",
+      "target": "extensions/sparkclaw/iscpbridge/relay.go",
+      "source_sha256": "9e523e4bf5199eb1f0f187cc4ab75f6cc435ee83e7423132877331e477ece693",
+      "target_sha256": "0c4d6d97e19f85cca69026e182d52bb763a82cfba5594d4b00cdd374999ceace",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/latencytrace",
+            "github.com/Infinimesh-ai/ISCP/internal/latencytrace"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/relay_credentials_test.go",
+      "target": "extensions/sparkclaw/iscpbridge/relay_credentials_test.go",
+      "source_sha256": "204e9a6177780058bb6d202c794efbe5eaa4b96bf4daeec2b6e4ffeeb30b7395",
+      "target_sha256": "204e9a6177780058bb6d202c794efbe5eaa4b96bf4daeec2b6e4ffeeb30b7395",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/relay_local_renewal.go",
+      "target": "extensions/sparkclaw/iscpbridge/relay_local_renewal.go",
+      "source_sha256": "cffde514ce606789a4179c2bbae54b2e936190b6dca22cf1413325cfa8fd5001",
+      "target_sha256": "cffde514ce606789a4179c2bbae54b2e936190b6dca22cf1413325cfa8fd5001",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/relay_local_renewal_test.go",
+      "target": "extensions/sparkclaw/iscpbridge/relay_local_renewal_test.go",
+      "source_sha256": "b3bd17d5c12c15170e5c6ca18d52e565fc954eb9a7322d8f2e1b94b0386f5a7f",
+      "target_sha256": "b3bd17d5c12c15170e5c6ca18d52e565fc954eb9a7322d8f2e1b94b0386f5a7f",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/relay_node_refresh.go",
+      "target": "extensions/sparkclaw/iscpbridge/relay_node_refresh.go",
+      "source_sha256": "e5acb33c12a2345f68428f3e1323a173352ad25a8004c4d36755de21c50cc7ff",
+      "target_sha256": "e5acb33c12a2345f68428f3e1323a173352ad25a8004c4d36755de21c50cc7ff",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/relay_node_refresh_test.go",
+      "target": "extensions/sparkclaw/iscpbridge/relay_node_refresh_test.go",
+      "source_sha256": "49d9ca55989756bdee7155a142dda55fd5755e39d1f2ffa31c215147c7f9bff8",
+      "target_sha256": "49d9ca55989756bdee7155a142dda55fd5755e39d1f2ffa31c215147c7f9bff8",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/relay_node_service_recovery.go",
+      "target": "extensions/sparkclaw/iscpbridge/relay_node_service_recovery.go",
+      "source_sha256": "bacf328e37ed3564fc40b08119a77167882a98701b6d4544d217df443bade601",
+      "target_sha256": "bacf328e37ed3564fc40b08119a77167882a98701b6d4544d217df443bade601",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/relay_node_service_recovery_test.go",
+      "target": "extensions/sparkclaw/iscpbridge/relay_node_service_recovery_test.go",
+      "source_sha256": "d732c18d77fa22f6c86873e1fdb653781926b19fd6c9893e2d429958da58cef9",
+      "target_sha256": "d732c18d77fa22f6c86873e1fdb653781926b19fd6c9893e2d429958da58cef9",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/relay_receive_test.go",
+      "target": "extensions/sparkclaw/iscpbridge/relay_receive_test.go",
+      "source_sha256": "a778e3c8a1c29ce05bd842dc6d063f998150991e952d2c278867c15ab1506e69",
+      "target_sha256": "a778e3c8a1c29ce05bd842dc6d063f998150991e952d2c278867c15ab1506e69",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/workbench_urls.go",
+      "target": "extensions/sparkclaw/iscpbridge/workbench_urls.go",
+      "source_sha256": "01250f98c78e29713e5214a1d58b7088fae3c230f482f3edd310586f0bfdd1d7",
+      "target_sha256": "01250f98c78e29713e5214a1d58b7088fae3c230f482f3edd310586f0bfdd1d7",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscplocalenroll/enroll.go",
+      "target": "extensions/sparkclaw/iscplocalenroll/enroll.go",
+      "source_sha256": "9fc7cb26231e540b47954239c08a0f78f0e000542d8dd7b91999f2e1a513a037",
+      "target_sha256": "95c1b93ac8d739fcc93eb2b1494e27eab8f61ef6d126e91004c2fdcdaeda6ab4",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscplocalenroll/enroll_test.go",
+      "target": "extensions/sparkclaw/iscplocalenroll/enroll_test.go",
+      "source_sha256": "3b2f7dd1c8cf8514206b8a8533a64bbb3fa048187b13329652640bb743f94a73",
+      "target_sha256": "02b14e7c592df7ae4ca5e0abf57ca20a6cde70a20ac0cc63b84db0672882fb37",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscplocalenroll/refresh.go",
+      "target": "extensions/sparkclaw/iscplocalenroll/refresh.go",
+      "source_sha256": "620fd7d27972c162277a561746b21755fefeb21f27ab2de25b841d453ba66763",
+      "target_sha256": "0b38e93a0a0817a93baa01ed381112e42325ed1e731fcd3fd2eda02e39415879",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscplocalissuer/authorization_delete.go",
+      "target": "extensions/sparkclaw/iscplocalissuer/authorization_delete.go",
+      "source_sha256": "b53725a0d16ca628f0f27b8e6382d0fe0d7e0fd7662813d4be25748e3a5ea8e9",
+      "target_sha256": "5fb24980badeb5a8ec697200fcb342422e99f7f0c7d23f0c917dadf0e0cd9371",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscplocalissuer/authorization_delete_test.go",
+      "target": "extensions/sparkclaw/iscplocalissuer/authorization_delete_test.go",
+      "source_sha256": "626c88a2f731d6f52525ed524d058748fe25ad5354786cd15e8373dfc2574eaf",
+      "target_sha256": "54b55d03196a6e4b1bf9cb269608718becfc5b8895591e319e95f47b266082db",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscplocalissuer/issuer.go",
+      "target": "extensions/sparkclaw/iscplocalissuer/issuer.go",
+      "source_sha256": "877c6b493f593bdfe78fb940b7eb2aa0d5cedd77d50b43d22bf062807557f82a",
+      "target_sha256": "877c6b493f593bdfe78fb940b7eb2aa0d5cedd77d50b43d22bf062807557f82a",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscplocalissuer/issuer_test.go",
+      "target": "extensions/sparkclaw/iscplocalissuer/issuer_test.go",
+      "source_sha256": "9598d30f7c488bf551177c05f1065ade405e05a3711c2dc1043499a57d0e9a3a",
+      "target_sha256": "9598d30f7c488bf551177c05f1065ade405e05a3711c2dc1043499a57d0e9a3a",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscplocalissuer/reauthorization.go",
+      "target": "extensions/sparkclaw/iscplocalissuer/reauthorization.go",
+      "source_sha256": "3092cc26315b57a6b863e480dda130f6904745bdb4e6e35d97bb1d15518b2ee2",
+      "target_sha256": "eefead786266534355b6509794e91e3046888bcc209780655ecdd18155c278f8",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscplocalissuer/reauthorization_test.go",
+      "target": "extensions/sparkclaw/iscplocalissuer/reauthorization_test.go",
+      "source_sha256": "57f1d422ad5fe63d1038a51e162bc7c1f72641fca263003fc5de0e6e35ae3e6a",
+      "target_sha256": "81b85048084e522f52a6035614f6dadddffcddf69a49a6f0e06ed5d56f7b657c",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscplocalissuer/renewal.go",
+      "target": "extensions/sparkclaw/iscplocalissuer/renewal.go",
+      "source_sha256": "4a4ac40e40f6cb0c565ca270e89437ba9edd6be8706bd4a38cef510b53402246",
+      "target_sha256": "1a1113e22a8f46c22debec41b12a5a1e71873324b14e7c52ffc64f632eb8a5c6",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscplocalissuer/renewal_state.go",
+      "target": "extensions/sparkclaw/iscplocalissuer/renewal_state.go",
+      "source_sha256": "35f124b3dc79f8f2a9176fe043d243527c7e54e2a1dfdce595b9a24106bac065",
+      "target_sha256": "c8e825323d8b4e3e66259fec95e96826955fad3e0e64c43aa2fd988647704334",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscplocalissuer/renewal_test.go",
+      "target": "extensions/sparkclaw/iscplocalissuer/renewal_test.go",
+      "source_sha256": "5953c908de57f1f26f8b124f053358c56b0250d718c626e7e703742b4163897c",
+      "target_sha256": "5953c908de57f1f26f8b124f053358c56b0250d718c626e7e703742b4163897c",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscplocalissuer/standing_authorization.go",
+      "target": "extensions/sparkclaw/iscplocalissuer/standing_authorization.go",
+      "source_sha256": "1e7a95ec85877f06c6432486498915868431de489fefbf90c38c171d396eb4a2",
+      "target_sha256": "bcb8f84435aae8b5f139711370becd572824f049479f5c74ef8d77422dbfd8a9",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscplocalissuer/standing_authorization_test.go",
+      "target": "extensions/sparkclaw/iscplocalissuer/standing_authorization_test.go",
+      "source_sha256": "a0ff2fe7bf3413b20838bb6a66d81b55004848b67708b6bc0a5bf2f178a41ca5",
+      "target_sha256": "90d414aee9623c33be2cb78dc603434dda23ded4c35c88b07166f5fbdced9cc0",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpnodeclient/authorization.go",
+      "target": "extensions/sparkclaw/iscpnodeclient/authorization.go",
+      "source_sha256": "81fe10af6391dd1fda7ee3f00bc052705d224b78e0f9bef315b060c6cdbc4b95",
+      "target_sha256": "c3eb6e908bb42c4bdb97ea3315ce454c16e7182f8f9b4809d37075ed183e1cd6",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpnodeclient/authorization_test.go",
+      "target": "extensions/sparkclaw/iscpnodeclient/authorization_test.go",
+      "source_sha256": "725823b3cd3691a1e23176d12f02e625830224d57f87d5abcd782eee5b620f80",
+      "target_sha256": "c2a6af133ca74a607e2327a73d6ec458a8259c3598708f791988448479efaa79",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpnodeclient/client.go",
+      "target": "extensions/sparkclaw/iscpnodeclient/client.go",
+      "source_sha256": "b0a651eb87699f9ae51a121b37e4c5d0258089cc0a7ed52de57596625a125fb0",
+      "target_sha256": "b0a944d289c982b09074e407e1bc91b86b585cac7a0bb9ac60ba8626ef27b032",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpnodeclient/client_test.go",
+      "target": "extensions/sparkclaw/iscpnodeclient/client_test.go",
+      "source_sha256": "2557fd480399d53b6f52d21623804eec349e22768cd2cd970b8979469875f448",
+      "target_sha256": "72e6de614923ceb2cf5762014e399c20fbeef3db62bf0e98523e79a2a1917176",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpnodeclient/lifecycle.go",
+      "target": "extensions/sparkclaw/iscpnodeclient/lifecycle.go",
+      "source_sha256": "6c896aefeca8f44271e8f1926954a88957f585d58afb5dbf4433b57324c8b2ad",
+      "target_sha256": "4f54f5337fb4e3f1a8ad4add2fc727064ef0830cb924f284df118e5406d80524",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpnodecontrol/config.go",
+      "target": "extensions/sparkclaw/iscpnodecontrol/config.go",
+      "source_sha256": "f2e456119438ce57080917dd16162eb135514c71986255006aee6faaa74b48af",
+      "target_sha256": "4a9b912ab894a021acdaec645a89e9b7eb0a2e40a00f7f32cf0138ad625181e7",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpnodecontrol/forwarder.go",
+      "target": "extensions/sparkclaw/iscpnodecontrol/forwarder.go",
+      "source_sha256": "a276bd6987a75547d319235c53153f605ee9c36cb3f2f991aa11f312d57d822c",
+      "target_sha256": "368563277765f3e7d958d5e761f799675003391ecfc4181fcdc97fcf2dfc1c90",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpnodecontrol/forwarder_capacity_test.go",
+      "target": "extensions/sparkclaw/iscpnodecontrol/forwarder_capacity_test.go",
+      "source_sha256": "3e13b9a247fe5f2063cdbd11d8b93951e521e120a50e43e9998147a001fd35d1",
+      "target_sha256": "8ec12b73d30c09ca5908035f3625270b7bdf4c3111701314c9a7d2777f531d1a",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpnodecontrol/hello.go",
+      "target": "extensions/sparkclaw/iscpnodecontrol/hello.go",
+      "source_sha256": "7be554602d2a9e82343e661cbfb531d66db45ef011b7cd116acc8141d4c9f3d8",
+      "target_sha256": "6779f80967fe592870478d50bb428930a38ae0f89a292600e47833cf29d084ad",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpnodecontrol/hello_test.go",
+      "target": "extensions/sparkclaw/iscpnodecontrol/hello_test.go",
+      "source_sha256": "950a82f83e76d70e0dae026ccb46bc57bc00b1f4d9d134870c87e5fa365ea19e",
+      "target_sha256": "af45f9e8be2678850a610cf4d2a5f0cf0853d87a7a49d3c95446d813e0806622",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpnodecontrol/peer.go",
+      "target": "extensions/sparkclaw/iscpnodecontrol/peer.go",
+      "source_sha256": "8b048bcc0834867ee450d123f38e51075d274c7c6a3f398a5c42fe080b076aaa",
+      "target_sha256": "b67006527a1dd38088fd54981b84a53501d2e2a284a7490fcc7e32f558ab9972",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpnodecontrol/peer_continuous_test.go",
+      "target": "extensions/sparkclaw/iscpnodecontrol/peer_continuous_test.go",
+      "source_sha256": "72b9dc3cd9488e324e245a3c459d63fdbfee6064d23227219a95a3f410c2450e",
+      "target_sha256": "72b9dc3cd9488e324e245a3c459d63fdbfee6064d23227219a95a3f410c2450e",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpnodecontrol/peer_test.go",
+      "target": "extensions/sparkclaw/iscpnodecontrol/peer_test.go",
+      "source_sha256": "30fb55e2f1d023a3e05c0450121d47a352b9a934e6ed75777d37612408c2dad1",
+      "target_sha256": "a1b1848aeb87eab929ab6f8bb9cba2c90d14da8eb6edae947e757691705da0f8",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpnodecontrol/rotation.go",
+      "target": "extensions/sparkclaw/iscpnodecontrol/rotation.go",
+      "source_sha256": "a52e0da9e50d9dea36f83c9ce3e398b54671dba98bc9cd28cdc3abeacf504f9d",
+      "target_sha256": "87d59dad2d61116488f8b42799c317c2224f74238184cdd4d0feabc52bfcf47a",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpnodecontrol/rotation_inflight_test.go",
+      "target": "extensions/sparkclaw/iscpnodecontrol/rotation_inflight_test.go",
+      "source_sha256": "cec39a6d2c62026e096979c2999dee486ff5b44a4ed09f00c315bc464671bba1",
+      "target_sha256": "24d820f635c0f0bad991cdd80c64dcd0a35198d6fd980ae9b1362a3194433e61",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpnodecontrol/rotation_test.go",
+      "target": "extensions/sparkclaw/iscpnodecontrol/rotation_test.go",
+      "source_sha256": "85c5650a1f38c05bbd23c3ea2bdd170c6f9ae3ba8b3fb076e1097f721fd9d3bb",
+      "target_sha256": "7a58d0fe668c78eaf23b838aaf1afb292868a594eeccb163271178e9ccec31a1",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpnodecontrol/routing.go",
+      "target": "extensions/sparkclaw/iscpnodecontrol/routing.go",
+      "source_sha256": "4ff31e2c2ef7072028bd026711f3073ca730c27c7a2255845be7564c186a5419",
+      "target_sha256": "55e32f50a01fa4808458e055e9d10a29be167c3e19b0b790bbf2ecb9fe0ecbf3",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpnodecontrol/routing_test.go",
+      "target": "extensions/sparkclaw/iscpnodecontrol/routing_test.go",
+      "source_sha256": "484209b3d9cba47a749047204078011d476aea40705be26f849910531e025516",
+      "target_sha256": "fe89a8ce77412fe1239a21d37dca9adc938c259066e81570eec8cfeb376b8e55",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpnodecontrol/service_recovery.go",
+      "target": "extensions/sparkclaw/iscpnodecontrol/service_recovery.go",
+      "source_sha256": "2dada026eaa767ca960d04ef862ae317b3b5355040ca512a459c304cc74f4a90",
+      "target_sha256": "b9221520c0aa6c8a2cc8ef53600d8fee2df4220b7831427bbe283f452ce501f8",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpnodecontrol/unix_listener.go",
+      "target": "extensions/sparkclaw/iscpnodecontrol/unix_listener.go",
+      "source_sha256": "7bb24407ac7d0ff932a86831b4dc3403235a2d8a0bb4001226a655a203346d62",
+      "target_sha256": "2c42fdc393cdc83453d670761c9c5d70dde47b542d7a2db873f471e216b1638c",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpnodecontrol/unix_relay.go",
+      "target": "extensions/sparkclaw/iscpnodecontrol/unix_relay.go",
+      "source_sha256": "4ef45077f6fa4279ddb9b42bbfb8a2d7ca90011ce9df509386429124a4fd06de",
+      "target_sha256": "408de8d0786131883ac2095d0f816707a006dc0b6f3c592154f8fec528abe30d",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpnodeissuer/applied.go",
+      "target": "extensions/sparkclaw/iscpnodeissuer/applied.go",
+      "source_sha256": "eb57ebb67ae4f1ac72be4da0e075679297b72c8d5fdde06c72d687061e3f63a6",
+      "target_sha256": "eb57ebb67ae4f1ac72be4da0e075679297b72c8d5fdde06c72d687061e3f63a6",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpnodeissuer/channel.go",
+      "target": "extensions/sparkclaw/iscpnodeissuer/channel.go",
+      "source_sha256": "049e35f52b4aea423460d1de65c085f5a2707c8345632dfcfa194bff3ded6de2",
+      "target_sha256": "049e35f52b4aea423460d1de65c085f5a2707c8345632dfcfa194bff3ded6de2",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpnodeissuer/http.go",
+      "target": "extensions/sparkclaw/iscpnodeissuer/http.go",
+      "source_sha256": "3ebf03f17f9f7eae1149d4d98594a965051fda45b33d1b454f3493621ff0dbd4",
+      "target_sha256": "3ebf03f17f9f7eae1149d4d98594a965051fda45b33d1b454f3493621ff0dbd4",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpnodeissuer/issuer.go",
+      "target": "extensions/sparkclaw/iscpnodeissuer/issuer.go",
+      "source_sha256": "edfcf70d799d8d81dce04f61e209eacbd448dbf4e49ee689c8e356b7c941efbf",
+      "target_sha256": "2e34dbc0bf46e07402c30020dd2833a2e1a8162ff7a1f0b4b4f456a7564e9cf1",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpnodeissuer/issuer_test.go",
+      "target": "extensions/sparkclaw/iscpnodeissuer/issuer_test.go",
+      "source_sha256": "5875ef175e7bce7144cf67a3d266ae488de48ea2208e916ec0764d0b992538ed",
+      "target_sha256": "990f78135b81be1fc0eed8a3cfa79a8b47d8bf9e27a723376626ca324f85593f",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpnodeissuer/lifecycle.go",
+      "target": "extensions/sparkclaw/iscpnodeissuer/lifecycle.go",
+      "source_sha256": "404c320c330d8448ef7c81b6d5a4c44a643a6722c623f57e27e63210f1419911",
+      "target_sha256": "e749dbb7ff784134bd8a6ea12d363fe8abcd8ee8e016f93e667809c5965f1031",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpnodeissuer/management.go",
+      "target": "extensions/sparkclaw/iscpnodeissuer/management.go",
+      "source_sha256": "7534f73d17e4f1ad0617453b9cdb5d0a74ea273c05a6a73dcd8bbeb8e637e1be",
+      "target_sha256": "7534f73d17e4f1ad0617453b9cdb5d0a74ea273c05a6a73dcd8bbeb8e637e1be",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpnodeissuer/management_test.go",
+      "target": "extensions/sparkclaw/iscpnodeissuer/management_test.go",
+      "source_sha256": "a7e8b09c9e880ac897543bc2ef074270085afc27caef3dbab8d621e99beaf18d",
+      "target_sha256": "a7e8b09c9e880ac897543bc2ef074270085afc27caef3dbab8d621e99beaf18d",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpnodeissuer/migration_test.go",
+      "target": "extensions/sparkclaw/iscpnodeissuer/migration_test.go",
+      "source_sha256": "89292b0f9d9ee3585a986b2c0ebc4cd590f4d69f0050b2863ee0dbf882fd044d",
+      "target_sha256": "89292b0f9d9ee3585a986b2c0ebc4cd590f4d69f0050b2863ee0dbf882fd044d",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpnodeissuer/store.go",
+      "target": "extensions/sparkclaw/iscpnodeissuer/store.go",
+      "source_sha256": "9481b9a9e6cc54623880fd973b1343fa79c518529edd28eff65d69223b8c36df",
+      "target_sha256": "9481b9a9e6cc54623880fd973b1343fa79c518529edd28eff65d69223b8c36df",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpnodeissuer/types.go",
+      "target": "extensions/sparkclaw/iscpnodeissuer/types.go",
+      "source_sha256": "bae3739cc65d44b2470e7876e565bda7938c4a148450acbb457765f10e22b56d",
+      "target_sha256": "26beb68ac8152cd296efcce3cb1510ffc55d08df5b9a82c1ec7eae70822661dd",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscprelayadapter/adapter.go",
+      "target": "extensions/sparkclaw/iscprelayadapter/adapter.go",
+      "source_sha256": "ea27d327275467c6a22d47ac425c6757f92393558ebbac9670cd02e498e5f871",
+      "target_sha256": "25e11f377267ea71809c3b6101843121e281ab3429202500bf64b51bacda4f6f",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscprelayadapter/adapter_test.go",
+      "target": "extensions/sparkclaw/iscprelayadapter/adapter_test.go",
+      "source_sha256": "2886f45fba25681e91d6605ec8bed04c830d4eea90d898e387b0a7d7a1f10941",
+      "target_sha256": "08c5b5019b1b1f34082bb9a779d3eb2fbe421f71bae9c3cdb83919ea6636fc54",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscprelayadapter/authority.go",
+      "target": "extensions/sparkclaw/iscprelayadapter/authority.go",
+      "source_sha256": "903e13526ab0773162a6b2ab3ebeff9215cceddf9e2587e15034be6cf9516ea8",
+      "target_sha256": "b84c4a70e33fa5018d608d00b86c23a5ff36e72a8239e7f0904c1599ff1466f1",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscprelayadapter/capacity_test.go",
+      "target": "extensions/sparkclaw/iscprelayadapter/capacity_test.go",
+      "source_sha256": "09e2ff17f9bd6dbf427e49f1851bc2b617771b300a51a7140f6fb889b455c0e7",
+      "target_sha256": "09e2ff17f9bd6dbf427e49f1851bc2b617771b300a51a7140f6fb889b455c0e7",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscprelayadapter/lifecycle.go",
+      "target": "extensions/sparkclaw/iscprelayadapter/lifecycle.go",
+      "source_sha256": "c00186faf3eb9b8b81515f31e8fd02b35797e8b2e962d9b4dff270c77ae69636",
+      "target_sha256": "9b76be1022930753754347f8c94c9fc4d6a644440c5e1efeeb3bea3bb7684167",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscprelayadapter/manager.go",
+      "target": "extensions/sparkclaw/iscprelayadapter/manager.go",
+      "source_sha256": "695db33aa1890717917220f40a5f0ad468d9e0628c0a396ddec4e822ff310917",
+      "target_sha256": "e22e9d170939177a48354d0589c0f368110eadc254aab2b262b06306244b8594",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscprelayadapter/multi_test.go",
+      "target": "extensions/sparkclaw/iscprelayadapter/multi_test.go",
+      "source_sha256": "174d5baece045a38631a90141a4eec6aca044ccea6c6569ee1e877439f933879",
+      "target_sha256": "784c519ad2c7993a503c1b8d48090cf115c2c314d905c847b4ef2b060788dbc6",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscprelayreference",
+            "github.com/Infinimesh-ai/ISCP/pkg/server/relay"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscprelayadapter/registration.go",
+      "target": "extensions/sparkclaw/iscprelayadapter/registration.go",
+      "source_sha256": "b564774d3b47a881b3eefae977185b53465382ba67bd0e2593db12dcb09f7ffc",
+      "target_sha256": "359f34555d58dffa3ac52e94d3eb37fe5c7428f53d1035dc07b508cf6da3916f",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscprelayadapter/service.go",
+      "target": "extensions/sparkclaw/iscprelayadapter/service.go",
+      "source_sha256": "902bfdb569ccac96fd985e15120ad3758e88a7bb5017c73a0fc19dba6933a4ac",
+      "target_sha256": "5719b181b2f487a757e90f3c12002ee9159091149b2c1c8079bd8a97a0b05e3c",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscprelayreference/UPSTREAM_LICENSE.txt",
+      "target": "pkg/server/relay/UPSTREAM_LICENSE.txt",
+      "source_sha256": "c66f3d7fdddf45a312a2211276f08d26fb57c4b5ccd5acb9ce26dba04fde5cb9",
+      "target_sha256": "62257d6b473481cc29297701afa552eddd08279dad27e272fb985c90effc8ed4",
+      "transforms": [
+        {
+          "replace": [
+            "SOFTWARE.\n\n",
+            "SOFTWARE.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscprelayreference/managed.go",
+      "target": "pkg/server/relay/managed.go",
+      "source_sha256": "8f79159660938cabcc4f454c11c382bc07d238133cb2c0464180001c0c5f1236",
+      "target_sha256": "8f79159660938cabcc4f454c11c382bc07d238133cb2c0464180001c0c5f1236",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscprelayreference/persistent_signer.go",
+      "target": "pkg/server/relay/persistent_signer.go",
+      "source_sha256": "8211dfeff68a914f8cb55402e5ff8b8d9b2bdfef138a76030fc11c4f344c12bc",
+      "target_sha256": "8211dfeff68a914f8cb55402e5ff8b8d9b2bdfef138a76030fc11c4f344c12bc",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscprelayreference/persistent_signer_test.go",
+      "target": "pkg/server/relay/persistent_signer_test.go",
+      "source_sha256": "0a230da30bf016ad68b1a9f5a47cec9a67fe4c53cae781b02c7ec07c6c171e3e",
+      "target_sha256": "0a230da30bf016ad68b1a9f5a47cec9a67fe4c53cae781b02c7ec07c6c171e3e",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscprelayreference/receive.go",
+      "target": "pkg/server/relay/receive.go",
+      "source_sha256": "8b5309b8469913858da5a15199aab455c7babc0c65c13cca4fca3ac6c7ca0eb0",
+      "target_sha256": "8b5309b8469913858da5a15199aab455c7babc0c65c13cca4fca3ac6c7ca0eb0",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscprelayreference/receive_test.go",
+      "target": "pkg/server/relay/receive_test.go",
+      "source_sha256": "f2981d4246f13cb825bdb93c97235ce800ffb241a8c395b85ce0e932e5e0d97e",
+      "target_sha256": "b348463f2eb0979f8726efead5b246d6eacd8f5d070cfcb771183ebb6b1f413f",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscprelayreference/schema.go",
+      "target": "pkg/server/relay/schema.go",
+      "source_sha256": "e924edee388eca8d15d607a455eaffa9161ab54a2cf1355d05b44df15d4941f2",
+      "target_sha256": "e924edee388eca8d15d607a455eaffa9161ab54a2cf1355d05b44df15d4941f2",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscprelayreference/schema.sql",
+      "target": "pkg/server/relay/schema.sql",
+      "source_sha256": "82e6c84b0938ff290108d1d0f0466526a4efba3143535653fd5c8b35aeda6b0e",
+      "target_sha256": "82e6c84b0938ff290108d1d0f0466526a4efba3143535653fd5c8b35aeda6b0e",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscprelayreference/schema_test.go",
+      "target": "pkg/server/relay/schema_test.go",
+      "source_sha256": "f78956a3c0e9a5038159a214ffe15f1a00b93dd9d5fb4fb352c01040d5ef957d",
+      "target_sha256": "f78956a3c0e9a5038159a214ffe15f1a00b93dd9d5fb4fb352c01040d5ef957d",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscprelayreference/server.go",
+      "target": "pkg/server/relay/server.go",
+      "source_sha256": "6b2eae3bb1cfeb80451066813b36f14b103e736dbedd9e02377812ef991ff645",
+      "target_sha256": "6b2eae3bb1cfeb80451066813b36f14b103e736dbedd9e02377812ef991ff645",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscprelayreference/server_test.go",
+      "target": "pkg/server/relay/server_test.go",
+      "source_sha256": "6cc560c3f25b71d47e18a909869aff48cedccac70061df3118da96b1cd1c4b3c",
+      "target_sha256": "6cc560c3f25b71d47e18a909869aff48cedccac70061df3118da96b1cd1c4b3c",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/authorization_control.go",
+      "target": "extensions/sparkclaw/iscpworkbench/authorization_control.go",
+      "source_sha256": "3b2c508b23c1e4ff97d1c9d158f5d4a106d34546c08d77d08fa4422e65e746e7",
+      "target_sha256": "3794570949d906e6cfb7c5dd03af0ebbc92df45586e66b8be65d9f3cb4931472",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/authorization_control_test.go",
+      "target": "extensions/sparkclaw/iscpworkbench/authorization_control_test.go",
+      "source_sha256": "f70f8f84aea2bd994fa89eadb741a5a997eb2309639305a0d1475c56581a0b3a",
+      "target_sha256": "f70f8f84aea2bd994fa89eadb741a5a997eb2309639305a0d1475c56581a0b3a",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/config.go",
+      "target": "extensions/sparkclaw/iscpworkbench/config.go",
+      "source_sha256": "8733fa856156da302fe6db810882630e00486726afa93389ddc5864278ace110",
+      "target_sha256": "24a9c70d57555ddec73286777092147d3f1f0db1c476c69baa805a468615b6a1",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/endpoint.go",
+      "target": "extensions/sparkclaw/iscpworkbench/endpoint.go",
+      "source_sha256": "bd021bc74c1ec76698d6eb4ab2d8e0ded30745da5b11d95f7213db5ad11d7a1d",
+      "target_sha256": "0f227de04f6be967fad02704ede67e97814e59781cfc8bd1f94bf59a911ea1f5",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/appstream",
+            "github.com/Infinimesh-ai/ISCP/pkg/iscp/appstream"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/latencytrace",
+            "github.com/Infinimesh-ai/ISCP/internal/latencytrace"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/endpoint_call_isolation_test.go",
+      "target": "extensions/sparkclaw/iscpworkbench/endpoint_call_isolation_test.go",
+      "source_sha256": "bfbecc6c187f26cf9a7e65a5e87672d637f61d1fe28c52a75d44f7187be99962",
+      "target_sha256": "0a1c71101bc1702cc116ff2db85334d8102f1d9c089f2c8c4452b900b1050fac",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/endpoint_continuous_test.go",
+      "target": "extensions/sparkclaw/iscpworkbench/endpoint_continuous_test.go",
+      "source_sha256": "10c7a54a6cd332b22e0280347ab02352bcc141d4b858bdfca693ba6ce0348e58",
+      "target_sha256": "07704a23020fb0541e7fa63a44918dba99c13ac35fb1766230913b63c4664267",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/endpoint_response_authority_fixture_test.go",
+      "target": "extensions/sparkclaw/iscpworkbench/endpoint_response_authority_fixture_test.go",
+      "source_sha256": "41707900b7b04da8436205091ff18dc06940912d2eef727bf66e4411d8552a9c",
+      "target_sha256": "07171e3c192b80023b6975db11f9924504bcf0cff15fa71cea709a5653e248f9",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeclient",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeclient"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/endpoint_response_authorization_test.go",
+      "target": "extensions/sparkclaw/iscpworkbench/endpoint_response_authorization_test.go",
+      "source_sha256": "95b2a337a4605e8597ef01b1d76d30f0632fb2e898b8064c92d066ec17bd8b4f",
+      "target_sha256": "e93e3b437d859b2284cc9f73aafc8040c36e59b9d7e5883a35133c8d665712e5",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/endpoint_rpc.go",
+      "target": "extensions/sparkclaw/iscpworkbench/endpoint_rpc.go",
+      "source_sha256": "ce2eec16f64e8aa54ebcc535dc3c09733e64843efa6020345241b176b54f77c2",
+      "target_sha256": "796d1e16e551f1b413b123b44f2b53a99bf3b25c724769a01b3cd1b0d5d13de1",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/latencytrace",
+            "github.com/Infinimesh-ai/ISCP/internal/latencytrace"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/endpoint_stream.go",
+      "target": "extensions/sparkclaw/iscpworkbench/endpoint_stream.go",
+      "source_sha256": "4d99ba7f48b0bae33ce4fb557b66830e37c0dc665692fc2be9f358b4df9d0749",
+      "target_sha256": "9f32bde4a4d7dfd8d19fd2e1a9acbeb4c3caa31e03df1e82b530bc9c5c25c0b7",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/appstream",
+            "github.com/Infinimesh-ai/ISCP/pkg/iscp/appstream"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/endpoint_stream_recovery_test.go",
+      "target": "extensions/sparkclaw/iscpworkbench/endpoint_stream_recovery_test.go",
+      "source_sha256": "cae3b2ae1c5fdbfe1b08c47ef7874b43f30d18de02e4992a5f8a0135b87b6022",
+      "target_sha256": "b31d46be6cdd7dc3d859a4d5ec6bf2fe03a3103dda84245a905dcbbaafe0deb2",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/appstream",
+            "github.com/Infinimesh-ai/ISCP/pkg/iscp/appstream"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/endpoint_stream_test.go",
+      "target": "extensions/sparkclaw/iscpworkbench/endpoint_stream_test.go",
+      "source_sha256": "8f7041cd9facae629be2690d5643635c8dd60748123c34e2c6dffce83f79bf21",
+      "target_sha256": "13228538dcbedfef1da2f1f2811575171f2f63700d4838a01667e3d28c01f564",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/appstream",
+            "github.com/Infinimesh-ai/ISCP/pkg/iscp/appstream"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/endpoint_test.go",
+      "target": "extensions/sparkclaw/iscpworkbench/endpoint_test.go",
+      "source_sha256": "fd54f8f986cf3186b936bba8f29451be20e9669adfc021c154c8745aebdb780f",
+      "target_sha256": "bbd1eacd8dae04ed04e3544c78ccc198d945ff547b790bdee085b6ff54cb5026",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/endpoint_trace_test.go",
+      "target": "extensions/sparkclaw/iscpworkbench/endpoint_trace_test.go",
+      "source_sha256": "cd55d4064b5f50e334053a265d53ee5566a2cec78adc7a593bfcd0fbb8c9c8d3",
+      "target_sha256": "6f3cebd2cdc241a1af36f072cae8fd801a590ab301ecb5e5de931bfbba438b4f",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/latencytrace",
+            "github.com/Infinimesh-ai/ISCP/internal/latencytrace"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/envelope_authentication.go",
+      "target": "extensions/sparkclaw/iscpworkbench/envelope_authentication.go",
+      "source_sha256": "d63e1f74d46ba2a188799fb712d4e356fc30ec91236b738a7034908b2b288349",
+      "target_sha256": "d63e1f74d46ba2a188799fb712d4e356fc30ec91236b738a7034908b2b288349",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/errors.go",
+      "target": "extensions/sparkclaw/iscpworkbench/errors.go",
+      "source_sha256": "d0df6f53ae5bcc86d803e1be1cabc288b89ed063b67731356bdcd33c39ff18d4",
+      "target_sha256": "d0df6f53ae5bcc86d803e1be1cabc288b89ed063b67731356bdcd33c39ff18d4",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/grant_lifecycle.go",
+      "target": "extensions/sparkclaw/iscpworkbench/grant_lifecycle.go",
+      "source_sha256": "3c6eeaeed915e5a2047c0b99dd67bae46ecd07ef41a12a9ee0a48d75dbd754bb",
+      "target_sha256": "3fbb79b546f380270b783592b8e7a10bcf406bb7e769696e92ebd275507713a7",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeclient",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeclient"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/grant_lifecycle_test.go",
+      "target": "extensions/sparkclaw/iscpworkbench/grant_lifecycle_test.go",
+      "source_sha256": "c9a7a1faddb892416c5c6df2796670e7bfad88867a4017b773453fe5c11b4ca5",
+      "target_sha256": "1e3b35f3e7c8c7d6c5aca11869e94b07675417a1958099db477f07bf5923dde1",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscplocalissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscplocalissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/mail_deadline_test.go",
+      "target": "extensions/sparkclaw/iscpworkbench/mail_deadline_test.go",
+      "source_sha256": "055ca1870796de3dca48f5f9af5a41a162a29325d76630f5c17471933592b857",
+      "target_sha256": "055ca1870796de3dca48f5f9af5a41a162a29325d76630f5c17471933592b857",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/mail_popup_test.go",
+      "target": "extensions/sparkclaw/iscpworkbench/mail_popup_test.go",
+      "source_sha256": "eec0d592e15299f751c5505e98c7fe5e286bb011865593019982cd5cf384459c",
+      "target_sha256": "eec0d592e15299f751c5505e98c7fe5e286bb011865593019982cd5cf384459c",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/negotiation.go",
+      "target": "extensions/sparkclaw/iscpworkbench/negotiation.go",
+      "source_sha256": "d135f9d8f343c2efa14855698c891a4173b19dbf891389dcc84a94f0e791c7df",
+      "target_sha256": "502b59a158168420b5403d6db8b02ddc60d1d012b7dd94692fc79a75ec4af543",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/negotiation_test.go",
+      "target": "extensions/sparkclaw/iscpworkbench/negotiation_test.go",
+      "source_sha256": "79003a8459bef1410375650bddc671f73af8aa49df05343ca0a2eba2bd9efe1e",
+      "target_sha256": "79003a8459bef1410375650bddc671f73af8aa49df05343ca0a2eba2bd9efe1e",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/node_config.go",
+      "target": "extensions/sparkclaw/iscpworkbench/node_config.go",
+      "source_sha256": "9de8de4e2b6980b03242e36c7683196278102ca3fdb17b619d15fdfa121758bf",
+      "target_sha256": "78218f4cd1c084b6b35e9bec4392d13ea663a9dbb5aa55a585f94ab8a5233ad7",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/node_config_test.go",
+      "target": "extensions/sparkclaw/iscpworkbench/node_config_test.go",
+      "source_sha256": "04b12f5be46c57453063a177ad1f8b3b9a2b7a34200cf1a1bc248677c031685d",
+      "target_sha256": "4cedec6798a27e2e9a89d1684fcee8d409b0c388d53e1dcb6e5497a0bc175726",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeclient",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeclient"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/node_lifecycle.go",
+      "target": "extensions/sparkclaw/iscpworkbench/node_lifecycle.go",
+      "source_sha256": "fca15e5cd586438fc619f2d3a5946ca116e35e465ba255575a97abc2977cf3fb",
+      "target_sha256": "6161b887f710b66a401c19a19649432f29176305c57f59f6c5a7897e5cfe6ba4",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeclient",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeclient"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpnodeissuer",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/node_responder.go",
+      "target": "extensions/sparkclaw/iscpworkbench/node_responder.go",
+      "source_sha256": "5c792ee6d7895cb615812e7f5f0b39d338b738598c9a96c4004bdbe9b8869e77",
+      "target_sha256": "01fdf34cced61315c31f703d84dfab2047780c2e022b613b76de43d8a097405f",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/appstream",
+            "github.com/Infinimesh-ai/ISCP/pkg/iscp/appstream"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/node_responder_test.go",
+      "target": "extensions/sparkclaw/iscpworkbench/node_responder_test.go",
+      "source_sha256": "d2dda66dbff29d1693cff5b3f549acfd0b803e8b2f7ff7f0bbe31a1566ec3e32",
+      "target_sha256": "e063d8f144a689922baf6d7df3429f580ca0feb30e773411dc87c28f25c7029c",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/operations.json",
+      "target": "extensions/sparkclaw/iscpworkbench/operations.json",
+      "source_sha256": "f63cf6e2a6b71db6bf95af660cbe914b80742da138d5a58a2bd631941dfe3854",
+      "target_sha256": "f63cf6e2a6b71db6bf95af660cbe914b80742da138d5a58a2bd631941dfe3854",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/operations_generated.go",
+      "target": "extensions/sparkclaw/iscpworkbench/operations_generated.go",
+      "source_sha256": "c220b2a74a2582ed69985c00ab719980ee9daf7b52302d95aae0976082b63899",
+      "target_sha256": "1d4c0aee6f0d744f1ae89c20430eb6a4789076b8ddab3704b88ae29f74f8aa50",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/progress_negotiation_test.go",
+      "target": "extensions/sparkclaw/iscpworkbench/progress_negotiation_test.go",
+      "source_sha256": "f8b9264b3d29b4e2e86734063c842a640d9f6e21357f3fc9043ccee2798dbeb8",
+      "target_sha256": "f8b9264b3d29b4e2e86734063c842a640d9f6e21357f3fc9043ccee2798dbeb8",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/protocol.go",
+      "target": "extensions/sparkclaw/iscpworkbench/protocol.go",
+      "source_sha256": "ac0335bf85a7002830ee30610e3eead140b9e6cfbce86ac66546472c6fa2efd5",
+      "target_sha256": "ac0335bf85a7002830ee30610e3eead140b9e6cfbce86ac66546472c6fa2efd5",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/registry.go",
+      "target": "extensions/sparkclaw/iscpworkbench/registry.go",
+      "source_sha256": "5499fefa6d74cea495bc85dddb3dc8fb2494e8d7c91fbf883ae95d4e7efae700",
+      "target_sha256": "5499fefa6d74cea495bc85dddb3dc8fb2494e8d7c91fbf883ae95d4e7efae700",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/runtime_config.go",
+      "target": "extensions/sparkclaw/iscpworkbench/runtime_config.go",
+      "source_sha256": "2e633ff05e36f3e2bac8b6b6daed6ab5e9a7aed3bd16eb6bbf24a953931074ca",
+      "target_sha256": "81d54ec4119521779af59efe8dab6b40377841b4d410d720396ce72366d70275",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/runtime_config_test.go",
+      "target": "extensions/sparkclaw/iscpworkbench/runtime_config_test.go",
+      "source_sha256": "1d4665e2691db2c22ca23b44f5c07f1f3dde35fa1eb3698f6729d2feb4a241e2",
+      "target_sha256": "8fa6772771b1282fda9d32948d18783ef1634b33b9bc24dda5b1227a745e6236",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/stream_authority.go",
+      "target": "extensions/sparkclaw/iscpworkbench/stream_authority.go",
+      "source_sha256": "fa25e2e5ca139f51f5a8ec94629c16da1081a7d038616ed9d0051309bc1fcb4e",
+      "target_sha256": "bbd995b26e24beba080858d896764be155d6309d16d0d2c00d4e23ed9a7e6468",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/stream_authority_test.go",
+      "target": "extensions/sparkclaw/iscpworkbench/stream_authority_test.go",
+      "source_sha256": "34072c10d5b603e2de5d7739ed8ef111a64964747e1d87cca5e2c2d86d1e34ad",
+      "target_sha256": "fb47fa60f795abb9722be8747cd39c743ba1c7988a0171218fd6a9f736be69ff",
+      "transforms": [
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpauth",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
+          ]
+        },
+        {
+          "replace": [
+            "github.com/Chiiz0/SparkClaw/services/gateway/internal/iscpbridge",
+            "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpworkbench/unbounded_rpc_test.go",
+      "target": "extensions/sparkclaw/iscpworkbench/unbounded_rpc_test.go",
+      "source_sha256": "e2aceada68df6fe7b6cb2c4b3990ced8a93ea86832f0ef6a72d084de7a6127c0",
+      "target_sha256": "e2aceada68df6fe7b6cb2c4b3990ced8a93ea86832f0ef6a72d084de7a6127c0",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/latencytrace/trace.go",
+      "target": "internal/latencytrace/trace.go",
+      "source_sha256": "a4cefcb5ca604c4b81fe411718782c652e1def9f46b458023db578554447cf0f",
+      "target_sha256": "a4cefcb5ca604c4b81fe411718782c652e1def9f46b458023db578554447cf0f",
+      "transforms": []
+    },
+    {
+      "source": "services/gateway/internal/latencytrace/trace_test.go",
+      "target": "internal/latencytrace/trace_test.go",
+      "source_sha256": "df3c6b356b66d453bc26d2a5e1b1dd7319ad89238d7a95aa365dca067fa851a3",
+      "target_sha256": "df3c6b356b66d453bc26d2a5e1b1dd7319ad89238d7a95aa365dca067fa851a3",
+      "transforms": []
+    },
+    {
+      "source": "apps/desktop/src/shared/iscp-operations.json",
+      "target": "extensions/sparkclaw/protocol/iscp-operations.json",
+      "source_sha256": "f63cf6e2a6b71db6bf95af660cbe914b80742da138d5a58a2bd631941dfe3854",
+      "target_sha256": "f63cf6e2a6b71db6bf95af660cbe914b80742da138d5a58a2bd631941dfe3854",
+      "transforms": []
+    }
+  ],
+  "excluded_bridge_files": [
+    "adapter.go",
+    "adapter_test.go",
+    "gateway_client.go",
+    "managed_lifecycle.go",
+    "managed_lifecycle_test.go",
+    "managed_session.go",
+    "managed_session_test.go",
+    "mock.go",
+    "owner_store_contract_test.go",
+    "projection.go",
+    "projection_test.go",
+    "service.go",
+    "service_test.go",
+    "storetest_aliases_test.go"
+  ],
+  "notes": [
+    "Gateway business handlers, Agent/store/UI and phone bridge service remain in SparkClaw.",
+    "config_defaults.go extracts the two unchanged config defaults from gateway_client.go.",
+    "Package identifiers, wire names and SPARKCLAW environment variable names are deliberately retained."
+  ],
+  "extractions": [
+    {
+      "source": "services/gateway/internal/iscpbridge/service.go",
+      "source_sha256": "9d693c584c8f807f708ba210c21b8a17decef3c613f727ef3ecad829a5122829",
+      "functions": [
+        "strictUnmarshal",
+        "newWireID"
+      ],
+      "target": "extensions/sparkclaw/iscpbridge/transport_helpers.go",
+      "target_sha256": "c65c3e3920144c60bfe2024bacd4129af02ea90c0bf3bf27756d3d4545c27625",
+      "constants_source": "services/gateway/internal/iscpbridge/managed_session.go",
+      "constants": [
+        "manifestPayloadType",
+        "sparkclawBridgeProtocol"
+      ]
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/gateway_client.go",
+      "target": "extensions/sparkclaw/iscpbridge/config_defaults.go",
+      "constants": [
+        "defaultGatewayURL",
+        "defaultGatewayTimeout"
+      ],
+      "target_sha256": "4b25f948afc10d6d45b035e2c4ccc1cc6e85d62e59eb29a03c6d3787c544f160"
+    },
+    {
+      "source": "services/gateway/internal/iscpbridge/managed_lifecycle.go",
+      "source_sha256": "765c677e4290f8376d9007110bfd71ed2ba88c9a1f916ba80f7b5e510a6557dd",
+      "functions": [
+        "verifyGrantContinuity",
+        "verifyGrantSnapshot",
+        "verifyGrantPairingBounds",
+        "GrantRenewalWindow",
+        "VerifyGrantRenewal"
+      ],
+      "target": "extensions/sparkclaw/iscpbridge/grant_verification.go",
+      "target_sha256": "42b0b473cf432fecfa02a1024be02d59c225738aa0b2f6082594b8d5138194a0"
+    }
+  ]
+}

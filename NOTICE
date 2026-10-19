@@ -1,0 +1,11 @@
+SparkClaw baseline import, 2026-10-19
+
+The existing ISCP source remains under the root MIT license.
+The files listed in extensions/sparkclaw/baseline-manifest.json originate from
+SparkClaw revision cf9b81dec39b8872efc43650080bb8facaa58511. Its Apache License 2.0
+is retained in extensions/sparkclaw/SPARKCLAW_LICENSE.txt; upstream-derived Relay
+code also retains its original notice in pkg/server/relay/UPSTREAM_LICENSE.txt.
+Import-path and fixture-path changes, extracted shared functions, and the fixed
+source and destination digests are recorded in the manifest. The baseline guide
+describes the additional command/build integration changes. Importing this code
+does not relicense it as MIT or make the SparkClaw profile an upstream standard.

@@ -1,0 +1,1937 @@
+[
+  {
+    "name": "workbench.identity",
+    "constant": "OperationIdentity",
+    "version": 1,
+    "direction": "forward",
+    "scope": "workbench.text",
+    "mutation": false,
+    "recovery": "original_request",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "business"
+  },
+  {
+    "name": "installation.bind",
+    "constant": "OperationBind",
+    "version": 1,
+    "direction": "forward",
+    "scope": "workbench.text",
+    "mutation": true,
+    "recovery": "original_request",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "business"
+  },
+  {
+    "name": "presentation.config",
+    "constant": "OperationConfig",
+    "version": 1,
+    "direction": "forward",
+    "scope": "workbench.text",
+    "mutation": false,
+    "recovery": "original_request",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "business"
+  },
+  {
+    "name": "presentation.owner",
+    "constant": "OperationOwner",
+    "version": 1,
+    "direction": "forward",
+    "scope": "workbench.text",
+    "mutation": false,
+    "recovery": "original_request",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "business"
+  },
+  {
+    "name": "presentation.ready",
+    "constant": "OperationReady",
+    "version": 1,
+    "direction": "forward",
+    "scope": "workbench.text",
+    "mutation": false,
+    "recovery": "original_request",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "business"
+  },
+  {
+    "name": "execution.submit",
+    "constant": "OperationSubmit",
+    "version": 1,
+    "direction": "forward",
+    "scope": "workbench.text",
+    "mutation": true,
+    "recovery": "original_request",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "business"
+  },
+  {
+    "name": "execution.lookup",
+    "constant": "OperationLookup",
+    "version": 1,
+    "direction": "forward",
+    "scope": "workbench.text",
+    "mutation": false,
+    "recovery": "original_request",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "business"
+  },
+  {
+    "name": "execution.cancel",
+    "constant": "OperationCancel",
+    "version": 1,
+    "direction": "forward",
+    "scope": "workbench.text",
+    "mutation": true,
+    "recovery": "original_request",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "control"
+  },
+  {
+    "name": "execution.ack",
+    "constant": "OperationAck",
+    "version": 1,
+    "direction": "forward",
+    "scope": "workbench.text",
+    "mutation": true,
+    "recovery": "original_request",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "control"
+  },
+  {
+    "name": "capabilities.get",
+    "constant": "OperationCapabilitiesGet",
+    "version": 2,
+    "direction": "forward",
+    "scope": "workbench.text",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "control"
+  },
+  {
+    "name": "settings.owner.get",
+    "constant": "OperationSettingsOwnerGet",
+    "version": 2,
+    "direction": "forward",
+    "scope": "settings.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "http": {
+      "method": "GET",
+      "path": "/api/owner"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "settings.owner.patch",
+    "constant": "OperationSettingsOwnerPatch",
+    "version": 2,
+    "direction": "forward",
+    "scope": "settings.write",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "http": {
+      "method": "POST",
+      "path": "/api/owner"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "settings.connectors.list",
+    "constant": "OperationSettingsConnectorsList",
+    "version": 2,
+    "direction": "forward",
+    "scope": "settings.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "http": {
+      "method": "GET",
+      "path": "/api/connectors"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "settings.connectors.patch",
+    "constant": "OperationSettingsConnectorsPatch",
+    "version": 2,
+    "direction": "forward",
+    "scope": "settings.write",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "channel"
+    ],
+    "http": {
+      "method": "PATCH",
+      "path": "/api/connectors/{channel}"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "settings.integrations.list",
+    "constant": "OperationSettingsIntegrationsList",
+    "version": 2,
+    "direction": "forward",
+    "scope": "settings.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "http": {
+      "method": "GET",
+      "path": "/api/integrations"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "settings.credentials.add",
+    "constant": "OperationSettingsCredentialsAdd",
+    "version": 2,
+    "direction": "forward",
+    "scope": "settings.write",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "integration_id"
+    ],
+    "http": {
+      "method": "POST",
+      "path": "/api/integrations/{integration_id}/credentials"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "settings.credentials.activate",
+    "constant": "OperationSettingsCredentialsActivate",
+    "version": 2,
+    "direction": "forward",
+    "scope": "settings.write",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "integration_id"
+    ],
+    "http": {
+      "method": "PUT",
+      "path": "/api/integrations/{integration_id}/active-credential"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "settings.credentials.check",
+    "constant": "OperationSettingsCredentialsCheck",
+    "version": 2,
+    "direction": "forward",
+    "scope": "settings.write",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "integration_id",
+      "credential_id"
+    ],
+    "http": {
+      "method": "POST",
+      "path": "/api/integrations/{integration_id}/credentials/{credential_id}/check"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "settings.credentials.delete",
+    "constant": "OperationSettingsCredentialsDelete",
+    "version": 2,
+    "direction": "forward",
+    "scope": "settings.write",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "integration_id",
+      "credential_id"
+    ],
+    "http": {
+      "method": "DELETE",
+      "path": "/api/integrations/{integration_id}/credentials/{credential_id}"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "authorizations.list",
+    "constant": "OperationAuthorizationsList",
+    "version": 2,
+    "direction": "forward",
+    "scope": "authorization.manage",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "business"
+  },
+  {
+    "name": "authorizations.delete",
+    "constant": "OperationAuthorizationsDelete",
+    "version": 2,
+    "direction": "forward",
+    "scope": "authorization.manage",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "business"
+  },
+  {
+    "name": "notifications.list",
+    "constant": "OperationNotificationsList",
+    "version": 2,
+    "direction": "forward",
+    "scope": "notifications.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "limit",
+      "after"
+    ],
+    "http": {
+      "method": "GET",
+      "path": "/api/notifications"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "notifications.read",
+    "constant": "OperationNotificationsRead",
+    "version": 2,
+    "direction": "forward",
+    "scope": "notifications.write",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "id"
+    ],
+    "http": {
+      "method": "POST",
+      "path": "/api/notifications/{id}/read"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "notifications.read_all",
+    "constant": "OperationNotificationsReadAll",
+    "version": 2,
+    "direction": "forward",
+    "scope": "notifications.write",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "http": {
+      "method": "POST",
+      "path": "/api/notifications/read-all"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "transfer.open",
+    "constant": "OperationTransferOpen",
+    "version": 2,
+    "direction": "forward",
+    "scope": "objects.write",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "bulk"
+  },
+  {
+    "name": "transfer.status",
+    "constant": "OperationTransferStatus",
+    "version": 2,
+    "direction": "forward",
+    "scope": "objects.write",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "bulk"
+  },
+  {
+    "name": "transfer.chunk",
+    "constant": "OperationTransferChunk",
+    "version": 2,
+    "direction": "forward",
+    "scope": "objects.write",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "bulk"
+  },
+  {
+    "name": "transfer.commit",
+    "constant": "OperationTransferCommit",
+    "version": 2,
+    "direction": "forward",
+    "scope": "objects.write",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "bulk"
+  },
+  {
+    "name": "transfer.abort",
+    "constant": "OperationTransferAbort",
+    "version": 2,
+    "direction": "forward",
+    "scope": "objects.write",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "control"
+  },
+  {
+    "name": "object.describe",
+    "constant": "OperationObjectDescribe",
+    "version": 2,
+    "direction": "forward",
+    "scope": "objects.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "bulk"
+  },
+  {
+    "name": "object.read",
+    "constant": "OperationObjectRead",
+    "version": 2,
+    "direction": "forward",
+    "scope": "objects.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "bulk"
+  },
+  {
+    "name": "object.release",
+    "constant": "OperationObjectRelease",
+    "version": 2,
+    "direction": "forward",
+    "scope": "objects.read",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "control"
+  },
+  {
+    "name": "approvals.list",
+    "constant": "OperationApprovalsList",
+    "version": 2,
+    "direction": "forward",
+    "scope": "approvals.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "request_id"
+    ],
+    "capacity_class": "business"
+  },
+  {
+    "name": "approvals.get",
+    "constant": "OperationApprovalsGet",
+    "version": 2,
+    "direction": "forward",
+    "scope": "approvals.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "request_id",
+      "approval_id",
+      "id"
+    ],
+    "capacity_class": "business"
+  },
+  {
+    "name": "approvals.decide",
+    "constant": "OperationApprovalsDecide",
+    "version": 2,
+    "direction": "forward",
+    "scope": "approvals.decide",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "request_id",
+      "approval_id",
+      "id"
+    ],
+    "capacity_class": "business"
+  },
+  {
+    "name": "events.snapshot",
+    "constant": "OperationEventsSnapshot",
+    "version": 2,
+    "direction": "forward",
+    "scope": "events.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "events"
+  },
+  {
+    "name": "events.pull",
+    "constant": "OperationEventsPull",
+    "version": 2,
+    "direction": "forward",
+    "scope": "events.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "events"
+  },
+  {
+    "name": "events.ack",
+    "constant": "OperationEventsAck",
+    "version": 2,
+    "direction": "forward",
+    "scope": "events.read",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "control"
+  },
+  {
+    "name": "events.subscribe",
+    "constant": "OperationEventsSubscribe",
+    "version": 2,
+    "direction": "forward",
+    "scope": "events.read",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "events"
+  },
+  {
+    "name": "events.resume",
+    "constant": "OperationEventsResume",
+    "version": 2,
+    "direction": "forward",
+    "scope": "events.read",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "events"
+  },
+  {
+    "name": "events.unsubscribe",
+    "constant": "OperationEventsUnsubscribe",
+    "version": 2,
+    "direction": "forward",
+    "scope": "events.read",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "control"
+  },
+  {
+    "name": "state.snapshot",
+    "constant": "OperationStateSnapshot",
+    "version": 2,
+    "direction": "forward",
+    "scope": "events.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "events"
+  },
+  {
+    "name": "mail.providers.list",
+    "constant": "OperationMailProvidersList",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "http": {
+      "method": "GET",
+      "path": "/api/email/providers"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.providers.update",
+    "constant": "OperationMailProvidersUpdate",
+    "version": 2,
+    "direction": "forward",
+    "scope": "settings.write",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "provider"
+    ],
+    "http": {
+      "method": "PATCH",
+      "path": "/api/email/providers/{provider}"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.providers.check",
+    "constant": "OperationMailProvidersCheck",
+    "version": 2,
+    "direction": "forward",
+    "scope": "settings.write",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "provider"
+    ],
+    "http": {
+      "method": "POST",
+      "path": "/api/email/providers/{provider}/check"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.providers.login",
+    "constant": "OperationMailProvidersLogin",
+    "version": 2,
+    "direction": "forward",
+    "scope": "browser.login",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "provider"
+    ],
+    "http": {
+      "method": "POST",
+      "path": "/api/email/providers/{provider}/login-browser"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.mailboxes",
+    "constant": "OperationMailMailboxes",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "http": {
+      "method": "GET",
+      "path": "/api/v1/mail/mailboxes"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.sync",
+    "constant": "OperationMailSync",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "mailbox"
+    ],
+    "http": {
+      "method": "POST",
+      "path": "/api/v1/mail/{mailbox}/sync"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.message",
+    "constant": "OperationMailMessage",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "mail"
+    ],
+    "capacity_class": "business",
+    "http": {
+      "method": "GET",
+      "path": "/api/email/messages/{mail}"
+    }
+  },
+  {
+    "name": "mail.attachment",
+    "constant": "OperationMailAttachment",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "mailbox",
+      "mail",
+      "part"
+    ],
+    "http": {
+      "method": "GET",
+      "path": "/api/v1/mail/{mailbox}/messages/{mail}/attachments/{part}"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.send",
+    "constant": "OperationMailSend",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.send",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "draft"
+    ],
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.drafts.list",
+    "constant": "OperationMailDraftsList",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "cursor",
+      "mailbox_id",
+      "q",
+      "limit",
+      "draft"
+    ],
+    "http": {
+      "method": "GET",
+      "path": "/api/email/drafts"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.drafts.save",
+    "constant": "OperationMailDraftsSave",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.drafts.write",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "draft"
+    ],
+    "http": {
+      "method": "POST",
+      "path": "/api/email/drafts"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.drafts.send",
+    "constant": "OperationMailDraftsSend",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.send",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "draft"
+    ],
+    "http": {
+      "method": "POST",
+      "path": "/api/email/drafts/{draft}/send"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.drafts.reconcile",
+    "constant": "OperationMailDraftsReconcile",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "draft"
+    ],
+    "http": {
+      "method": "POST",
+      "path": "/api/email/drafts/{draft}/reconcile"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.drafts.resolve",
+    "constant": "OperationMailDraftsResolve",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.send",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "draft"
+    ],
+    "http": {
+      "method": "POST",
+      "path": "/api/email/drafts/{draft}/resolve"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "browser.host.register",
+    "constant": "OperationBrowserHostRegister",
+    "version": 2,
+    "direction": "forward",
+    "scope": "browser.control",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "business"
+  },
+  {
+    "name": "browser.host.poll",
+    "constant": "OperationBrowserHostPoll",
+    "version": 2,
+    "direction": "forward",
+    "scope": "browser.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "business"
+  },
+  {
+    "name": "browser.host.reply",
+    "constant": "OperationBrowserHostReply",
+    "version": 2,
+    "direction": "forward",
+    "scope": "browser.control",
+    "mutation": true,
+    "recovery": "command_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "business"
+  },
+  {
+    "name": "browser.host.heartbeat",
+    "constant": "OperationBrowserHostHeartbeat",
+    "version": 2,
+    "direction": "forward",
+    "scope": "browser.control",
+    "mutation": true,
+    "recovery": "stream_sequence",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "business"
+  },
+  {
+    "name": "browser.host.close",
+    "constant": "OperationBrowserHostClose",
+    "version": 2,
+    "direction": "forward",
+    "scope": "browser.control",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "control"
+  },
+  {
+    "name": "browser.host.grant",
+    "constant": "OperationBrowserHostGrant",
+    "version": 2,
+    "direction": "forward",
+    "scope": "browser.control",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "business"
+  },
+  {
+    "name": "browser.host.revoke",
+    "constant": "OperationBrowserHostRevoke",
+    "version": 2,
+    "direction": "forward",
+    "scope": "browser.control",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "control"
+  },
+  {
+    "name": "browser.command",
+    "constant": "OperationBrowserCommand",
+    "version": 2,
+    "direction": "reverse",
+    "scope": "browser.control",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "business"
+  },
+  {
+    "name": "browser.receipt",
+    "constant": "OperationBrowserReceipt",
+    "version": 2,
+    "direction": "forward",
+    "scope": "browser.control",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "business"
+  },
+  {
+    "name": "browser.reconcile",
+    "constant": "OperationBrowserReconcile",
+    "version": 2,
+    "direction": "forward",
+    "scope": "browser.read",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "business"
+  },
+  {
+    "name": "tools.list",
+    "constant": "OperationToolsList",
+    "version": 2,
+    "direction": "forward",
+    "scope": "tools.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "business"
+  },
+  {
+    "name": "tools.invoke",
+    "constant": "OperationToolsInvoke",
+    "version": 2,
+    "direction": "forward",
+    "scope": "tools.invoke",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "business"
+  },
+  {
+    "name": "speech.status",
+    "constant": "OperationSpeechStatus",
+    "version": 2,
+    "direction": "forward",
+    "scope": "speech.transcribe",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "business"
+  },
+  {
+    "name": "speech.transcribe",
+    "constant": "OperationSpeechTranscribe",
+    "version": 2,
+    "direction": "forward",
+    "scope": "speech.transcribe",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "business"
+  },
+  {
+    "name": "speech.cancel",
+    "constant": "OperationSpeechCancel",
+    "version": 2,
+    "direction": "forward",
+    "scope": "speech.transcribe",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "control"
+  },
+  {
+    "name": "speech.session.open",
+    "constant": "OperationSpeechSessionOpen",
+    "version": 2,
+    "direction": "forward",
+    "scope": "speech.realtime",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "business"
+  },
+  {
+    "name": "speech.session.frame",
+    "constant": "OperationSpeechSessionFrame",
+    "version": 2,
+    "direction": "forward",
+    "scope": "speech.realtime",
+    "mutation": true,
+    "recovery": "stream_sequence",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "audio"
+  },
+  {
+    "name": "speech.session.finish",
+    "constant": "OperationSpeechSessionFinish",
+    "version": 2,
+    "direction": "forward",
+    "scope": "speech.realtime",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "control"
+  },
+  {
+    "name": "speech.session.cancel",
+    "constant": "OperationSpeechSessionCancel",
+    "version": 2,
+    "direction": "forward",
+    "scope": "speech.realtime",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "control"
+  },
+  {
+    "name": "audio.session.open",
+    "constant": "OperationAudioSessionOpen",
+    "version": 2,
+    "direction": "forward",
+    "scope": "speech.realtime",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "business"
+  },
+  {
+    "name": "audio.session.control",
+    "constant": "OperationAudioSessionControl",
+    "version": 2,
+    "direction": "forward",
+    "scope": "speech.realtime",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "control"
+  },
+  {
+    "name": "audio.session.close",
+    "constant": "OperationAudioSessionClose",
+    "version": 2,
+    "direction": "forward",
+    "scope": "speech.realtime",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "control"
+  },
+  {
+    "name": "audio.frame",
+    "constant": "OperationAudioFrame",
+    "version": 2,
+    "direction": "forward",
+    "scope": "speech.realtime",
+    "mutation": true,
+    "recovery": "stream_sequence",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "audio"
+  },
+  {
+    "name": "operations.receipt",
+    "constant": "OperationOperationsReceipt",
+    "version": 2,
+    "direction": "forward",
+    "scope": "workbench.control",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "operation_id"
+    ],
+    "capacity_class": "control"
+  },
+  {
+    "name": "execution.approval",
+    "constant": "OperationExecutionApproval",
+    "version": 2,
+    "direction": "forward",
+    "scope": "approvals.decide",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "request_id",
+      "approval_id"
+    ],
+    "http": {
+      "method": "POST",
+      "path": "/api/v1/executions/{request_id}/approvals/{approval_id}"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "execution.input.put",
+    "constant": "OperationExecutionInputPut",
+    "version": 2,
+    "direction": "forward",
+    "scope": "objects.write",
+    "mutation": true,
+    "recovery": "original_request",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "request_id",
+      "file_id"
+    ],
+    "http": {
+      "method": "PUT",
+      "path": "/api/v1/inputs/{request_id}/files/{file_id}"
+    },
+    "capacity_class": "bulk"
+  },
+  {
+    "name": "execution.file.get",
+    "constant": "OperationExecutionFileGet",
+    "version": 2,
+    "direction": "forward",
+    "scope": "objects.read",
+    "mutation": false,
+    "recovery": "original_request",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "request_id",
+      "file_id"
+    ],
+    "http": {
+      "method": "GET",
+      "path": "/api/v1/executions/{request_id}/files/{file_id}"
+    },
+    "capacity_class": "bulk"
+  },
+  {
+    "name": "speech.session.events",
+    "constant": "OperationSpeechSessionEvents",
+    "version": 2,
+    "direction": "forward",
+    "scope": "speech.realtime",
+    "mutation": false,
+    "recovery": "cursor",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "capacity_class": "events"
+  },
+  {
+    "name": "mail.conversations.list",
+    "constant": "OperationMailConversationsList",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "mailbox_id",
+      "q",
+      "cursor",
+      "limit",
+      "entry",
+      "unassigned_only"
+    ],
+    "http": {
+      "method": "GET",
+      "path": "/api/email/conversations"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.pending",
+    "constant": "OperationMailPending",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "mailbox_id",
+      "q",
+      "cursor",
+      "limit",
+      "entry",
+      "unassigned_only"
+    ],
+    "http": {
+      "method": "GET",
+      "path": "/api/email/pending"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.interaction",
+    "constant": "OperationMailInteraction",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "mailbox_id",
+      "q",
+      "cursor",
+      "limit",
+      "entry",
+      "unassigned_only"
+    ],
+    "http": {
+      "method": "GET",
+      "path": "/api/email/interaction-mails"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.sent_sources",
+    "constant": "OperationMailSentSources",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "mailbox_id",
+      "q",
+      "cursor",
+      "limit",
+      "entry",
+      "unassigned_only"
+    ],
+    "http": {
+      "method": "GET",
+      "path": "/api/email/sent-sources"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.notifications",
+    "constant": "OperationMailNotifications",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "mailbox_id",
+      "q",
+      "cursor",
+      "limit",
+      "entry",
+      "unassigned_only",
+      "subtype",
+      "validity"
+    ],
+    "http": {
+      "method": "GET",
+      "path": "/api/email/notifications"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.conversations.get",
+    "constant": "OperationMailConversationsGet",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "conversation"
+    ],
+    "http": {
+      "method": "GET",
+      "path": "/api/email/conversations/{conversation}"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.conversations.messages",
+    "constant": "OperationMailConversationsMessages",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "conversation",
+      "mailbox_id",
+      "q",
+      "cursor",
+      "limit",
+      "entry",
+      "unassigned_only"
+    ],
+    "http": {
+      "method": "GET",
+      "path": "/api/email/conversations/{conversation}/messages"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.verification",
+    "constant": "OperationMailVerification",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "mail"
+    ],
+    "http": {
+      "method": "GET",
+      "path": "/api/email/messages/{mail}/verification"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.render_preview",
+    "constant": "OperationMailRenderPreview",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "mail"
+    ],
+    "http": {
+      "method": "GET",
+      "path": "/api/email/messages/{mail}/render-preview"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.file",
+    "constant": "OperationMailFile",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "mail",
+      "part_id"
+    ],
+    "http": {
+      "method": "GET",
+      "path": "/api/email/messages/{mail}/file"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.sender_rules.list",
+    "constant": "OperationMailSenderRulesList",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "mailbox_id",
+      "q",
+      "cursor",
+      "limit",
+      "entry",
+      "unassigned_only"
+    ],
+    "http": {
+      "method": "GET",
+      "path": "/api/email/sender-rules"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.presentations.get",
+    "constant": "OperationMailPresentationsGet",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "target_kind",
+      "target_ids",
+      "language"
+    ],
+    "http": {
+      "method": "GET",
+      "path": "/api/email/presentations"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.compose.capabilities",
+    "constant": "OperationMailComposeCapabilities",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "http": {
+      "method": "GET",
+      "path": "/api/email/compose-capabilities"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.sync.status",
+    "constant": "OperationMailSyncStatus",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "http": {
+      "method": "GET",
+      "path": "/api/email/sync-status"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.sync.warnings",
+    "constant": "OperationMailSyncWarnings",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "mailbox_id",
+      "cursor",
+      "limit"
+    ],
+    "http": {
+      "method": "GET",
+      "path": "/api/email/sync-warnings"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.conversations.rename",
+    "constant": "OperationMailConversationsRename",
+    "version": 2,
+    "direction": "forward",
+    "scope": "settings.write",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "conversation"
+    ],
+    "http": {
+      "method": "POST",
+      "path": "/api/email/conversations/{conversation}/rename"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.conversations.delete",
+    "constant": "OperationMailConversationsDelete",
+    "version": 2,
+    "direction": "forward",
+    "scope": "settings.write",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "conversation"
+    ],
+    "http": {
+      "method": "DELETE",
+      "path": "/api/email/conversations/{conversation}"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.source.cleanup",
+    "constant": "OperationMailSourceCleanup",
+    "version": 2,
+    "direction": "forward",
+    "scope": "settings.write",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "http": {
+      "method": "POST",
+      "path": "/api/email/source/cleanup"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.classification",
+    "constant": "OperationMailClassification",
+    "version": 2,
+    "direction": "forward",
+    "scope": "settings.write",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "mail"
+    ],
+    "http": {
+      "method": "POST",
+      "path": "/api/email/messages/{mail}/classification"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.assignment",
+    "constant": "OperationMailAssignment",
+    "version": 2,
+    "direction": "forward",
+    "scope": "settings.write",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "mail"
+    ],
+    "http": {
+      "method": "POST",
+      "path": "/api/email/messages/{mail}/assignment"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.sender_rules.update",
+    "constant": "OperationMailSenderRulesUpdate",
+    "version": 2,
+    "direction": "forward",
+    "scope": "settings.write",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "rule"
+    ],
+    "http": {
+      "method": "POST",
+      "path": "/api/email/sender-rules/{rule}"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.presentations.ensure",
+    "constant": "OperationMailPresentationsEnsure",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "http": {
+      "method": "POST",
+      "path": "/api/email/presentations/ensure"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.replies.polish",
+    "constant": "OperationMailRepliesPolish",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.drafts.write",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "http": {
+      "method": "POST",
+      "path": "/api/email/replies/polish"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.sync.acknowledge",
+    "constant": "OperationMailSyncAcknowledge",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "warning"
+    ],
+    "http": {
+      "method": "POST",
+      "path": "/api/email/sync-warnings/{warning}/acknowledge"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.sync.request",
+    "constant": "OperationMailSyncRequest",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "http": {
+      "method": "POST",
+      "path": "/api/email/sync"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.viewed",
+    "constant": "OperationMailViewed",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "http": {
+      "method": "POST",
+      "path": "/api/email/messages/viewed"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.reanalyze",
+    "constant": "OperationMailReanalyze",
+    "version": 2,
+    "direction": "forward",
+    "scope": "mail.read",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "mail"
+    ],
+    "http": {
+      "method": "POST",
+      "path": "/api/email/messages/{mail}/reanalyze"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "mail.intake.update",
+    "constant": "OperationMailIntakeUpdate",
+    "version": 2,
+    "direction": "forward",
+    "scope": "settings.write",
+    "mutation": true,
+    "recovery": "operation_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "provider"
+    ],
+    "capacity_class": "business"
+  },
+  {
+    "name": "clients.list",
+    "constant": "OperationClientsList",
+    "version": 2,
+    "direction": "forward",
+    "scope": "settings.read",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "http": {
+      "method": "GET",
+      "path": "/api/clients"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "clients.issue",
+    "constant": "OperationClientsIssue",
+    "version": 2,
+    "direction": "forward",
+    "scope": "settings.write",
+    "mutation": true,
+    "recovery": "issuer_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [],
+    "http": {
+      "method": "POST",
+      "path": "/api/clients"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "clients.revoke",
+    "constant": "OperationClientsRevoke",
+    "version": 2,
+    "direction": "forward",
+    "scope": "settings.write",
+    "mutation": true,
+    "recovery": "issuer_receipt",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "id"
+    ],
+    "http": {
+      "method": "POST",
+      "path": "/api/clients/{id}/revoke"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "clients.delete",
+    "constant": "OperationClientsDelete",
+    "version": 2,
+    "direction": "forward",
+    "scope": "settings.write",
+    "mutation": true,
+    "recovery": "idempotent",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "id"
+    ],
+    "http": {
+      "method": "DELETE",
+      "path": "/api/clients/{id}"
+    },
+    "capacity_class": "business"
+  },
+  {
+    "name": "execution.progress",
+    "constant": "OperationExecutionProgress",
+    "version": 2,
+    "direction": "forward",
+    "scope": "workbench.text",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "request_id"
+    ],
+    "capacity_class": "business",
+    "http": {
+      "method": "POST",
+      "path": "/api/v1/executions/{request_id}/progress"
+    }
+  },
+  {
+    "name": "execution.progress.stream",
+    "constant": "OperationExecutionProgressStream",
+    "version": 2,
+    "direction": "forward",
+    "scope": "workbench.text",
+    "mutation": false,
+    "recovery": "read",
+    "limit_bytes": 63488,
+    "dependencies": [],
+    "params": [
+      "request_id"
+    ],
+    "capacity_class": "business"
+  }
+]

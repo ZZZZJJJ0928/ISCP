@@ -1,0 +1,201 @@
+{
+  "positive": [
+    {
+      "request_id": "11111111-1111-4111-8111-111111111111",
+      "input_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "epoch": "22222222-2222-4222-8222-222222222222",
+      "generation": "33333333-3333-4333-8333-333333333333",
+      "revision": 1,
+      "kind": "delta",
+      "from_offset": 0,
+      "to_offset": 6,
+      "text": "你好",
+      "content_digest": "670d9743542cae3ea7ebe36af56bd53648b0a1126162e78d81a32934a711302e"
+    },
+    {
+      "request_id": "11111111-1111-4111-8111-111111111111",
+      "input_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "epoch": "22222222-2222-4222-8222-222222222222",
+      "generation": "33333333-3333-4333-8333-333333333333",
+      "revision": 1,
+      "kind": "snapshot_begin",
+      "snapshot_id": "44444444-4444-4444-8444-444444444444",
+      "total_bytes": 6,
+      "content_digest": "670d9743542cae3ea7ebe36af56bd53648b0a1126162e78d81a32934a711302e"
+    },
+    {
+      "request_id": "11111111-1111-4111-8111-111111111111",
+      "input_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "epoch": "22222222-2222-4222-8222-222222222222",
+      "generation": "33333333-3333-4333-8333-333333333333",
+      "revision": 1,
+      "kind": "snapshot_chunk",
+      "snapshot_id": "44444444-4444-4444-8444-444444444444",
+      "offset": 0,
+      "text": "你好"
+    },
+    {
+      "request_id": "11111111-1111-4111-8111-111111111111",
+      "input_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "epoch": "22222222-2222-4222-8222-222222222222",
+      "generation": "33333333-3333-4333-8333-333333333333",
+      "revision": 1,
+      "kind": "snapshot_end",
+      "snapshot_id": "44444444-4444-4444-8444-444444444444",
+      "total_bytes": 6,
+      "content_digest": "670d9743542cae3ea7ebe36af56bd53648b0a1126162e78d81a32934a711302e"
+    },
+    {
+      "request_id": "11111111-1111-4111-8111-111111111111",
+      "input_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "epoch": "22222222-2222-4222-8222-222222222222",
+      "generation": "33333333-3333-4333-8333-333333333333",
+      "revision": 1,
+      "kind": "state",
+      "state": "running"
+    },
+    {
+      "request_id": "11111111-1111-4111-8111-111111111111",
+      "input_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "epoch": "22222222-2222-4222-8222-222222222222",
+      "generation": "33333333-3333-4333-8333-333333333333",
+      "revision": 1,
+      "kind": "invalidate",
+      "reason": "reset"
+    }
+  ],
+  "negative": [
+    {
+      "name": "unknown kind",
+      "value": {
+        "request_id": "11111111-1111-4111-8111-111111111111",
+        "input_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "epoch": "22222222-2222-4222-8222-222222222222",
+        "generation": "33333333-3333-4333-8333-333333333333",
+        "revision": 1,
+        "kind": "token",
+        "from_offset": 0,
+        "to_offset": 6,
+        "text": "你好",
+        "content_digest": "670d9743542cae3ea7ebe36af56bd53648b0a1126162e78d81a32934a711302e"
+      }
+    },
+    {
+      "name": "unknown property",
+      "value": {
+        "request_id": "11111111-1111-4111-8111-111111111111",
+        "input_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "epoch": "22222222-2222-4222-8222-222222222222",
+        "generation": "33333333-3333-4333-8333-333333333333",
+        "revision": 1,
+        "kind": "delta",
+        "from_offset": 0,
+        "to_offset": 6,
+        "text": "你好",
+        "content_digest": "670d9743542cae3ea7ebe36af56bd53648b0a1126162e78d81a32934a711302e",
+        "secret": "no"
+      }
+    },
+    {
+      "name": "wrong byte offset",
+      "value": {
+        "request_id": "11111111-1111-4111-8111-111111111111",
+        "input_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "epoch": "22222222-2222-4222-8222-222222222222",
+        "generation": "33333333-3333-4333-8333-333333333333",
+        "revision": 1,
+        "kind": "delta",
+        "from_offset": 0,
+        "to_offset": 2,
+        "text": "你好",
+        "content_digest": "670d9743542cae3ea7ebe36af56bd53648b0a1126162e78d81a32934a711302e"
+      }
+    },
+    {
+      "name": "unsafe revision",
+      "value": {
+        "request_id": "11111111-1111-4111-8111-111111111111",
+        "input_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "epoch": "22222222-2222-4222-8222-222222222222",
+        "generation": "33333333-3333-4333-8333-333333333333",
+        "revision": 9007199254740992,
+        "kind": "delta",
+        "from_offset": 0,
+        "to_offset": 6,
+        "text": "你好",
+        "content_digest": "670d9743542cae3ea7ebe36af56bd53648b0a1126162e78d81a32934a711302e"
+      }
+    },
+    {
+      "name": "uppercase digest",
+      "value": {
+        "request_id": "11111111-1111-4111-8111-111111111111",
+        "input_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "epoch": "22222222-2222-4222-8222-222222222222",
+        "generation": "33333333-3333-4333-8333-333333333333",
+        "revision": 1,
+        "kind": "delta",
+        "from_offset": 0,
+        "to_offset": 6,
+        "text": "你好",
+        "content_digest": "670D9743542CAE3EA7EBE36AF56BD53648B0A1126162E78D81A32934A711302E"
+      }
+    },
+    {
+      "name": "negative offset",
+      "value": {
+        "request_id": "11111111-1111-4111-8111-111111111111",
+        "input_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "epoch": "22222222-2222-4222-8222-222222222222",
+        "generation": "33333333-3333-4333-8333-333333333333",
+        "revision": 1,
+        "kind": "delta",
+        "from_offset": -1,
+        "to_offset": 6,
+        "text": "你好",
+        "content_digest": "670d9743542cae3ea7ebe36af56bd53648b0a1126162e78d81a32934a711302e"
+      }
+    },
+    {
+      "name": "null state",
+      "value": {
+        "request_id": "11111111-1111-4111-8111-111111111111",
+        "input_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "epoch": "22222222-2222-4222-8222-222222222222",
+        "generation": "33333333-3333-4333-8333-333333333333",
+        "revision": 1,
+        "kind": "state",
+        "state": null
+      }
+    },
+    {
+      "name": "missing zero offset",
+      "value": {
+        "request_id": "11111111-1111-4111-8111-111111111111",
+        "input_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "epoch": "22222222-2222-4222-8222-222222222222",
+        "generation": "33333333-3333-4333-8333-333333333333",
+        "revision": 1,
+        "kind": "delta",
+        "to_offset": 6,
+        "text": "你好",
+        "content_digest": "670d9743542cae3ea7ebe36af56bd53648b0a1126162e78d81a32934a711302e"
+      }
+    },
+    {
+      "name": "NUL forbidden by result format",
+      "value": {
+        "request_id": "11111111-1111-4111-8111-111111111111",
+        "input_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "epoch": "22222222-2222-4222-8222-222222222222",
+        "generation": "33333333-3333-4333-8333-333333333333",
+        "revision": 1,
+        "kind": "delta",
+        "from_offset": 0,
+        "to_offset": 1,
+        "text": "\u0000",
+        "content_digest": "670d9743542cae3ea7ebe36af56bd53648b0a1126162e78d81a32934a711302e"
+      }
+    }
+  ]
+}

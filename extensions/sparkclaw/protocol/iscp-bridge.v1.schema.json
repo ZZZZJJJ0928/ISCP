@@ -1,0 +1,371 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sparkclaw.local/schemas/iscp-bridge.v1.schema.json",
+  "title": "SparkClaw ISCP Bridge v1",
+  "type": "object",
+  "oneOf": [
+    { "$ref": "#/$defs/request" },
+    { "$ref": "#/$defs/response" },
+    { "$ref": "#/$defs/event" },
+    { "$ref": "#/$defs/relay_frame" },
+    { "$ref": "#/$defs/enrollment_request" },
+    { "$ref": "#/$defs/enrollment_bundle" }
+  ],
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol_version", "type", "request_id", "endpoint_id", "issued_at", "expires_at"],
+      "properties": {
+        "protocol_version": { "const": "agent.capability.v1" },
+        "type": {
+          "enum": [
+            "agent.capabilities.describe.v1",
+            "agent.session.list.v1",
+            "agent.session.create.v1",
+            "agent.message.send.v1",
+            "agent.message.cancel.v1",
+            "agent.notification.deliver.v1",
+            "agent.event.resume.v1",
+            "agent.approval.list.v1",
+            "agent.approval.resolve.v1",
+            "agent.operation.status.v1",
+            "agent.activity.list.v1",
+            "agent.snapshot.get.v1"
+          ]
+        },
+        "request_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "endpoint_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "session_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "idempotency_key": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "issued_at": { "$ref": "#/$defs/timestamp" },
+        "expires_at": { "$ref": "#/$defs/timestamp" },
+        "payload": { "type": "object" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "enum": [
+                  "agent.session.create.v1",
+                  "agent.message.send.v1",
+                  "agent.message.cancel.v1",
+                  "agent.notification.deliver.v1",
+                  "agent.approval.resolve.v1"
+                ]
+              }
+            }
+          },
+          "then": { "required": ["idempotency_key"] }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "enum": [
+                  "agent.capabilities.describe.v1",
+                  "agent.session.list.v1"
+                ]
+              }
+            }
+          },
+          "then": { "properties": { "payload": { "$ref": "#/$defs/empty_payload" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "agent.session.create.v1" } } },
+          "then": { "properties": { "payload": { "$ref": "#/$defs/session_create_payload" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "agent.message.send.v1" } } },
+          "then": { "required": ["session_id", "payload"], "properties": { "payload": { "$ref": "#/$defs/message_send_payload" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "agent.message.cancel.v1" } } },
+          "then": { "required": ["session_id", "payload"], "properties": { "payload": { "$ref": "#/$defs/message_cancel_payload" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "agent.notification.deliver.v1" } } },
+          "then": {
+            "required": ["payload"],
+            "properties": {
+              "session_id": false,
+              "payload": { "$ref": "#/$defs/notification_deliver_payload" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "agent.event.resume.v1" } } },
+          "then": { "required": ["session_id", "payload"], "properties": { "payload": { "$ref": "#/$defs/event_resume_payload" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "agent.approval.list.v1" } } },
+          "then": { "properties": { "payload": { "$ref": "#/$defs/approval_list_payload" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "agent.approval.resolve.v1" } } },
+          "then": { "required": ["session_id", "payload"], "properties": { "payload": { "$ref": "#/$defs/approval_resolve_payload" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "agent.operation.status.v1" } } },
+          "then": { "required": ["payload"], "properties": { "payload": { "$ref": "#/$defs/operation_status_payload" } } }
+        }
+      ]
+    },
+    "empty_payload": {
+      "type": "object",
+      "additionalProperties": false
+    },
+    "session_create_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "title": { "type": "string", "maxLength": 200 } }
+    },
+    "message_send_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["content"],
+      "properties": { "content": { "type": "string", "minLength": 1, "maxLength": 262144 } }
+    },
+    "message_cancel_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation_id"],
+      "properties": { "operation_id": { "type": "string", "minLength": 1 } }
+    },
+    "notification_deliver_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["notification_id", "source", "kind", "deep_link", "occurred_at"],
+      "properties": {
+        "notification_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "source": { "const": "localmind" },
+        "kind": { "enum": ["document_mention", "comment_mention"] },
+        "deep_link": { "type": "string", "format": "uri", "maxLength": 2048 },
+        "occurred_at": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+    "event_resume_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cursor": { "type": "string" },
+        "limit": { "type": "integer", "minimum": 1, "maximum": 200 }
+      }
+    },
+    "approval_list_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "status": { "type": "string" } }
+    },
+    "approval_resolve_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["approval_id", "decision", "preview_hash", "expected_state"],
+      "properties": {
+        "approval_id": { "type": "string", "minLength": 1 },
+        "decision": { "enum": ["approved", "rejected"] },
+        "preview_hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "expected_state": { "const": "pending" },
+        "note": { "type": "string", "maxLength": 2000 }
+      }
+    },
+    "operation_status_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation_id"],
+      "properties": { "operation_id": { "type": "string", "minLength": 1 } }
+    },
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol_version", "type", "request_id", "endpoint_id", "status", "issued_at"],
+      "properties": {
+        "protocol_version": { "const": "agent.capability.v1" },
+        "type": { "const": "agent.response.v1" },
+        "request_id": { "type": "string" },
+        "endpoint_id": { "type": "string" },
+        "session_id": { "type": "string" },
+        "status": { "enum": ["ok", "accepted", "error"] },
+        "operation": { "$ref": "#/$defs/operation" },
+        "result": true,
+        "error": { "$ref": "#/$defs/error" },
+        "issued_at": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+    "operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "session_id", "state", "created_at", "updated_at"],
+      "properties": {
+        "id": { "type": "string" },
+        "request_id": { "type": "string" },
+        "session_id": { "type": "string" },
+        "run_id": { "type": "string" },
+        "state": {
+          "enum": ["accepted", "running", "approval_required", "completed", "failed", "cancelled", "unknown"]
+        },
+        "result": true,
+        "error": { "$ref": "#/$defs/error" },
+        "created_at": { "$ref": "#/$defs/timestamp" },
+        "updated_at": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol_version", "type", "endpoint_id", "session_id", "cursor", "event_type", "payload", "issued_at"],
+      "properties": {
+        "protocol_version": { "const": "agent.capability.v1" },
+        "type": { "const": "agent.event.v1" },
+        "endpoint_id": { "type": "string" },
+        "session_id": { "type": "string" },
+        "operation_id": { "type": "string" },
+        "cursor": { "type": "string", "minLength": 1 },
+        "event_type": { "type": "string", "minLength": 1 },
+        "payload": true,
+        "issued_at": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "retryable"],
+      "properties": {
+        "code": {
+          "enum": [
+            "unauthenticated",
+            "permission_denied",
+            "unsupported_capability",
+            "invalid_request",
+            "stale_state",
+            "approval_required",
+            "not_found",
+            "conflict",
+            "rate_limited",
+            "temporarily_unavailable",
+            "internal"
+          ]
+        },
+        "message": { "type": "string", "maxLength": 500 },
+        "retryable": { "type": "boolean" }
+      }
+    },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relay_id", "ttl_seconds", "priority"],
+      "properties": {
+        "relay_id": { "type": "string", "minLength": 1 },
+        "ttl_seconds": { "type": "integer", "minimum": 1, "maximum": 86400 },
+        "priority": { "type": "integer", "minimum": 0, "maximum": 9 }
+      }
+    },
+    "relay_frame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "domain_id", "message_id", "sender_device_id", "recipient_device_id", "payload_type", "route", "payload"],
+      "properties": {
+        "type": { "const": "sparkclaw.iscp.relay_frame.v1" },
+        "domain_id": { "type": "string" },
+        "message_id": { "type": "string" },
+        "sender_device_id": { "type": "string" },
+        "recipient_device_id": { "type": "string" },
+        "payload_type": { "enum": ["iscp.session.hello.v2", "iscp.session.ready.v2"] },
+        "route": { "$ref": "#/$defs/route" },
+        "payload": { "type": "object" }
+      }
+    },
+    "enrollment_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "device_type", "device_role", "product_kind", "runtime_kind", "hardware_class", "protocol_versions", "identity", "created_at"],
+      "properties": {
+        "type": { "const": "sparkclaw.bridge.enrollment_request.v1" },
+        "device_type": { "const": "compute_node" },
+        "device_role": { "const": "owner_runtime" },
+        "product_kind": { "const": "sparkclaw" },
+        "runtime_kind": { "const": "sparkclaw" },
+        "hardware_class": { "type": "string", "minLength": 1 },
+        "protocol_versions": {
+          "type": "array",
+          "contains": { "const": "sparkclaw.bridge.v1" },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "identity": { "type": "object" },
+        "device_proof": { "$ref": "#/$defs/device_proof" },
+        "created_at": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+    "device_proof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "domain_id", "device_id", "audience", "challenge", "nonce", "issued_at", "signature"],
+      "properties": {
+        "type": { "const": "iscp.device.proof.v2" },
+        "domain_id": { "type": "string", "minLength": 1 },
+        "device_id": { "type": "string", "minLength": 1 },
+        "audience": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "challenge": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "nonce": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "issued_at": { "$ref": "#/$defs/timestamp" },
+        "signature": { "type": "object" }
+      }
+    },
+    "relay_credential": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["domain_id", "device_id", "token", "expires_at"],
+      "properties": {
+        "domain_id": { "type": "string", "minLength": 1 },
+        "device_id": { "type": "string", "minLength": 1 },
+        "token": { "type": "string", "minLength": 1 },
+        "expires_at": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+    "peer_authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity", "inbound_grant", "outbound_grant", "inbound_revocation_epoch", "outbound_revocation_epoch"],
+      "properties": {
+        "identity": { "type": "object" },
+        "inbound_grant": { "type": "object" },
+        "outbound_grant": { "type": "object" },
+        "inbound_revocation_epoch": { "type": "integer", "minimum": 0 },
+        "outbound_revocation_epoch": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "enrollment_bundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type", "domain_id", "device_id", "relay_id", "relay_base_url",
+        "relay_websocket_url", "trust_root_identity", "access", "refresh",
+        "peers", "issued_at", "expires_at"
+      ],
+      "properties": {
+        "type": { "const": "sparkclaw.bridge.enrollment.v1" },
+        "domain_id": { "type": "string", "minLength": 1 },
+        "device_id": { "type": "string", "minLength": 1 },
+        "relay_id": { "type": "string", "minLength": 1 },
+        "relay_base_url": { "type": "string", "format": "uri" },
+        "relay_websocket_url": { "type": "string", "format": "uri" },
+        "trust_root_identity": { "type": "object" },
+        "access": { "$ref": "#/$defs/relay_credential" },
+        "refresh": { "$ref": "#/$defs/relay_credential" },
+        "peers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/peer_authorization" },
+          "minItems": 1
+        },
+        "issued_at": { "$ref": "#/$defs/timestamp" },
+        "expires_at": { "$ref": "#/$defs/timestamp" }
+      }
+    }
+  }
+}

@@ -58,3 +58,17 @@ CONNECTED -> CHALLENGE_SENT -> POP_VERIFIED -> READY -> CLOSED
 
 Business envelopes are accepted only in READY state. Relay receipt confirms
 relay handling only and does not imply E2E application receipt.
+
+## Fork reference implementation baseline
+
+The SparkClaw-aligned reference Relay in this fork continuously receives queued
+and newly arriving envelopes on an authenticated connection, including when the
+queue is empty. It does not emit `drained` after a batch or rotate a healthy
+connection after 55 seconds. Ping/Pong runs independently of delivery. The
+deployment no longer applies artificial request-rate or cumulative allowances.
+Identity, authorization, message-size bounds and actual resource failures remain.
+
+Envelope submission still uses the REST endpoint above. The receive socket does
+not accept business submission frames. No duplex transport binding is introduced
+by this baseline. See the [baseline scope and validation](../docs/sparkclaw-baseline.md)
+for persistent signers, queued-receipt indexing and optional node-authority adapters.
