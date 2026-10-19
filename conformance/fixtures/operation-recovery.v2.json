@@ -1,0 +1,976 @@
+{
+  "status": "candidate",
+  "protocol": "iscp.operation.recovery.v2",
+  "test_keys": {
+    "issuer_seed_hex": "0101010101010101010101010101010101010101010101010101010101010101",
+    "issuer_public_key": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+    "device_seed_hex": "0202020202020202020202020202020202020202020202020202020202020202",
+    "device_public_key": "gTl3Dqh9F19Wo1Rmw0x-zMuNipG07jeiXfYPW4_Js5Q",
+    "relay_public_key": "2b8hSHSKhcidparY7gsPwtEF_TnUGkx5ZTY1TwrikAw"
+  },
+  "intent": {
+    "type": "iscp.operation.intent.v2",
+    "version": 2,
+    "namespace": "control.credentials.v2",
+    "operation_id": "renew-fixture-1",
+    "kind": "credential.renew",
+    "subject_binding": {
+      "domain_id": "domain-test",
+      "device_id": "device-test",
+      "binding_id": "binding-test"
+    },
+    "target": {
+      "service_id": "issuer-test",
+      "resource_id": "binding-test"
+    },
+    "task_authorization": {
+      "kind": "standing",
+      "authorization_revision": "7",
+      "scopes": [
+        "connect",
+        "workbench"
+      ]
+    },
+    "payload": {
+      "requested_scopes": [
+        "connect",
+        "workbench"
+      ]
+    },
+    "business_deadline": null,
+    "preconditions": {
+      "resource_version": "3",
+      "credential_generation": "8",
+      "authorization_revision": "7"
+    }
+  },
+  "intent_canonical": "{\"business_deadline\":null,\"kind\":\"credential.renew\",\"namespace\":\"control.credentials.v2\",\"operation_id\":\"renew-fixture-1\",\"payload\":{\"requested_scopes\":[\"connect\",\"workbench\"]},\"preconditions\":{\"authorization_revision\":\"7\",\"credential_generation\":\"8\",\"resource_version\":\"3\"},\"subject_binding\":{\"binding_id\":\"binding-test\",\"device_id\":\"device-test\",\"domain_id\":\"domain-test\"},\"target\":{\"resource_id\":\"binding-test\",\"service_id\":\"issuer-test\"},\"task_authorization\":{\"authorization_revision\":\"7\",\"kind\":\"standing\",\"scopes\":[\"connect\",\"workbench\"]},\"type\":\"iscp.operation.intent.v2\",\"version\":2}",
+  "semantic_digest": "ZAVhr2QAxfH-soeXqU-YZgfDM7MY9JekPjICZ9gntgE",
+  "challenge": {
+    "type": "iscp.control.challenge.v2",
+    "protocol": "iscp.operation.recovery.v2",
+    "audience": "issuer-test",
+    "challenge_id": "BAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ",
+    "challenge": "BQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQU",
+    "purpose": "recover",
+    "server_time": "2026-10-19T04:00:00Z",
+    "expires_at": "2026-10-19T04:00:10Z"
+  },
+  "request": {
+    "type": "iscp.operation.request.v2",
+    "protocol": "iscp.operation.recovery.v2",
+    "attempt_id": "attempt-fixture-1",
+    "action": "recover",
+    "key": {
+      "domain_id": "domain-test",
+      "device_id": "device-test",
+      "namespace": "control.credentials.v2",
+      "operation_id": "renew-fixture-1"
+    },
+    "semantic_digest": "ZAVhr2QAxfH-soeXqU-YZgfDM7MY9JekPjICZ9gntgE",
+    "intent": {
+      "type": "iscp.operation.intent.v2",
+      "version": 2,
+      "namespace": "control.credentials.v2",
+      "operation_id": "renew-fixture-1",
+      "kind": "credential.renew",
+      "subject_binding": {
+        "domain_id": "domain-test",
+        "device_id": "device-test",
+        "binding_id": "binding-test"
+      },
+      "target": {
+        "service_id": "issuer-test",
+        "resource_id": "binding-test"
+      },
+      "task_authorization": {
+        "kind": "standing",
+        "authorization_revision": "7",
+        "scopes": [
+          "connect",
+          "workbench"
+        ]
+      },
+      "payload": {
+        "requested_scopes": [
+          "connect",
+          "workbench"
+        ]
+      },
+      "business_deadline": null,
+      "preconditions": {
+        "resource_version": "3",
+        "credential_generation": "8",
+        "authorization_revision": "7"
+      }
+    },
+    "delivery": {
+      "delivery_id": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc",
+      "recipient_public_key": "Xf7dO2vUf2-ijuFdlp1bsOpTd01Ii9r53xxuASSz7yI"
+    },
+    "authentication": {
+      "challenge_id": "BAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ",
+      "challenge": "BQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQU",
+      "nonce": "BgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYG",
+      "issued_at": "2026-10-19T04:00:00Z",
+      "signature": {
+        "alg": "Ed25519",
+        "kid": "device-key-test",
+        "value": "M5W0qbAIsAhSb4rW0F7WObck_PYEzy-TytF11eSB3kmIztqeYsRduIQMG1Vfv-B3KriMH4izYaLD9yAyHnMZAg"
+      }
+    }
+  },
+  "authentication_context": {
+    "type": "iscp.control.authentication.v2",
+    "protocol": "iscp.operation.recovery.v2",
+    "purpose": "recover",
+    "method": "POST",
+    "path": "/v2/control/operations/recover",
+    "audience": "issuer-test",
+    "domain_id": "domain-test",
+    "device_id": "device-test",
+    "challenge_id": "BAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ",
+    "challenge": "BQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQU",
+    "nonce": "BgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYG",
+    "issued_at": "2026-10-19T04:00:00Z",
+    "request_digest": "JVqh1_wqS49GFsivr55tiakYTus39h0SFFHgUFUXwy0",
+    "credential_sha256": null
+  },
+  "authentication_context_canonical": "{\"audience\":\"issuer-test\",\"challenge\":\"BQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQU\",\"challenge_id\":\"BAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ\",\"credential_sha256\":null,\"device_id\":\"device-test\",\"domain_id\":\"domain-test\",\"issued_at\":\"2026-10-19T04:00:00Z\",\"method\":\"POST\",\"nonce\":\"BgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYG\",\"path\":\"/v2/control/operations/recover\",\"protocol\":\"iscp.operation.recovery.v2\",\"purpose\":\"recover\",\"request_digest\":\"JVqh1_wqS49GFsivr55tiakYTus39h0SFFHgUFUXwy0\",\"type\":\"iscp.control.authentication.v2\"}",
+  "authentication_signature_input_hex": "495343502d56322d5349474e415455524500697363702e636f6e74726f6c2e61757468656e7469636174696f6e2e7632007b2261756469656e6365223a226973737565722d74657374222c226368616c6c656e6765223a2242515546425155464251554642515546425155464251554642515546425155464251554642515546425155222c226368616c6c656e67655f6964223a2242415145424151454241514542415145424151454241514542415145424151454241514542415145424151222c2263726564656e7469616c5f736861323536223a6e756c6c2c226465766963655f6964223a226465766963652d74657374222c22646f6d61696e5f6964223a22646f6d61696e2d74657374222c226973737565645f6174223a22323032362d31302d31395430343a30303a30305a222c226d6574686f64223a22504f5354222c226e6f6e6365223a224267594742675947426759474267594742675947426759474267594742675947222c2270617468223a222f76322f636f6e74726f6c2f6f7065726174696f6e732f7265636f766572222c2270726f746f636f6c223a22697363702e6f7065726174696f6e2e7265636f766572792e7632222c22707572706f7365223a227265636f766572222c22726571756573745f646967657374223a224a567168315f777153343947467369767235357469616b5954757333396830534646486755465558777930222c2274797065223a22697363702e636f6e74726f6c2e61757468656e7469636174696f6e2e7632227d",
+  "result": {
+    "type": "iscp.operation.result.v2",
+    "payload": {
+      "type": "iscp.operation.result.payload.v2",
+      "protocol": "iscp.operation.recovery.v2",
+      "key": {
+        "domain_id": "domain-test",
+        "device_id": "device-test",
+        "namespace": "control.credentials.v2",
+        "operation_id": "renew-fixture-1"
+      },
+      "semantic_digest": "ZAVhr2QAxfH-soeXqU-YZgfDM7MY9JekPjICZ9gntgE",
+      "result_version": "1",
+      "state": "succeeded",
+      "completed_at": "2026-10-19T04:00:01Z",
+      "credential_generation": "9",
+      "body": {
+        "grant": {
+          "type": "iscp.trust_grant.v2",
+          "grant_id": "grant-fixture-9",
+          "issuer": "issuer-test",
+          "subject_device_id": "device-test",
+          "audience": "gateway-test",
+          "confirmation_thumbprint": "0DpKdy-R2rcNYnkB15ShS29uV_rkCxuNQsKmGaKSKIU",
+          "permissions": [
+            "connect",
+            "workbench"
+          ],
+          "not_before": "2026-10-19T04:00:01Z",
+          "expires_at": "2026-10-19T04:30:01Z",
+          "revocation_epoch": 7,
+          "signature": {
+            "alg": "Ed25519",
+            "kid": "issuer-key-test",
+            "value": "Z7bp5SJpWsOrBtVR1RRTgUy2w9rp5AZbsxywoNw2FbFMmgGjcyMBx3Fv3DOxJTM8nJdcWtHZbfwSD89Fr4QWAg"
+          }
+        }
+      }
+    },
+    "result_digest": "zWBmJBQ6Pdbg4kCrBGmHOtNhDGCNU0kzft1TePvPWZc",
+    "signature": {
+      "alg": "Ed25519",
+      "kid": "issuer-key-test",
+      "value": "Pqyr_QB7os4h3E4pr7JjpxrHV3rP1KOvh7GLMpu5hUwSyPAXtNisr-d80vaLpINrNRrNJ1My3JQWoz8ObuWZAA"
+    }
+  },
+  "result_payload_canonical": "{\"body\":{\"grant\":{\"audience\":\"gateway-test\",\"confirmation_thumbprint\":\"0DpKdy-R2rcNYnkB15ShS29uV_rkCxuNQsKmGaKSKIU\",\"expires_at\":\"2026-10-19T04:30:01Z\",\"grant_id\":\"grant-fixture-9\",\"issuer\":\"issuer-test\",\"not_before\":\"2026-10-19T04:00:01Z\",\"permissions\":[\"connect\",\"workbench\"],\"revocation_epoch\":7,\"signature\":{\"alg\":\"Ed25519\",\"kid\":\"issuer-key-test\",\"value\":\"Z7bp5SJpWsOrBtVR1RRTgUy2w9rp5AZbsxywoNw2FbFMmgGjcyMBx3Fv3DOxJTM8nJdcWtHZbfwSD89Fr4QWAg\"},\"subject_device_id\":\"device-test\",\"type\":\"iscp.trust_grant.v2\"}},\"completed_at\":\"2026-10-19T04:00:01Z\",\"credential_generation\":\"9\",\"key\":{\"device_id\":\"device-test\",\"domain_id\":\"domain-test\",\"namespace\":\"control.credentials.v2\",\"operation_id\":\"renew-fixture-1\"},\"protocol\":\"iscp.operation.recovery.v2\",\"result_version\":\"1\",\"semantic_digest\":\"ZAVhr2QAxfH-soeXqU-YZgfDM7MY9JekPjICZ9gntgE\",\"state\":\"succeeded\",\"type\":\"iscp.operation.result.payload.v2\"}",
+  "result_digest": "zWBmJBQ6Pdbg4kCrBGmHOtNhDGCNU0kzft1TePvPWZc",
+  "disposition": {
+    "type": "iscp.operation.disposition.v2",
+    "protocol": "iscp.operation.recovery.v2",
+    "key": {
+      "domain_id": "domain-test",
+      "device_id": "device-test",
+      "namespace": "control.credentials.v2",
+      "operation_id": "renew-fixture-1"
+    },
+    "semantic_digest": "ZAVhr2QAxfH-soeXqU-YZgfDM7MY9JekPjICZ9gntgE",
+    "ack": {
+      "result_digest": "zWBmJBQ6Pdbg4kCrBGmHOtNhDGCNU0kzft1TePvPWZc",
+      "disposition": "acknowledged_expired",
+      "credential_generation": "9",
+      "recorded_at": "2026-10-21T04:00:00Z",
+      "parent_result_digest": null
+    },
+    "disposition_digest": "t_8G-BOQZdv3yL_kPJYbkWwb9Coo2yKNDxk1hQFp2PY",
+    "accepted_at": "2026-10-21T04:00:01Z",
+    "signature": {
+      "alg": "Ed25519",
+      "kid": "issuer-key-test",
+      "value": "k_sJyMb3exSpiu1pr58aFjiw9VWaOLkugP6pAW7ZlLXms-qRmfp3KPL-J5cfMbrPr1-SIhNcA2BAGe8o590lDw"
+    }
+  },
+  "child": {
+    "context": {
+      "parent_key": {
+        "domain_id": "domain-test",
+        "device_id": "device-test",
+        "namespace": "control.credentials.v2",
+        "operation_id": "recover-fixture-1"
+      },
+      "parent_semantic_digest": "w6FIjUCVOLxvbwvRoi_0N-l3sZF8r-ssaJrdalek0no",
+      "target_service_id": "relay-test",
+      "step": "relay.credentials.recover",
+      "child_index": "0",
+      "predecessor_disposition_digest": null
+    },
+    "canonical": "{\"child_index\":\"0\",\"parent_key\":{\"device_id\":\"device-test\",\"domain_id\":\"domain-test\",\"namespace\":\"control.credentials.v2\",\"operation_id\":\"recover-fixture-1\"},\"parent_semantic_digest\":\"w6FIjUCVOLxvbwvRoi_0N-l3sZF8r-ssaJrdalek0no\",\"predecessor_disposition_digest\":null,\"step\":\"relay.credentials.recover\",\"target_service_id\":\"relay-test\"}",
+    "operation_id": "child-CMFRRuWTyHKSOQyCKHP5KlrJGcmmQ13dyUM8oCB5faA"
+  },
+  "deliveries": [
+    {
+      "client_seed_hex": "0303030303030303030303030303030303030303030303030303030303030303",
+      "server_seed_hex": "0808080808080808080808080808080808080808080808080808080808080808",
+      "context": {
+        "protocol": "iscp.operation.recovery.v2",
+        "key": {
+          "domain_id": "domain-test",
+          "device_id": "device-test",
+          "namespace": "control.credentials.v2",
+          "operation_id": "renew-fixture-1"
+        },
+        "semantic_digest": "ZAVhr2QAxfH-soeXqU-YZgfDM7MY9JekPjICZ9gntgE",
+        "result_digest": "zWBmJBQ6Pdbg4kCrBGmHOtNhDGCNU0kzft1TePvPWZc",
+        "delivery_id": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc",
+        "recipient_public_key": "Xf7dO2vUf2-ijuFdlp1bsOpTd01Ii9r53xxuASSz7yI",
+        "server_public_key": "MdSras7slhE3kXA3k25gcW-sVzr-lNnahKgCBEjfwRI"
+      },
+      "context_canonical": "{\"delivery_id\":\"BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc\",\"key\":{\"device_id\":\"device-test\",\"domain_id\":\"domain-test\",\"namespace\":\"control.credentials.v2\",\"operation_id\":\"renew-fixture-1\"},\"protocol\":\"iscp.operation.recovery.v2\",\"recipient_public_key\":\"Xf7dO2vUf2-ijuFdlp1bsOpTd01Ii9r53xxuASSz7yI\",\"result_digest\":\"zWBmJBQ6Pdbg4kCrBGmHOtNhDGCNU0kzft1TePvPWZc\",\"semantic_digest\":\"ZAVhr2QAxfH-soeXqU-YZgfDM7MY9JekPjICZ9gntgE\",\"server_public_key\":\"MdSras7slhE3kXA3k25gcW-sVzr-lNnahKgCBEjfwRI\"}",
+      "salt_hex": "c818856369ca1312615c326129560da7e7641c7ceae0323bac8456c934d928e0",
+      "key_hex": "8cf4a1c5c3f6e2815f4d753698f88c7785972ad0cfe243c81811260e7474123b",
+      "aad_hex": "495343502d434f4e54524f4c2d524553554c542d4141442d5632007b2264656c69766572795f6964223a2242776348427763484277634842776348427763484277634842776348427763484277634842776348427763222c226b6579223a7b226465766963655f6964223a226465766963652d74657374222c22646f6d61696e5f6964223a22646f6d61696e2d74657374222c226e616d657370616365223a22636f6e74726f6c2e63726564656e7469616c732e7632222c226f7065726174696f6e5f6964223a2272656e65772d666978747572652d31227d2c2270726f746f636f6c223a22697363702e6f7065726174696f6e2e7265636f766572792e7632222c22726563697069656e745f7075626c69635f6b6579223a22586637644f32765566322d696a7546646c703162734f70546430314969397235337878754153537a377949222c22726573756c745f646967657374223a227a57426d4a42513650646267346b437242476d484f744e684447434e55306b7a6674315465507650575a63222c2273656d616e7469635f646967657374223a225a415668723251417866482d736f655871552d595a6766444d374d59394a656b506a49435a39676e746745222c227365727665725f7075626c69635f6b6579223a224d645372617337736c6845336b5841336b32356763572d73567a722d6c4e6e61684b674342456a66775249227d",
+      "wire": {
+        "type": "iscp.operation.sealed-result.v2",
+        "attempt_id": "attempt-fixture-7",
+        "protocol": "iscp.operation.recovery.v2",
+        "key": {
+          "domain_id": "domain-test",
+          "device_id": "device-test",
+          "namespace": "control.credentials.v2",
+          "operation_id": "renew-fixture-1"
+        },
+        "semantic_digest": "ZAVhr2QAxfH-soeXqU-YZgfDM7MY9JekPjICZ9gntgE",
+        "result_digest": "zWBmJBQ6Pdbg4kCrBGmHOtNhDGCNU0kzft1TePvPWZc",
+        "delivery_id": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc",
+        "recipient_public_key": "Xf7dO2vUf2-ijuFdlp1bsOpTd01Ii9r53xxuASSz7yI",
+        "server_public_key": "MdSras7slhE3kXA3k25gcW-sVzr-lNnahKgCBEjfwRI",
+        "nonce": "CQkJCQkJCQkJCQkJ",
+        "ciphertext": "njTF2naK1P93IkEgVhxSHECoOuNxG1AQkJG6JYJyw2OVCezDCmtqveiPQBAu4bIhHiNuLO2mGLI2QsUJMkW1Jcnn0K9VutQTAxSHKduiPKWVYwpwnlsjY7tZpJEzt0inBfN3JqZO-H_GdUGpH_08FT0xgVRkIa3_MR_waz-8mX10d-YH2Rfax3Pnc_RHghbvIL-KpxBIHCn6UlgmeSC-pek8L9HX8n3p5btDUoF96h3Cf8awa9YyOFkInF1y8MkFIh1H4qjz_mTLco86XBICngnMRHEewu2tsuD0hYxwA5iQAMVBDxCe8solblAejhFFVqBExdALqz0ahyCoivjlaAIxgP7dq4_DQ-P0wew2T7fuQ0lXlVvUiJBDGkPDvxn8ozZmMvOfnnglFF6n4lppxckb44iXPjGFXVyzz4OH_8LHILfSrttKo1Va8HYEcgqyDB9H2J17kAdIt1cjsTfpGqRuVjf3wuU6Q89ePVhPnfu2c8zxxjepPrNmo9wgfkryjbXsja7yw1sQZcPeWGMYM8wUpltlEv-pDhU154pEWADy_XoXOCVQBODf7ZHDuwD_HYj4mD7BEuzDJUACkIyuqsUJwn8N6_6ZJUEheCkwz-RibIFZvww-Y_r6nxJMkr3i9gt9iPAA-TLBa8Q5YfkRRTETlBa9rt88mqjiRov5AkYmGlhxDpMmNs7ZMpOUZKEEUIEaTXloUlGmTahNMcGcVK4ZpHzDP6b8f3luCxVnFdMVQwlYstrArSHChC8l2rIQjmuH2tf6BQv4YnS7IIPmGkZ4vw-6tdT1m_zlEyAeCOeRo6s6xzVJ2oRyBhhVMqcXgQcTKDPpk8Zsq5W-9syp5aGxQK2ToJs-TQSo6ovhn_QS4U1MTKHxUDjrVF31ulyvAbS4W0AB1kNNldDuX8Y1H1DIw7JXUFx8uOcbyJBjxgkH7hm321cUDDjQbl4GauJ5dDgIVvwLeABx5xP67De3SholVagVurh5cRFiIiyWdeFqRurLAoCRX5DTlKqfDqJyaEBnIOWmIutoqAtZ8Botqb7g8lRompLhGMbUmOSWT7PGSVJrDRRYIOdSu0pGA7c7X-W-L8_Jdsr2PJqK1BYaH04zsvRpeIUmgI3ydnTFKwG4dPED02vVNdW7QMSPKvkFVhcNIQSBd7z667_1v3HLycZHJait0Vf-Bx2zYlcmS6kctZ5bSYG_UqLGd99OJxTd_tCikeZhb5Ao4UZ7SGDDwo9C41S9vV-ROLRv2UUEqUhNgpbEJvrJXdH5SJNSbslAl7iG1HPzcKDCIUnn9swI1WhjlM2z-sLSaZelWQQlSGbB-l86LZOSRzWi_hxb9-0d_De4WsAg8iyw35XiTA6GjVObxqQan1kQPUu5YmW_Igh4LRwHa2nvsqKAakGhK0P9vi7YT20GFWiUncCWTuwv3FdnvPwMWqGm9WN0R1Xr5y9gflXhnOf-pqbzvGa9T4k50WX66NpwLVK0s7bauDeGSAOv-KT-3f9IFWsDf5g2X-N_jm5ASG0G5wBmelqHVrEihF8o-Pngj8VtP_z-NwmvKsdSmy5Q",
+        "ciphersuite": "ISCP_V2_X25519_HKDF_SHA256_CHACHA20POLY1305"
+      }
+    },
+    {
+      "client_seed_hex": "0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+      "server_seed_hex": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+      "context": {
+        "protocol": "iscp.operation.recovery.v2",
+        "key": {
+          "domain_id": "domain-test",
+          "device_id": "device-test",
+          "namespace": "control.credentials.v2",
+          "operation_id": "renew-fixture-1"
+        },
+        "semantic_digest": "ZAVhr2QAxfH-soeXqU-YZgfDM7MY9JekPjICZ9gntgE",
+        "result_digest": "zWBmJBQ6Pdbg4kCrBGmHOtNhDGCNU0kzft1TePvPWZc",
+        "delivery_id": "DQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0",
+        "recipient_public_key": "93_0sQeIv9ymLKC7Fg1CfPV2LYXytcrWgH7Jw_673gk",
+        "server_public_key": "c7LYt2qptTZgAyvI9di-46OuTjs6f9Sa3oH3NHo0qmg"
+      },
+      "context_canonical": "{\"delivery_id\":\"DQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0\",\"key\":{\"device_id\":\"device-test\",\"domain_id\":\"domain-test\",\"namespace\":\"control.credentials.v2\",\"operation_id\":\"renew-fixture-1\"},\"protocol\":\"iscp.operation.recovery.v2\",\"recipient_public_key\":\"93_0sQeIv9ymLKC7Fg1CfPV2LYXytcrWgH7Jw_673gk\",\"result_digest\":\"zWBmJBQ6Pdbg4kCrBGmHOtNhDGCNU0kzft1TePvPWZc\",\"semantic_digest\":\"ZAVhr2QAxfH-soeXqU-YZgfDM7MY9JekPjICZ9gntgE\",\"server_public_key\":\"c7LYt2qptTZgAyvI9di-46OuTjs6f9Sa3oH3NHo0qmg\"}",
+      "salt_hex": "d7025abd6c92cf89a92d720d62841c993e163bae06afa33887299d5044bd73e7",
+      "key_hex": "c13e69bdc0ea1947ab49e905a1240d4f991e5e75f3a000aa09d2d3fffadebfc2",
+      "aad_hex": "495343502d434f4e54524f4c2d524553554c542d4141442d5632007b2264656c69766572795f6964223a224451304e4451304e4451304e4451304e4451304e4451304e4451304e4451304e4451304e4451304e445130222c226b6579223a7b226465766963655f6964223a226465766963652d74657374222c22646f6d61696e5f6964223a22646f6d61696e2d74657374222c226e616d657370616365223a22636f6e74726f6c2e63726564656e7469616c732e7632222c226f7065726174696f6e5f6964223a2272656e65772d666978747572652d31227d2c2270726f746f636f6c223a22697363702e6f7065726174696f6e2e7265636f766572792e7632222c22726563697069656e745f7075626c69635f6b6579223a2239335f30735165497639796d4c4b433746673143665056324c595879746372576748374a775f363733676b222c22726573756c745f646967657374223a227a57426d4a42513650646267346b437242476d484f744e684447434e55306b7a6674315465507650575a63222c2273656d616e7469635f646967657374223a225a415668723251417866482d736f655871552d595a6766444d374d59394a656b506a49435a39676e746745222c227365727665725f7075626c69635f6b6579223a2263374c597432717074545a67417976493964692d34364f75546a733666395361336f48334e486f30716d67227d",
+      "wire": {
+        "type": "iscp.operation.sealed-result.v2",
+        "attempt_id": "attempt-fixture-13",
+        "protocol": "iscp.operation.recovery.v2",
+        "key": {
+          "domain_id": "domain-test",
+          "device_id": "device-test",
+          "namespace": "control.credentials.v2",
+          "operation_id": "renew-fixture-1"
+        },
+        "semantic_digest": "ZAVhr2QAxfH-soeXqU-YZgfDM7MY9JekPjICZ9gntgE",
+        "result_digest": "zWBmJBQ6Pdbg4kCrBGmHOtNhDGCNU0kzft1TePvPWZc",
+        "delivery_id": "DQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0",
+        "recipient_public_key": "93_0sQeIv9ymLKC7Fg1CfPV2LYXytcrWgH7Jw_673gk",
+        "server_public_key": "c7LYt2qptTZgAyvI9di-46OuTjs6f9Sa3oH3NHo0qmg",
+        "nonce": "DAwMDAwMDAwMDAwM",
+        "ciphertext": "2PawReYmN3rgRrJkewOtYpziBjX3sACQsXgAmantQaXrXF2KEVcgC0ql5sh8puNOOLOzrimg3YX8s23CsIN9qm-aKaTa7GDdIak6cvJKH14sTbmr31vYcfCxmjPWwbt2-0RZEGfWTxlBhmFNINJfYfVTj534oISKxeUZzg2HGJAajZwiF3qvjvocJeOwOdxn7ec__SxKn-rXretDoOdhfawh5V5-1q_vL-HMnx373fF7rwV51B8Yp6oAy2mynjStyQgnOE9xvl16JBmGT5r0DBw_OhVZ8XY8zL0IjJz2YlucOiMH6jQzv7y0t6wbsYtVpjV103cHd8jx2QF0NGrQ3NAE6xP1CcEvQOCi09GSh8HOrUyiDXCxk57R6VD5D8gvLNozYmmbqBu0STl1m_Zq9kIdpP2-TjymlzW8FsBu_cVIOHgwuVVHMREFcuIwVrj00pXi_rCFIznpDTBTzbZ0eQPO0PPvasBsRUYK3MPHPjv1F2TZb6LmndzOkXGw0m0z7en5tYACWh_GTHJq7py5Her-5591gyI2tPZsTCn5sWwqZunaCQ8dsfZ9hAm2mdN7VyEZ2M6YwLE1DQWpVe0Za4VarPDYwA2PKg4VM0xOuXCEipY5t1pVnA3ws0E7_XdeA63VOLweka5i7Cm5miwxlYPk0sM1SmpbR7t9j4n5_zpGUtkYaepBU_MgJQx9lhkx28apDLhCJMnfGirP6PZcz0PgOJlKw06YUPFFH3Z3aprd42MAhdXTOv_3oCq43ar1YE3PUBuHNFH6W7GCHIi9gOWYwDDy78jlCmNtFIXX0fKNJzCwXIOOXoZQ6Zetm1xmMqSDFuXa0CDNwknqG9cTPNXbYE5lrZHdGgzZemctLL0za42tS16OPhUByG9AjBrFTxuD_ivMXfCJrTiORzskfffGD-sTaEes-rwMovNR3IoyxA7W9gbc86EWpZ6fRhvlP_sKCTxAmhrNS9--A_rDGigPKd050KdBcbkBc9A0juTen-WhOLa_taGLrr15zUFRvomLGussXjQDT-R6r5ldMGEzua4znC2ALw055TeyfuKw7PFOZwVF2bLjdEor3O8HrjUBJTxX4fFifOcU0eA6mQBCaeMTMdwJjFIX8qMWxa2kK2XKAoBO4biuRGY1qxGxQ-WulmMbS9Bs7qrUfdB0Psfoh58kKyu5ZAMqew8GP01180p-mLwnoltXo4tVhgGaU5CUTXWTWwTL6XYJ9ZS3fFclan14Dgaot91Kgty71uFjyCu0ImNIlOA4Y5ca-eKLH6hTAZskCCg_UiAUSsvvE8wPWcnaJgZeRrsjr1gKHd2KvCO8rKc1BRJc5bjl5V_nZai8Ycs17_606meyI7L7ojtZNjbGlVQ6miR8YbhvYvhIopYZsl351qgXCymG7e5ncEDBDx3x_lHHr46uYqE88FbuwT6sZV0h6mNqCAC1K_vWdfZmLKG3PbWxTDzQF6UqNvo8V14rdPvm7YGPiL2vP9aNP75fw3d_q7VTCcFsQKUvvzSdXgzfzZHosrv8SjgbrgLlVYZAiWMdpuv4oUJUQkpunT1W",
+        "ciphersuite": "ISCP_V2_X25519_HKDF_SHA256_CHACHA20POLY1305"
+      }
+    }
+  ],
+  "negative_raw": [
+    {
+      "name": "duplicate-member",
+      "raw": "{\"type\":\"x\",\"type\":\"y\"}"
+    },
+    {
+      "name": "trailing-garbage",
+      "raw": "{\"business_deadline\":null,\"kind\":\"credential.renew\",\"namespace\":\"control.credentials.v2\",\"operation_id\":\"renew-fixture-1\",\"payload\":{\"requested_scopes\":[\"connect\",\"workbench\"]},\"preconditions\":{\"authorization_revision\":\"7\",\"credential_generation\":\"8\",\"resource_version\":\"3\"},\"subject_binding\":{\"binding_id\":\"binding-test\",\"device_id\":\"device-test\",\"domain_id\":\"domain-test\"},\"target\":{\"resource_id\":\"binding-test\",\"service_id\":\"issuer-test\"},\"task_authorization\":{\"authorization_revision\":\"7\",\"kind\":\"standing\",\"scopes\":[\"connect\",\"workbench\"]},\"type\":\"iscp.operation.intent.v2\",\"version\":2} garbage"
+    },
+    {
+      "name": "lone-surrogate",
+      "raw": "{\"value\":\"\\ud800\"}"
+    },
+    {
+      "name": "float",
+      "raw": "{\"version\":2.0}"
+    },
+    {
+      "name": "exponent",
+      "raw": "{\"version\":2e0}"
+    },
+    {
+      "name": "invalid-utf8",
+      "raw_hex": "7b2278223a22ff227d"
+    }
+  ],
+  "negative_schema": [
+    {
+      "name": "proof-in-intent",
+      "path": [
+        "intent",
+        "proof"
+      ],
+      "value": {}
+    },
+    {
+      "name": "unknown-envelope-field",
+      "path": [
+        "unknown"
+      ],
+      "value": true
+    },
+    {
+      "name": "numeric-generation",
+      "path": [
+        "intent",
+        "preconditions",
+        "credential_generation"
+      ],
+      "value": 8
+    },
+    {
+      "name": "leading-zero-generation",
+      "path": [
+        "intent",
+        "preconditions",
+        "credential_generation"
+      ],
+      "value": "08"
+    },
+    {
+      "name": "unknown-proof-field",
+      "path": [
+        "authentication",
+        "authority"
+      ],
+      "value": true
+    },
+    {
+      "name": "wrong-version",
+      "path": [
+        "intent",
+        "version"
+      ],
+      "value": 1
+    },
+    {
+      "name": "invalid-wrap-key",
+      "path": [
+        "delivery",
+        "recipient_public_key"
+      ],
+      "value": "bad="
+    },
+    {
+      "name": "duplicate-scope",
+      "path": [
+        "intent",
+        "task_authorization",
+        "scopes"
+      ],
+      "value": [
+        "connect",
+        "connect"
+      ]
+    },
+    {
+      "name": "fractional-time",
+      "path": [
+        "authentication",
+        "issued_at"
+      ],
+      "value": "2026-10-19T04:00:00.001Z"
+    }
+  ],
+  "negative_binding": [
+    {
+      "name": "wrong-audience",
+      "path": [
+        "audience"
+      ],
+      "value": "other-issuer"
+    },
+    {
+      "name": "wrong-method",
+      "path": [
+        "method"
+      ],
+      "value": "GET"
+    },
+    {
+      "name": "wrong-path",
+      "path": [
+        "path"
+      ],
+      "value": "/v2/control/operations/submit"
+    },
+    {
+      "name": "wrong-purpose",
+      "path": [
+        "purpose"
+      ],
+      "value": "submit"
+    },
+    {
+      "name": "wrong-challenge",
+      "path": [
+        "challenge"
+      ],
+      "value": "Y2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2M"
+    },
+    {
+      "name": "wrong-request",
+      "path": [
+        "request_digest"
+      ],
+      "value": "Y2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2M"
+    },
+    {
+      "name": "wrong-credential",
+      "path": [
+        "credential_sha256"
+      ],
+      "value": "Y2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2M"
+    }
+  ],
+  "status_record": {
+    "type": "iscp.operation.status.v2",
+    "protocol": "iscp.operation.recovery.v2",
+    "attempt_id": "attempt-fixture-1",
+    "key": {
+      "domain_id": "domain-test",
+      "device_id": "device-test",
+      "namespace": "control.credentials.v2",
+      "operation_id": "renew-fixture-1"
+    },
+    "semantic_digest": "ZAVhr2QAxfH-soeXqU-YZgfDM7MY9JekPjICZ9gntgE",
+    "state": "succeeded",
+    "record_version": "2",
+    "history_id": "Dg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4",
+    "history_complete": true,
+    "code": "none",
+    "result_digest": "zWBmJBQ6Pdbg4kCrBGmHOtNhDGCNU0kzft1TePvPWZc",
+    "credential_generation": "9",
+    "checked_at": "2026-10-21T04:00:00Z",
+    "signature": {
+      "alg": "Ed25519",
+      "kid": "issuer-key-test",
+      "value": "VouXxvT4xVFIrNjXE9DUxdGVMgGPILPVzXZm-a3OkPMtQNWld0P2_AkmxI1_oBCGpQEj179jKEk9mK65uxVSDA"
+    }
+  },
+  "families": [
+    {
+      "namespace": "control.credentials.v2",
+      "kinds": [
+        "credential.renew",
+        "credential.recover"
+      ],
+      "recovery": "find_or_admit",
+      "owner": "issuer"
+    },
+    {
+      "namespace": "control.relay-credentials.v2",
+      "kinds": [
+        "relay.refresh",
+        "relay.recover"
+      ],
+      "recovery": "find_or_admit",
+      "owner": "relay"
+    },
+    {
+      "namespace": "sparkclaw.execution.existing",
+      "kinds": [
+        "execution.submit"
+      ],
+      "recovery": "lookup_only",
+      "owner": "SparkClaw"
+    },
+    {
+      "namespace": "sparkclaw.domain.existing",
+      "kinds": [
+        "existing operation_receipt families"
+      ],
+      "recovery": "lookup_only",
+      "owner": "SparkClaw"
+    },
+    {
+      "namespace": "jingsi.runtime.v1",
+      "kinds": [
+        "submit"
+      ],
+      "recovery": "lookup_with_permanent_not_started_fence",
+      "owner": "accepted external contract"
+    }
+  ],
+  "parent_recovery_intent": {
+    "type": "iscp.operation.intent.v2",
+    "version": 2,
+    "namespace": "control.credentials.v2",
+    "operation_id": "recover-fixture-1",
+    "kind": "credential.recover",
+    "subject_binding": {
+      "domain_id": "domain-test",
+      "device_id": "device-test",
+      "binding_id": "binding-test"
+    },
+    "target": {
+      "service_id": "issuer-test",
+      "resource_id": "binding-test"
+    },
+    "task_authorization": {
+      "kind": "standing",
+      "authorization_revision": "7",
+      "scopes": [
+        "connect",
+        "workbench"
+      ]
+    },
+    "payload": {
+      "requested_scopes": [
+        "connect",
+        "workbench"
+      ]
+    },
+    "business_deadline": null,
+    "preconditions": {
+      "resource_version": "3",
+      "credential_generation": "8",
+      "authorization_revision": "7"
+    }
+  },
+  "delegated_child": {
+    "authenticated_actor": {
+      "domain_id": "domain-test",
+      "device_id": "issuer-service-test"
+    },
+    "key": {
+      "domain_id": "domain-test",
+      "device_id": "issuer-service-test",
+      "namespace": "control.relay-credentials.v2",
+      "operation_id": "child-CMFRRuWTyHKSOQyCKHP5KlrJGcmmQ13dyUM8oCB5faA"
+    },
+    "intent": {
+      "type": "iscp.operation.intent.v2",
+      "version": 2,
+      "namespace": "control.relay-credentials.v2",
+      "operation_id": "child-CMFRRuWTyHKSOQyCKHP5KlrJGcmmQ13dyUM8oCB5faA",
+      "kind": "relay.recover",
+      "subject_binding": {
+        "domain_id": "domain-test",
+        "device_id": "device-test",
+        "binding_id": "binding-test"
+      },
+      "target": {
+        "service_id": "relay-test",
+        "resource_id": "binding-test"
+      },
+      "task_authorization": {
+        "kind": "standing",
+        "authorization_revision": "7",
+        "scopes": [
+          "connect",
+          "workbench"
+        ]
+      },
+      "payload": {
+        "requested_scopes": [
+          "connect",
+          "workbench"
+        ]
+      },
+      "business_deadline": null,
+      "preconditions": {
+        "resource_version": "3",
+        "credential_generation": "21",
+        "authorization_revision": "7"
+      },
+      "parent": {
+        "key": {
+          "domain_id": "domain-test",
+          "device_id": "device-test",
+          "namespace": "control.credentials.v2",
+          "operation_id": "recover-fixture-1"
+        },
+        "semantic_digest": "w6FIjUCVOLxvbwvRoi_0N-l3sZF8r-ssaJrdalek0no",
+        "step": "relay.credentials.recover",
+        "child_index": "0"
+      }
+    },
+    "semantic_digest": "iW-BS8L2_oh2Ie1LCJDYkXojvIcxkIn2W-WJOobltJ0",
+    "stored_authority": {
+      "domain_id": "domain-test",
+      "device_id": "device-test",
+      "binding_id": "binding-test",
+      "issuer_device_id": "issuer-service-test",
+      "service_active": true,
+      "subject_active": true,
+      "authorization_revision": "7",
+      "resource_version": "3",
+      "credential_generation": "21",
+      "scopes": [
+        "connect",
+        "workbench"
+      ]
+    }
+  },
+  "child_result": {
+    "type": "iscp.operation.result.v2",
+    "payload": {
+      "type": "iscp.operation.result.payload.v2",
+      "protocol": "iscp.operation.recovery.v2",
+      "key": {
+        "domain_id": "domain-test",
+        "device_id": "issuer-service-test",
+        "namespace": "control.relay-credentials.v2",
+        "operation_id": "child-CMFRRuWTyHKSOQyCKHP5KlrJGcmmQ13dyUM8oCB5faA"
+      },
+      "semantic_digest": "iW-BS8L2_oh2Ie1LCJDYkXojvIcxkIn2W-WJOobltJ0",
+      "result_version": "1",
+      "state": "succeeded",
+      "completed_at": "2026-10-19T04:00:01Z",
+      "credential_generation": "22",
+      "body": {
+        "relay_credentials": {
+          "target_service_id": "relay-test",
+          "binding_id": "binding-test",
+          "credential_generation": "22",
+          "authorization_revision": "7",
+          "access": {
+            "domain_id": "domain-test",
+            "device_id": "device-test",
+            "token": "PUBLIC-CHILD-ACCESS-NOT-A-CREDENTIAL",
+            "expires_at": "2026-10-19T04:30:01Z"
+          },
+          "refresh": {
+            "domain_id": "domain-test",
+            "device_id": "device-test",
+            "token": "PUBLIC-CHILD-REFRESH-NOT-A-CREDENTIAL",
+            "expires_at": "2026-10-20T04:00:01Z"
+          }
+        }
+      }
+    },
+    "result_digest": "Dpgtbx3UOu8yp2cE4Mp1hOSuR0rtjkl_JNNi-aGDLTs",
+    "signature": {
+      "alg": "Ed25519",
+      "kid": "relay-key-test",
+      "value": "y65c1TSfLwQBfCkjqsgUbDkL-AyCL4DQDvFIP6udn0r01hTIGYdyHnx2P154SC76Q7eMOpyzWHYKKKAo6xiDCQ"
+    }
+  },
+  "child_disposition": {
+    "type": "iscp.operation.disposition.v2",
+    "protocol": "iscp.operation.recovery.v2",
+    "key": {
+      "domain_id": "domain-test",
+      "device_id": "issuer-service-test",
+      "namespace": "control.relay-credentials.v2",
+      "operation_id": "child-CMFRRuWTyHKSOQyCKHP5KlrJGcmmQ13dyUM8oCB5faA"
+    },
+    "semantic_digest": "iW-BS8L2_oh2Ie1LCJDYkXojvIcxkIn2W-WJOobltJ0",
+    "ack": {
+      "result_digest": "Dpgtbx3UOu8yp2cE4Mp1hOSuR0rtjkl_JNNi-aGDLTs",
+      "disposition": "acknowledged_expired",
+      "credential_generation": "22",
+      "recorded_at": "2026-10-21T04:00:00Z",
+      "parent_result_digest": null
+    },
+    "disposition_digest": "WitImrlt8P9692MCNIdkcI0QZrrifVupgX6c9Y7UAh4",
+    "accepted_at": "2026-10-21T04:00:01Z",
+    "signature": {
+      "alg": "Ed25519",
+      "kid": "relay-key-test",
+      "value": "l1IKdZGy8xDHnFN6pQoPXG_2fellTGVVoxVRjSTjuI0lmI1QAB2NwKIT1ZKW2i0u9dqODrzqWYSirEFaCgcCDg"
+    }
+  },
+  "child_successor": {
+    "context": {
+      "parent_key": {
+        "domain_id": "domain-test",
+        "device_id": "device-test",
+        "namespace": "control.credentials.v2",
+        "operation_id": "recover-fixture-1"
+      },
+      "parent_semantic_digest": "w6FIjUCVOLxvbwvRoi_0N-l3sZF8r-ssaJrdalek0no",
+      "target_service_id": "relay-test",
+      "step": "relay.credentials.recover",
+      "child_index": "1",
+      "predecessor_disposition_digest": "WitImrlt8P9692MCNIdkcI0QZrrifVupgX6c9Y7UAh4"
+    },
+    "operation_id": "child-y19TyutrTbk9vUuBENDKbzGkJOf-ZltrLvcse54WIIY",
+    "expected_credential_generation": "22",
+    "predecessor": {
+      "key": {
+        "domain_id": "domain-test",
+        "device_id": "issuer-service-test",
+        "namespace": "control.relay-credentials.v2",
+        "operation_id": "child-CMFRRuWTyHKSOQyCKHP5KlrJGcmmQ13dyUM8oCB5faA"
+      },
+      "result_digest": "Dpgtbx3UOu8yp2cE4Mp1hOSuR0rtjkl_JNNi-aGDLTs",
+      "disposition_digest": "WitImrlt8P9692MCNIdkcI0QZrrifVupgX6c9Y7UAh4"
+    },
+    "requires_predecessor_closed": true
+  },
+  "parent_recovery_result": {
+    "type": "iscp.operation.result.v2",
+    "payload": {
+      "type": "iscp.operation.result.payload.v2",
+      "protocol": "iscp.operation.recovery.v2",
+      "key": {
+        "domain_id": "domain-test",
+        "device_id": "device-test",
+        "namespace": "control.credentials.v2",
+        "operation_id": "recover-fixture-1"
+      },
+      "semantic_digest": "w6FIjUCVOLxvbwvRoi_0N-l3sZF8r-ssaJrdalek0no",
+      "result_version": "1",
+      "state": "succeeded",
+      "completed_at": "2026-10-19T04:00:01Z",
+      "credential_generation": "9",
+      "body": {
+        "grant": {
+          "type": "iscp.trust_grant.v2",
+          "grant_id": "grant-fixture-9",
+          "issuer": "issuer-test",
+          "subject_device_id": "device-test",
+          "audience": "gateway-test",
+          "confirmation_thumbprint": "0DpKdy-R2rcNYnkB15ShS29uV_rkCxuNQsKmGaKSKIU",
+          "permissions": [
+            "connect",
+            "workbench"
+          ],
+          "not_before": "2026-10-19T04:00:01Z",
+          "expires_at": "2026-10-19T04:30:01Z",
+          "revocation_epoch": 7,
+          "signature": {
+            "alg": "Ed25519",
+            "kid": "issuer-key-test",
+            "value": "Z7bp5SJpWsOrBtVR1RRTgUy2w9rp5AZbsxywoNw2FbFMmgGjcyMBx3Fv3DOxJTM8nJdcWtHZbfwSD89Fr4QWAg"
+          }
+        },
+        "relay_result": {
+          "type": "iscp.operation.result.v2",
+          "payload": {
+            "type": "iscp.operation.result.payload.v2",
+            "protocol": "iscp.operation.recovery.v2",
+            "key": {
+              "domain_id": "domain-test",
+              "device_id": "issuer-service-test",
+              "namespace": "control.relay-credentials.v2",
+              "operation_id": "child-CMFRRuWTyHKSOQyCKHP5KlrJGcmmQ13dyUM8oCB5faA"
+            },
+            "semantic_digest": "iW-BS8L2_oh2Ie1LCJDYkXojvIcxkIn2W-WJOobltJ0",
+            "result_version": "1",
+            "state": "succeeded",
+            "completed_at": "2026-10-19T04:00:01Z",
+            "credential_generation": "22",
+            "body": {
+              "relay_credentials": {
+                "target_service_id": "relay-test",
+                "binding_id": "binding-test",
+                "credential_generation": "22",
+                "authorization_revision": "7",
+                "access": {
+                  "domain_id": "domain-test",
+                  "device_id": "device-test",
+                  "token": "PUBLIC-CHILD-ACCESS-NOT-A-CREDENTIAL",
+                  "expires_at": "2026-10-19T04:30:01Z"
+                },
+                "refresh": {
+                  "domain_id": "domain-test",
+                  "device_id": "device-test",
+                  "token": "PUBLIC-CHILD-REFRESH-NOT-A-CREDENTIAL",
+                  "expires_at": "2026-10-20T04:00:01Z"
+                }
+              }
+            }
+          },
+          "result_digest": "Dpgtbx3UOu8yp2cE4Mp1hOSuR0rtjkl_JNNi-aGDLTs",
+          "signature": {
+            "alg": "Ed25519",
+            "kid": "relay-key-test",
+            "value": "y65c1TSfLwQBfCkjqsgUbDkL-AyCL4DQDvFIP6udn0r01hTIGYdyHnx2P154SC76Q7eMOpyzWHYKKKAo6xiDCQ"
+          }
+        }
+      }
+    },
+    "result_digest": "imHezQ_6pnxhM9kyeZ4MLV570hkf7EeW_2sxoXALBBI",
+    "signature": {
+      "alg": "Ed25519",
+      "kid": "issuer-key-test",
+      "value": "-IATX_8aOJGIeak6GVwYJzqKLy3U10-_EUYJQONnqgJHHUefjyuvskR8WYbrgZOrsaYVzNcRAgGEj4igt2VRDg"
+    }
+  },
+  "child_delegated_disposition": {
+    "type": "iscp.operation.disposition.v2",
+    "protocol": "iscp.operation.recovery.v2",
+    "key": {
+      "domain_id": "domain-test",
+      "device_id": "issuer-service-test",
+      "namespace": "control.relay-credentials.v2",
+      "operation_id": "child-CMFRRuWTyHKSOQyCKHP5KlrJGcmmQ13dyUM8oCB5faA"
+    },
+    "semantic_digest": "iW-BS8L2_oh2Ie1LCJDYkXojvIcxkIn2W-WJOobltJ0",
+    "ack": {
+      "result_digest": "Dpgtbx3UOu8yp2cE4Mp1hOSuR0rtjkl_JNNi-aGDLTs",
+      "disposition": "delegated",
+      "credential_generation": "22",
+      "recorded_at": "2026-10-19T04:00:03Z",
+      "parent_result_digest": "imHezQ_6pnxhM9kyeZ4MLV570hkf7EeW_2sxoXALBBI"
+    },
+    "disposition_digest": "IgzmtgauRRdqoCJCq9u-HeQUPWh9GAM0iI65lXhwMPs",
+    "accepted_at": "2026-10-19T04:00:04Z",
+    "signature": {
+      "alg": "Ed25519",
+      "kid": "relay-key-test",
+      "value": "5UI3lXF52bQfHUXx9_65-2kYi9GZqdpl3znBTaVSzWU3pLk1g3NDxILAajEQEfHr-_qCcra1EIJrgjDdJPrsDQ"
+    }
+  },
+  "scenario_note": "child_disposition/child_successor and parent_recovery_result/child_delegated_disposition are alternative histories, never conflicting dispositions in one ledger",
+  "negative_status": [
+    {
+      "name": "missing-history-cannot-succeed",
+      "path": [
+        "history_complete"
+      ],
+      "value": false
+    },
+    {
+      "name": "terminal-without-result-digest",
+      "path": [
+        "result_digest"
+      ],
+      "value": null
+    },
+    {
+      "name": "terminal-marked-history-unknown",
+      "path": [
+        "code"
+      ],
+      "value": "history_unavailable"
+    },
+    {
+      "name": "absence-with-terminal-result",
+      "path": [
+        "state"
+      ],
+      "value": "absent"
+    }
+  ],
+  "negative_delegation": [
+    {
+      "name": "wrong-service-actor",
+      "path": [
+        "authenticated_actor",
+        "device_id"
+      ],
+      "value": "unrelated-service"
+    },
+    {
+      "name": "wrong-target-subject",
+      "path": [
+        "intent",
+        "subject_binding",
+        "device_id"
+      ],
+      "value": "another-device"
+    },
+    {
+      "name": "wrong-binding",
+      "path": [
+        "intent",
+        "subject_binding",
+        "binding_id"
+      ],
+      "value": "another-binding"
+    },
+    {
+      "name": "scope-escalation",
+      "path": [
+        "intent",
+        "payload",
+        "requested_scopes"
+      ],
+      "value": [
+        "admin"
+      ]
+    },
+    {
+      "name": "target-revoked",
+      "path": [
+        "stored_authority",
+        "subject_active"
+      ],
+      "value": false
+    },
+    {
+      "name": "issuer-revoked",
+      "path": [
+        "stored_authority",
+        "service_active"
+      ],
+      "value": false
+    },
+    {
+      "name": "revision-stale",
+      "path": [
+        "intent",
+        "preconditions",
+        "authorization_revision"
+      ],
+      "value": "6"
+    },
+    {
+      "name": "wrong-parent-subject",
+      "path": [
+        "intent",
+        "parent",
+        "key",
+        "device_id"
+      ],
+      "value": "another-device"
+    },
+    {
+      "name": "wrong-child-key",
+      "path": [
+        "key",
+        "operation_id"
+      ],
+      "value": "another-child"
+    }
+  ]
+}
