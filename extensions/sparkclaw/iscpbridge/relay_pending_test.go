@@ -185,3 +185,141 @@ func TestReceiptCancellationBeforeFirstWriteIsNotSent(t *testing.T) {
 		t.Fatal("canceled frame kept queue reservation")
 	}
 }
+
+func TestReceiptConsumedNormallyPrunesButConcurrentUnknownSurvives(t *testing.T) {
+	p := crypto.NewProvider()
+	id, _ := identity.NewDevice(p, "domain", "sender", time.Now())
+	path := filepath.Join(t.TempDir(), "enrollment.json")
+	makeClient := func() *RelayClient {
+		c := &RelayClient{provider: p, device: id, enrollmentPath: path, enrollment: EnrollmentBundle{DomainID: "domain", DeviceID: "sender", RelayID: "relay"}}
+		if err := c.initRelayJournal(); err != nil {
+			t.Fatal(err)
+		}
+		return c
+	}
+	c := makeClient()
+	sub := RelaySubmission{MessageID: "normal", EnvelopeDigest: duplex.RandomID(), HistoryID: duplex.RandomID(), NotAfter: duplex.Timestamp(time.Now().Add(time.Minute)), SessionID: "session", Envelope: json.RawMessage(`{}`)}
+	if err := c.journalBeforeWrite(sub, false); err != nil {
+		t.Fatal(err)
+	}
+	c.resolveRelaySubmission(sub, "accepted", &AcceptanceReceipt{MessageID: sub.MessageID})
+	f := &ReceiptFuture{owner: c, Submission: sub, done: make(chan struct{}), written: true}
+	f.finish(&AcceptanceReceipt{MessageID: sub.MessageID}, nil)
+	if _, err := f.Wait(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := makeClient().SubmissionStatus(sub.MessageID); ok {
+		t.Fatal("ordinary consumed result retained historical rewrite cost")
+	}
+	sub.MessageID = "cancel-mark-paused"
+	if err := c.journalBeforeWrite(sub, false); err != nil {
+		t.Fatal(err)
+	}
+	c.resolveRelaySubmission(sub, "accepted", &AcceptanceReceipt{MessageID: sub.MessageID})
+	f = &ReceiptFuture{Submission: sub, done: make(chan struct{}), written: true}
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	// No owner simulates a pause after uncertain=true, before its journal mark.
+	_, err := f.Wait(ctx)
+	var unknown *UnknownAcceptance
+	if !errors.As(err, &unknown) {
+		t.Fatal(err)
+	}
+	f.owner = c
+	f.finish(&AcceptanceReceipt{MessageID: sub.MessageID}, nil)
+	if _, err = f.Wait(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	status, ok := makeClient().SubmissionStatus(sub.MessageID)
+	if !ok || status.State != "accepted" {
+		t.Fatal("completed waiter erased an already exposed Unknown", status)
+	}
+}
+
+func TestRelayJournalSequential1280ChunksKeepsConstantWorkingSet(t *testing.T) {
+	if os.Getenv("SC_RELAY_JOURNAL_BENCH") != "1" {
+		t.Skip("explicit fsync performance qualification")
+	}
+	p := crypto.NewProvider()
+	id, _ := identity.NewDevice(p, "domain", "sender", time.Now())
+	path := filepath.Join(t.TempDir(), "enrollment.json")
+	c := &RelayClient{provider: p, device: id, enrollmentPath: path, enrollment: EnrollmentBundle{DomainID: "domain", DeviceID: "sender", RelayID: "relay"}}
+	if err := c.initRelayJournal(); err != nil {
+		t.Fatal(err)
+	}
+	start := time.Now()
+	var maxSize int64
+	for i := 0; i < 1280; i++ {
+		sub := RelaySubmission{MessageID: fmt.Sprint(i), EnvelopeDigest: duplex.RandomID(), HistoryID: duplex.RandomID(), NotAfter: duplex.Timestamp(time.Now().Add(time.Minute)), SessionID: "session", Envelope: json.RawMessage(`{"ciphertext":"` + strings.Repeat("A", 12000) + `"}`)}
+		if err := c.journalBeforeWrite(sub, false); err != nil {
+			t.Fatal(err)
+		}
+		st, _ := os.Stat(path + ".duplex.pending.v1")
+		if st.Size() > maxSize {
+			maxSize = st.Size()
+		}
+		receipt := &AcceptanceReceipt{MessageID: sub.MessageID}
+		c.resolveRelaySubmission(sub, "accepted", receipt)
+		f := &ReceiptFuture{owner: c, Submission: sub, done: make(chan struct{}), written: true}
+		f.finish(receipt, nil)
+		if _, err := f.Wait(t.Context()); err != nil {
+			t.Fatal(err)
+		}
+		if len(c.journal.state.Records) != 0 {
+			t.Fatal("normal successful chunks accumulate", len(c.journal.state.Records))
+		}
+	}
+	t.Logf("1280 x 12KB journal: elapsed=%s max_encrypted_checkpoint_bytes=%d", time.Since(start), maxSize)
+	if maxSize > 20000 {
+		t.Fatal("checkpoint working set grew with history", maxSize)
+	}
+}
+
+type socketEventProvider struct{ events chan CredentialEvent }
+
+func (p *socketEventProvider) EnsureAccess(context.Context, CredentialBinding) (CredentialLease, error) {
+	return CredentialLease{}, errors.New("unexpected refresh")
+}
+func (p *socketEventProvider) Invalidate(CredentialBinding, CredentialGeneration, CredentialInvalidationReason) error {
+	return nil
+}
+func (p *socketEventProvider) Subscribe(context.Context, CredentialBinding) <-chan CredentialEvent {
+	return p.events
+}
+func (p *socketEventProvider) Close() error { return nil }
+func TestCredentialScopeSnapshotDoesNotDisconnectNewOwner(t *testing.T) {
+	for _, newOwner := range []bool{false, true} {
+		t.Run(fmt.Sprint(newOwner), func(t *testing.T) {
+			lease := CredentialLease{CredentialGeneration: "2", AuthorizationRevision: "8", StateVersion: 8, ExpiresAt: time.Now().Add(time.Hour), Enrollment: EnrollmentBundle{Access: RelayCredential{Token: "rev8"}}}
+			snapshot := lease
+			event := CredentialEvent{Binding: lease.Binding, CredentialGeneration: lease.CredentialGeneration, AuthorizationRevision: lease.AuthorizationRevision, StateVersion: lease.StateVersion, Reason: ScopeChanged, Lease: &snapshot}
+			if !newOwner {
+				lease.AuthorizationRevision = "7"
+				lease.StateVersion = 7
+				lease.Enrollment.Access.Token = "rev7"
+			}
+			provider := &socketEventProvider{events: make(chan CredentialEvent, 1)}
+			provider.events <- event
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			s := &relaySocket{owner: &RelayClient{credentialProvider: provider}, ctx: ctx, cancel: cancel, lease: lease, refresh: make(chan CredentialInvalidationReason), changed: make(chan struct{}, 1)}
+			done := make(chan struct{})
+			go func() { defer close(done); s.credentials() }()
+			if newOwner {
+				select {
+				case <-done:
+					t.Fatal("same verified scope snapshot disconnected new READY owner")
+				case <-time.After(80 * time.Millisecond):
+				}
+				cancel()
+				<-done
+			} else {
+				select {
+				case <-done:
+				case <-time.After(time.Second):
+					t.Fatal("old scope retained authority")
+				}
+			}
+		})
+	}
+}

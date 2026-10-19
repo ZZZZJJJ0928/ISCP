@@ -387,7 +387,7 @@ func (s *relaySocket) recoverPendingOnce() {
 // acknowledgeRelayResult runs only after Wait selected a completed result.
 // Before this acknowledgement, even a known accepted record cannot be evicted:
 // a canceled waiter may still expose its original tuple as Unknown.
-func (c *RelayClient) acknowledgeRelayResult(sub RelaySubmission) {
+func (c *RelayClient) acknowledgeRelayResult(sub RelaySubmission, uncertain bool) {
 	if c.journal == nil {
 		return
 	}
@@ -403,7 +403,12 @@ func (c *RelayClient) acknowledgeRelayResult(sub RelaySubmission) {
 	if !ok || r.Submission.EnvelopeDigest != sub.EnvelopeDigest || r.State == "unknown" || r.State == "pending" {
 		return
 	}
-	r.Consumed = true
-	j.state.Records[sub.MessageID] = r
+	r.Uncertain = r.Uncertain || uncertain
+	if !r.Uncertain {
+		delete(j.state.Records, sub.MessageID)
+	} else {
+		r.Consumed = true
+		j.state.Records[sub.MessageID] = r
+	}
 	_ = j.persist()
 }

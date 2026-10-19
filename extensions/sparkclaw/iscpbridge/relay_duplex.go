@@ -59,10 +59,10 @@ func (f *ReceiptFuture) Wait(ctx context.Context) (*AcceptanceReceipt, error) {
 	}
 	f.mu.Lock()
 	if f.completed {
-		result, err := f.result, f.err
+		result, err, uncertain := f.result, f.err, f.uncertain
 		f.mu.Unlock()
 		if f.owner != nil {
-			f.owner.acknowledgeRelayResult(f.Submission)
+			f.owner.acknowledgeRelayResult(f.Submission, uncertain)
 		}
 		return result, err
 	}
@@ -606,6 +606,9 @@ func (s *relaySocket) credentials() {
 			current := s.lease
 			s.mu.Unlock()
 			if event.Binding != current.Binding || event.StateVersion < current.StateVersion {
+				continue
+			}
+			if event.Reason == ScopeChanged && event.Lease != nil && event.StateVersion == current.StateVersion && event.CredentialGeneration == current.CredentialGeneration && event.AuthorizationRevision == current.AuthorizationRevision && event.Lease.Binding == current.Binding && event.Lease.StateVersion == current.StateVersion && event.Lease.CredentialGeneration == current.CredentialGeneration && event.Lease.AuthorizationRevision == current.AuthorizationRevision && event.Lease.Enrollment.Access.Token == current.Enrollment.Access.Token && event.Lease.ExpiresAt.Equal(current.ExpiresAt) {
 				continue
 			}
 			if event.Reason == "revoked" || event.Reason == "identity_changed" || event.Reason == "scope_changed" {
