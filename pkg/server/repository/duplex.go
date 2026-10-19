@@ -87,11 +87,9 @@ func AdmitEnvelope(ctx context.Context, tx pgx.Tx, scope, domain, sender, relay 
 		return AdmissionResult{}, e
 	}
 	raw, _ := json.Marshal(r)
-	canon, e := canonical.Marshal(raw)
-	if e != nil {
-		return AdmissionResult{}, e
-	}
-	if _, e = tx.Exec(ctx, `INSERT INTO iscp_relay.admissions(domain_id,message_id,scope_id,history_id,sender_device_id,recipient_device_id,envelope_digest,not_after,accepted_at,expires_at,receipt_raw,receipt_canonical) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, domain, sub.MessageID, scope, sub.HistoryID, sender, env.RecipientDeviceID, sub.EnvelopeDigest, deadline, now, expires, raw, canon); e != nil {
+	// The signed object is sufficient for every query/replay response. Keeping
+	// a second canonical JSON copy doubles receipt storage without a reader.
+	if _, e = tx.Exec(ctx, `INSERT INTO iscp_relay.admissions(domain_id,message_id,scope_id,history_id,sender_device_id,recipient_device_id,envelope_digest,not_after,accepted_at,expires_at,receipt_raw) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, domain, sub.MessageID, scope, sub.HistoryID, sender, env.RecipientDeviceID, sub.EnvelopeDigest, deadline, now, expires, raw); e != nil {
 		return AdmissionResult{}, e
 	}
 	id, e := postgres.NewUUIDv7Like(now)

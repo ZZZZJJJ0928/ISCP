@@ -75,6 +75,7 @@ type Server struct {
 	duplexClosed      bool
 	duplexWG          sync.WaitGroup
 	maintenanceCancel context.CancelFunc
+	payloadCleanup    payloadCleanupMetrics
 	admissionCommit   func(context.Context, pgx.Tx) error
 	cfg               Config
 	provider          crypto.Provider
@@ -212,6 +213,7 @@ func (s *Server) health(w http.ResponseWriter, _ *http.Request) {
 func (s *Server) metrics(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
 	_, _ = w.Write([]byte("# HELP iscp_relay_up Relay process status\n# TYPE iscp_relay_up gauge\niscp_relay_up 1\n"))
+	s.payloadCleanup.write(w)
 }
 
 func (s *Server) version(w http.ResponseWriter, _ *http.Request) {
