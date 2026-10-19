@@ -34,3 +34,16 @@ func TestSignatureInputRemovesSignature(t *testing.T) {
 		t.Fatalf("unexpected signature input: %q", got)
 	}
 }
+
+func TestStrictRejectsLossyUnicodeAndTrailingGarbage(t *testing.T) {
+	for _, raw := range [][]byte{[]byte("{\"x\":\"\xff\"}"), []byte(`{"x":"\ud800"}`), []byte(`{"x":"\udc00"}`), []byte(`{"x":"\ud800x\udc00"}`), []byte(`{"x":"\ud800\ud800"}`), []byte(`{"x":"\udc00\ud800"}`), []byte(`{} garbage`), []byte(`{} {`), []byte(`{} []`)} {
+		if _, err := ParseStrict(raw); err == nil {
+			t.Errorf("accepted lossy or trailing input %q", raw)
+		}
+	}
+	for _, raw := range []string{`{"x":"\ud83d\ude00"}`, `{"x":"😀"}`, `{"x":"�"}`, `{"x":"\\ud800"}`, "{} \n\t"} {
+		if _, err := ParseStrict([]byte(raw)); err != nil {
+			t.Errorf("valid input %q: %v", raw, err)
+		}
+	}
+}

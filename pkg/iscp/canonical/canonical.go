@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"sort"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	iscperrors "github.com/Infinimesh-ai/ISCP/pkg/iscp/errors"
 )
@@ -16,6 +18,9 @@ const signaturePrefix = "ISCP-V2-SIGNATURE\x00"
 type Value any
 
 func ParseStrict(input []byte) (Value, error) {
+	if !utf8.Valid(input) || !json.Valid(input) || !validUnicodeEscapes(input) {
+		return nil, iscperrors.New(iscperrors.CodeCanonicalInvalid, "invalid UTF-8, Unicode escape or JSON input")
+	}
 	dec := json.NewDecoder(bytes.NewReader(input))
 	dec.UseNumber()
 	value, err := parseValue(dec)
@@ -26,8 +31,8 @@ func ParseStrict(input []byte) (Value, error) {
 		return nil, iscperrors.New(iscperrors.CodeCanonicalInvalid, "unexpected trailing json value")
 	}
 	var trailing any
-	if err := dec.Decode(&trailing); err == nil {
-		return nil, iscperrors.New(iscperrors.CodeCanonicalInvalid, "unexpected trailing json value")
+	if err := dec.Decode(&trailing); err != io.EOF {
+		return nil, iscperrors.New(iscperrors.CodeCanonicalInvalid, "unexpected trailing json content")
 	}
 	return value, nil
 }
@@ -221,4 +226,39 @@ func writeCanonical(out *bytes.Buffer, value any) error {
 		return iscperrors.New(iscperrors.CodeCanonicalInvalid, fmt.Sprintf("unsupported canonical type %T", value))
 	}
 	return nil
+}
+
+// JSON syntax is checked before this scan. encoding/json otherwise silently
+// replaces invalid UTF-16 surrogate escapes with U+FFFD, changing signed bytes.
+func validUnicodeEscapes(input []byte) bool {
+	for i := 0; i < len(input); i++ {
+		if input[i] != '"' {
+			continue
+		}
+		i++
+		for ; i < len(input) && input[i] != '"'; i++ {
+			if input[i] != '\\' {
+				continue
+			}
+			i++
+			if input[i] != 'u' {
+				continue
+			}
+			n, _ := strconv.ParseUint(string(input[i+1:i+5]), 16, 16)
+			i += 4
+			if n >= 0xD800 && n <= 0xDBFF {
+				if i+6 >= len(input) || input[i+1] != '\\' || input[i+2] != 'u' {
+					return false
+				}
+				low, err := strconv.ParseUint(string(input[i+3:i+7]), 16, 16)
+				if err != nil || low < 0xDC00 || low > 0xDFFF {
+					return false
+				}
+				i += 6
+			} else if n >= 0xDC00 && n <= 0xDFFF {
+				return false
+			}
+		}
+	}
+	return true
 }
