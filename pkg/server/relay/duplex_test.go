@@ -6,6 +6,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/config"
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/crypto"
@@ -286,6 +288,8 @@ func TestDuplexPostgresClientCallbackMayWaitForReceipt(t *testing.T) {
 	ready := make(chan struct{}, 2)
 	done := make(chan error, 2)
 	received := make(chan struct{}, 1)
+	ordered := make(chan uint64, 32)
+	lastSequence := uint64(1)
 	makeEnvelope := func(sender, recipient, msg string) envelope.SecureEnvelope {
 		return envelope.SecureEnvelope{Type: envelope.TypeSecureEnvelope, DomainID: "domain-a", MessageID: msg, SessionID: "session-client", SenderDeviceID: sender, RecipientDeviceID: recipient, Sequence: 1, Nonce: crypto.Base64URL(crypto.RandomBytes(12)), PayloadType: "test", Route: envelope.Route{RelayID: "relay-a", TTLSeconds: 30, Priority: 5}, Ciphertext: crypto.Base64URL(crypto.RandomBytes(32))}
 	}
@@ -293,8 +297,18 @@ func TestDuplexPostgresClientCallbackMayWaitForReceipt(t *testing.T) {
 		done <- one.RunOnceReady(ctx, func(context.Context, json.RawMessage) error { received <- struct{}{}; return nil }, func() { ready <- struct{}{} })
 	}()
 	go func() {
-		done <- two.RunOnceReady(ctx, func(ctx context.Context, _ json.RawMessage) error {
-			return two.Submit(ctx, makeEnvelope(b.Identity.DeviceID, a.Identity.DeviceID, "response"))
+		done <- two.RunOnceReady(ctx, func(ctx context.Context, raw json.RawMessage) error {
+			var env envelope.SecureEnvelope
+			_ = json.Unmarshal(raw, &env)
+			if env.MessageID == "request" {
+				return two.Submit(ctx, makeEnvelope(b.Identity.DeviceID, a.Identity.DeviceID, "response"))
+			}
+			if env.Sequence != lastSequence+1 {
+				return errors.New("Relay reordered E2E sequence")
+			}
+			lastSequence = env.Sequence
+			ordered <- env.Sequence
+			return nil
 		}, func() { ready <- struct{}{} })
 	}()
 	for i := 0; i < 2; i++ {
@@ -315,6 +329,34 @@ func TestDuplexPostgresClientCallbackMayWaitForReceipt(t *testing.T) {
 		t.Fatal(e)
 	case <-ctx.Done():
 		t.Fatal(ctx.Err())
+	}
+	var futures []*iscpbridge.ReceiptFuture
+	for i := uint64(2); i <= 21; i++ {
+		env := makeEnvelope(a.Identity.DeviceID, b.Identity.DeviceID, fmt.Sprintf("ordered-%d", i))
+		env.Sequence = i
+		env.Route.Priority = int(i%2)*8 + 1
+		future, err := one.Enqueue(ctx, env)
+		if err != nil {
+			t.Fatal(err)
+		}
+		futures = append(futures, future)
+	}
+	for _, future := range futures {
+		if _, err := future.Wait(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for i := uint64(2); i <= 21; i++ {
+		select {
+		case got := <-ordered:
+			if got != i {
+				t.Fatal(got, i)
+			}
+		case err := <-done:
+			t.Fatal(err)
+		case <-ctx.Done():
+			t.Fatal(ctx.Err())
+		}
 	}
 	cancel()
 	for i := 0; i < 2; i++ {
@@ -391,5 +433,50 @@ func assertOldBinaryCannotOverwrite(t *testing.T, pool *pgxpool.Pool, id identit
 	var count int
 	if e = pool.QueryRow(context.Background(), `SELECT count(*) FROM iscp_relay.admissions WHERE domain_id='domain-a' AND message_id=$1`, original.MessageID).Scan(&count); e != nil || count != 1 {
 		t.Fatal("old executable damaged admission")
+	}
+}
+
+func TestDuplexTimedOutQueuedWriteCannotOutliveAuthority(t *testing.T) {
+	accepted := make(chan *websocket.Conn, 1)
+	h := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ws, e := (&websocket.Upgrader{}).Upgrade(w, r, nil)
+		if e == nil {
+			accepted <- ws
+		}
+	}))
+	defer h.Close()
+	peer, _, e := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(h.URL, "http"), nil)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer peer.Close()
+	ws := <-accepted
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	c := &duplexConnection{ws: ws, ctx: ctx, cancel: cancel, connection: duplex.RandomID(), generation: "1", expires: time.Now().Add(-time.Second), writes: make(chan duplexWrite, 1), controlWrites: make(chan duplexWrite, 1), changed: make(chan struct{}, 1)}
+	done := make(chan struct{})
+	go func() { c.writer(); close(done) }()
+	// An expired data write stays queued. Its waiter timing out represents the
+	// authority transaction being about to release its shared revocation lock.
+	if err := c.send(c.frame("closing", "maintenance"), true); err == nil {
+		t.Fatal("expired data unexpectedly written")
+	}
+	// Simulate a later reauthentication after that authority guard was released.
+	// Closing before send returns makes the old queued frame impossible to emit.
+	c.mu.Lock()
+	c.expires = time.Now().Add(time.Hour)
+	c.mu.Unlock()
+	select {
+	case c.changed <- struct{}{}:
+	default:
+	}
+	_ = peer.SetReadDeadline(time.Now().Add(time.Second))
+	if _, raw, err := peer.ReadMessage(); err == nil {
+		t.Fatalf("post-guard frame leaked: %s", raw)
+	}
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("writer retained timed-out authority")
 	}
 }

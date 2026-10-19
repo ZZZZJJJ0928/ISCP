@@ -43,6 +43,7 @@ type duplexConnection struct {
 	done                                          sync.WaitGroup
 	queueMu                                       sync.Mutex
 	pendingBytes                                  int
+	submitTail                                    chan struct{}
 	keys                                          map[string]chan struct{}
 }
 
@@ -481,8 +482,15 @@ func (c *duplexConnection) enqueue(f duplex.Frame, size int) bool {
 		return false
 	}
 	before := c.keys[f.MessageID]
+	var beforeSubmit chan struct{}
+	if f.Kind == "submit" {
+		beforeSubmit = c.submitTail
+	}
 	after := make(chan struct{})
 	c.keys[f.MessageID] = after
+	if f.Kind == "submit" {
+		c.submitTail = after
+	}
 	c.pendingBytes += size
 	c.queueMu.Unlock()
 	c.done.Add(1)
@@ -497,6 +505,13 @@ func (c *duplexConnection) enqueue(f duplex.Frame, size int) bool {
 			}
 			c.queueMu.Unlock()
 		}()
+		if beforeSubmit != nil {
+			select {
+			case <-beforeSubmit:
+			case <-c.ctx.Done():
+				return
+			}
+		}
 		if before != nil {
 			select {
 			case <-before:
@@ -673,7 +688,7 @@ func (c *duplexConnection) deliverOne() error {
 		return e
 	}
 	repo := repository.NewRelayRepository(tx)
-	messages, e := repo.ClaimPendingMessagesFor(ctx, repository.DomainID(c.id.DomainID), c.id.DeviceID, time.Now(), time.Minute, 1)
+	messages, e := repo.ClaimDuplexPendingMessage(ctx, repository.DomainID(c.id.DomainID), c.id.DeviceID, time.Now(), time.Minute)
 	if e != nil || len(messages) == 0 {
 		return e
 	}
