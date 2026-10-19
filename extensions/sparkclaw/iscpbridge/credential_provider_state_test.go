@@ -53,7 +53,14 @@ func TestCredentialProviderSharedFlightDurableCASAndInvalidation(t *testing.T) {
 		if expected == "2" {
 			gen = "3"
 		}
-		return CredentialLease{Binding: got, Enrollment: next, CredentialGeneration: gen, AuthorizationRevision: "7", ExpiresAt: next.Access.ExpiresAt}, nil
+		if expected == "3" {
+			gen = "4"
+		}
+		revision := "7"
+		if gen == "4" {
+			revision = "8"
+		}
+		return CredentialLease{Binding: got, Enrollment: next, CredentialGeneration: gen, AuthorizationRevision: revision, ExpiresAt: next.Access.ExpiresAt}, nil
 	}
 	if e = client.ConfigureCredentialProvider(binding, recover); e != nil {
 		t.Fatal(e)
@@ -109,6 +116,17 @@ func TestCredentialProviderSharedFlightDurableCASAndInvalidation(t *testing.T) {
 	if e != nil || next.CredentialGeneration != "3" || calls.Load() != 2 {
 		t.Fatalf("preTTL rejection looped same token: %v", e)
 	}
+	if err := provider.Invalidate(binding, "3", RotationRequired); err != nil {
+		t.Fatal(err)
+	}
+	scoped, err := provider.EnsureAccess(context.Background(), binding)
+	if err != nil || scoped.AuthorizationRevision != "8" {
+		t.Fatal("scope transition", err)
+	}
+	scopeEvent := <-events
+	if scopeEvent.Reason != ScopeChanged || scopeEvent.AuthorizationRevision != "8" {
+		t.Fatalf("scope change mislabeled as in-place rotation: %#v", scopeEvent)
+	}
 	_ = provider.Close()
 	reopened, e := NewRelayCredentialClient(ProfileProduction, path, bundle, device, time.Second)
 	if e != nil {
@@ -119,7 +137,7 @@ func TestCredentialProviderSharedFlightDurableCASAndInvalidation(t *testing.T) {
 	}
 	defer reopened.CredentialProvider().Close()
 	current, e := reopened.CredentialProvider().EnsureAccess(context.Background(), binding)
-	if e != nil || current.CredentialGeneration != "3" || calls.Load() != 2 {
+	if e != nil || current.CredentialGeneration != "4" || calls.Load() != 3 {
 		t.Fatalf("restart lost durable credential CAS: %v", e)
 	}
 }

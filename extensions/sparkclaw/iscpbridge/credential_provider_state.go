@@ -215,10 +215,18 @@ func (p *managedCredentialProvider) recover(f *credentialFlight, expected Creden
 		f.err = errors.New("recovered credential enrollment invalid")
 		return
 	}
+	newRevision, revisionErr := strconv.ParseUint(lease.AuthorizationRevision, 10, 64)
+	oldRevision, _ := strconv.ParseUint(p.state.AuthorizationRevision, 10, 64)
+	if revisionErr != nil || newRevision == 0 || newRevision < oldRevision {
+		f.err = errors.New("credential authority revision regressed")
+		return
+	}
 	lease.StateVersion = p.state.Version + 1
 	next := credentialState{Binding: p.binding, Lease: &lease, Generation: lease.CredentialGeneration, AuthorizationRevision: lease.AuthorizationRevision, Version: lease.StateVersion, Reason: CredentialRotated}
 	if oldGen == 0 {
 		next.Reason = CredentialRecovered
+	} else if p.state.AuthorizationRevision != lease.AuthorizationRevision {
+		next.Reason = ScopeChanged
 	}
 	// The encrypted CAS record is authoritative across restart. The existing
 	// enrollment is a compatibility projection, published only with this record.
