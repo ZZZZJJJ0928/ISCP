@@ -49,7 +49,11 @@ func NewRelayCredentialClient(profile, enrollmentPath string, enrollment Enrollm
 	if profile == ProfileProduction && enrollment.Mode == BundleModeWorkbenchLocalLab {
 		return nil, errors.New("production Relay rejects local-lab enrollment")
 	}
-	if err := enrollment.ValidateCredentials(time.Now().UTC()); err != nil {
+	validationTime := time.Now().UTC()
+	if enrollment.Mode == BundleModeWorkbenchNodeManaged {
+		validationTime = enrollment.IssuedAt
+	}
+	if err := enrollment.ValidateCredentials(validationTime); err != nil {
 		return nil, err
 	}
 	client, err := NewRelayClient(profile, enrollmentPath, enrollment, device, timeout)
@@ -84,6 +88,10 @@ func (c *RelayClient) Enrollment() EnrollmentBundle {
 }
 
 func (c *RelayClient) ensureAccess(ctx context.Context) error {
+	if provider := c.CredentialProvider(); provider != nil {
+		_, err := provider.EnsureAccess(ctx, c.CredentialBinding())
+		return err
+	}
 	bundle := c.Enrollment()
 	if time.Until(bundle.Access.ExpiresAt) > time.Minute && !c.localEnrollmentRefreshDue(bundle) && !c.hasNodeRefreshPending() {
 		return nil
