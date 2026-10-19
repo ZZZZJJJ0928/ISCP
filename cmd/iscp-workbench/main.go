@@ -25,6 +25,7 @@ import (
 const ipcVersion = 1
 
 type callFrame struct {
+	MessageID        string                 `json:"message_id,omitempty"`
 	OperationID      string                 `json:"operation_id,omitempty"`
 	ExpectedRevision uint64                 `json:"expected_revision,omitempty"`
 	IPCVersion       int                    `json:"ipc_version"`
@@ -237,6 +238,14 @@ func serveFrames(ctx context.Context, input io.Reader, writer *ipcWriter, endpoi
 				streams.cancel(frame.ID)
 				continue
 			}
+			if frame.Type == "relay_submission_status" {
+				calls.Add(1)
+				go func(frame callFrame) {
+					defer calls.Done()
+					_ = writer.send(relaySubmissionFrame(endpoint, frame))
+				}(frame)
+				continue
+			}
 			if frame.Type == "stream_call" {
 				streamStarted := time.Now()
 				streamCtx, done, err := streams.open(ctx, frame.ID)
@@ -263,6 +272,7 @@ func serveFrames(ctx context.Context, input io.Reader, writer *ipcWriter, endpoi
 							response.Status = 403
 							response.Code = iscpworkbench.ErrorGrantExpired
 						}
+						transportOutcome(&response, err)
 					}
 					_ = writeResponse(writer, frame.ID, response)
 				}(frame)
@@ -291,6 +301,7 @@ func serveFrames(ctx context.Context, input io.Reader, writer *ipcWriter, endpoi
 						response.Code = transportError.Code
 						response.Retryable = transportError.Retryable
 					}
+					transportOutcome(&response, err)
 				}
 				_ = writeResponse(writer, frame.ID, response)
 			}(frame)
@@ -313,6 +324,12 @@ func decodeCall(line []byte) (callFrame, error) {
 		return frame, errors.New("unsupported private IPC version or trailing data")
 	}
 	if frame.Type == "shutdown" {
+		return frame, nil
+	}
+	if frame.Type == "relay_submission_status" {
+		if frame.ID == "" || len(frame.ID) > 200 || !relayMessageID.MatchString(frame.MessageID) || frame.Request.Type != "" || frame.BodyBase64 != "" || frame.OperationID != "" || frame.ExpectedRevision != 0 {
+			return frame, errors.New("invalid Relay submission status frame")
+		}
 		return frame, nil
 	}
 	if frame.Type == "authorization_delete" || frame.Type == "authorization_delete_receipt" {
