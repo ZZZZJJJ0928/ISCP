@@ -8,8 +8,10 @@ import (
 
 	"github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpauth"
 	"github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+	control "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpcontrol"
 	"github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeclient"
 	"github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
+	c "github.com/Infinimesh-ai/ISCP/pkg/iscp/crypto"
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/trust"
 )
 
@@ -58,6 +60,22 @@ func recoverNodeRuntime(ctx context.Context, path string, cfg Config, m material
 	client, err := newNodeLifecycle(cfg, m)
 	if err != nil {
 		return Config{}, err
+	}
+	if client.UsesControlV2() {
+		relay, err := iscpbridge.NewRelayCredentialClient(cfg.EffectiveRelayProfile(), cfg.EnrollmentFile, m.enrollment, m.device, 30*time.Second)
+		if err != nil {
+			return Config{}, err
+		}
+		endpoint := &Endpoint{config: cfg, material: m, lifecycle: client, relay: relay}
+		if err = configureNodeCredentialProvider(endpoint, relay); err != nil {
+			return Config{}, err
+		}
+		provider := relay.CredentialProvider()
+		defer provider.Close()
+		if _, err = provider.EnsureAccess(ctx, relay.CredentialBinding()); err != nil {
+			return Config{}, err
+		}
+		return LoadConfig(path)
 	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
@@ -165,6 +183,13 @@ func (e *Endpoint) recoverLiveNodeTransport(ctx context.Context) error {
 	if !ok {
 		return nil
 	}
+	if client.UsesControlV2() {
+		if provider := relay.CredentialProvider(); provider != nil {
+			_, err := provider.EnsureAccess(ctx, relay.CredentialBinding())
+			return err
+		}
+		return control.ErrUnknown
+	}
 	bundle := relay.Enrollment()
 	if time.Now().Before(bundle.Refresh.ExpiresAt) && time.Now().Before(bundle.ExpiresAt) {
 		return nil
@@ -206,4 +231,65 @@ func RecoverNodeEnrollment(ctx context.Context, path string) (Config, error) {
 		return Config{}, err
 	}
 	return recoverNodeRuntime(ctx, path, cfg, m)
+}
+
+// configureNodeCredentialProvider connects the shared lease interface directly
+// to the independent HTTPS coordinator. No socket is needed to recover.
+func configureNodeCredentialProvider(e *Endpoint, relay *iscpbridge.RelayClient) error {
+	client, ok := e.lifecycle.(*iscpnodeclient.Client)
+	if !ok || !client.UsesControlV2() {
+		return nil
+	}
+	stored := client.StoredConfig()
+	binding := iscpbridge.CredentialBinding{DomainID: e.material.device.Identity.DomainID, DeviceID: e.material.device.Identity.DeviceID, ResourceBindingID: stored.Binding.ClientID, TargetServiceID: stored.RelayID, IssuerPublicKey: stored.IssuerIdentity.PublicKey.Public, RelayPublicKey: stored.RelaySignerIdentity.PublicKey.Public, TLSCertificateSHA256: c.Base64URL(c.SHA256([]byte(stored.TLSCertificatePEM)))}
+	return relay.ConfigureCredentialProviderWithInstallation(binding, func(ctx context.Context, b iscpbridge.CredentialBinding, g iscpbridge.CredentialGeneration) (iscpbridge.CredentialLease, error) {
+		e.renewalMu.Lock()
+		defer e.renewalMu.Unlock()
+		if kind, err := client.PendingLifecycleKind(); err != nil {
+			return iscpbridge.CredentialLease{}, err
+		} else if kind == "renew" {
+			pending, err := client.ResolvePendingLifecycle(ctx)
+			if err != nil {
+				return iscpbridge.CredentialLease{}, err
+			}
+			if pending.Grant == nil {
+				return iscpbridge.CredentialLease{}, control.ErrUnknown
+			}
+			if err = saveCurrentGrant(e.config.GrantFile, *pending.Grant); err != nil {
+				return iscpbridge.CredentialLease{}, err
+			}
+			if err = client.AcceptGrant(*pending.Grant); err != nil {
+				return iscpbridge.CredentialLease{}, err
+			}
+			if err = client.CommitRenewal(); err != nil {
+				return iscpbridge.CredentialLease{}, err
+			}
+			e.grantMu.Lock()
+			e.material.grant = *pending.Grant
+			e.grantMu.Unlock()
+		}
+		lease, err := client.RecoverCredentialLease(ctx, b, g, relay.Enrollment())
+		if err != nil {
+			return iscpbridge.CredentialLease{}, err
+		}
+		pending, err := client.PendingControlGrant(ctx)
+		if err != nil || pending.Grant == nil {
+			return iscpbridge.CredentialLease{}, control.ErrUnknown
+		}
+		next := e.grantMaterial()
+		next.grant = *pending.Grant
+		if err = verifyGrant(e.config, next, time.Now().UTC()); err != nil {
+			return iscpbridge.CredentialLease{}, err
+		}
+		if err = saveCurrentGrant(e.config.GrantFile, next.grant); err != nil {
+			return iscpbridge.CredentialLease{}, err
+		}
+		if err = client.AcceptGrant(next.grant); err != nil {
+			return iscpbridge.CredentialLease{}, err
+		}
+		e.grantMu.Lock()
+		e.material.grant = next.grant
+		e.grantMu.Unlock()
+		return lease, nil
+	}, client.CredentialLeaseInstalled)
 }

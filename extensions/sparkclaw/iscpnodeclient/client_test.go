@@ -7,6 +7,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
+	control "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpcontrol"
 	n "github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpnodeissuer"
 	c "github.com/Infinimesh-ai/ISCP/pkg/iscp/crypto"
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/identity"
@@ -15,6 +16,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -99,10 +101,18 @@ func setupClientTTL(t *testing.T, ttl time.Duration) (*Client, *n.Issuer, *regis
 	return setupClientStore(t, ttl, n.NewMemoryStore(), "create-invite-operation")
 }
 func setupClientStore(t *testing.T, ttl time.Duration, store n.Store, operation string) (*Client, *n.Issuer, *registration, string, *bool) {
+	return setupClientStoreMode(t, ttl, store, operation, false)
+}
+func setupClientStoreMode(t *testing.T, ttl time.Duration, store n.Store, operation string, v2 bool) (*Client, *n.Issuer, *registration, string, *bool) {
 	t.Helper()
 	var issuer *n.Issuer
 	drop := false
+	var controlHandler http.Handler
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/v2/control/") {
+			controlHandler.ServeHTTP(w, r)
+			return
+		}
 		raw, _ := io.ReadAll(r.Body)
 		var x n.Exchange
 		if n.StrictDecode(raw, &x) != nil || r.URL.Path != n.ExchangePath {
@@ -131,10 +141,11 @@ func setupClientStore(t *testing.T, ttl time.Duration, store n.Store, operation 
 	m := &management{active: map[string]bool{}}
 	reg := &registration{preps: map[string]n.RegistrationPreparation{}, receipts: map[string]n.RegistrationReceipt{}}
 	var e error
-	issuer, e = n.New(n.Config{Template: template, Issuer: signer, InvitationSigner: inviter, GrantTTL: ttl}, store, m, reg)
+	issuer, e = n.New(n.Config{Template: template, Issuer: signer, InvitationSigner: inviter, GrantTTL: ttl, EnableControlV2: v2, ControlRelay: &testControlRelay{signer: relay, actor: testDevice(t, "issuer-service-actor"), records: map[string]*control.Record{}}}, store, m, reg)
 	if e != nil {
 		t.Fatal(e)
 	}
+	controlHandler = issuer.ControlHandler()
 	encoded, e := issuer.CreateInvitation(context.Background(), "SparkX", 10*time.Minute, []string{"settings.read"}, operation)
 	if e != nil {
 		t.Fatal("invitation", e)
@@ -149,6 +160,7 @@ func setupClientStore(t *testing.T, ttl time.Duration, store n.Store, operation 
 	if e != nil {
 		t.Fatal("client-construction", e)
 	}
+	cl.cfg.ControlV2 = v2
 	if e = cl.SetInstallationID("original-native-installation-uuid"); e != nil {
 		t.Fatal(e)
 	}
@@ -164,6 +176,7 @@ func TestTLSProvisioningRestartReplayAndLifecycle(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
+	again.cfg.ControlV2 = false // Explicit coverage of the retained v1 enrollment test fixture.
 	_ = again.SetInstallationID("original-native-installation-uuid")
 	result, e := again.Enroll(context.Background())
 	if e != nil {

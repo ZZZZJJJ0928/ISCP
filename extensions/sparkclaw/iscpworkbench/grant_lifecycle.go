@@ -27,6 +27,13 @@ func (e *Endpoint) refreshAuthorization(ctx context.Context) (resultErr error) {
 	if e.lifecycle == nil {
 		return nil
 	}
+	if client, ok := e.lifecycle.(*iscpnodeclient.Client); ok && client.UsesControlV2() {
+		if relay, ok := e.relay.(*iscpbridge.RelayClient); ok && relay.CredentialProvider() != nil {
+			if _, err := relay.CredentialProvider().EnsureAccess(ctx, relay.CredentialBinding()); err != nil {
+				return err
+			}
+		}
+	}
 	e.renewalMu.Lock()
 	defer e.renewalMu.Unlock()
 	m := e.grantMaterial()

@@ -24,6 +24,7 @@ import (
 )
 
 type StoredConfig struct {
+	ControlV2           bool                    `json:"control_v2,omitempty"`
 	Origin              string                  `json:"origin"`
 	TLSCertificatePEM   string                  `json:"tls_certificate_pem"`
 	IssuerRoute         string                  `json:"issuer_route"`
@@ -74,7 +75,7 @@ func New(encoded string, device identity.Device, directory string) (*Client, err
 	if e != nil {
 		return nil, e
 	}
-	client, e := newClient(StoredConfig{v.Origin, v.TLSCertificatePEM, v.IssuerRoute, v.InvitationID, v.IssuerIdentity, v.RelaySignerIdentity, v.ResponderIdentity, iscpnodeissuer.Binding{DeploymentID: v.DeploymentID, OwnerID: v.OwnerID, ClientID: v.ClientID}, 1, v.Scopes, v.RelayID}, device, directory, trust.Grant{})
+	client, e := newClient(StoredConfig{ControlV2: true, Origin: v.Origin, TLSCertificatePEM: v.TLSCertificatePEM, IssuerRoute: v.IssuerRoute, InvitationID: v.InvitationID, IssuerIdentity: v.IssuerIdentity, RelaySignerIdentity: v.RelaySignerIdentity, ResponderIdentity: v.ResponderIdentity, Binding: iscpnodeissuer.Binding{DeploymentID: v.DeploymentID, OwnerID: v.OwnerID, ClientID: v.ClientID}, Revision: 1, Scopes: v.Scopes, RelayID: v.RelayID}, device, directory, trust.Grant{})
 	if e != nil {
 		return nil, e
 	}

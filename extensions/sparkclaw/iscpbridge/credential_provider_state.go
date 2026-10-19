@@ -39,6 +39,7 @@ type managedCredentialProvider struct {
 	relay       *RelayClient
 	binding     CredentialBinding
 	recovery    CredentialRecovery
+	installed   func(context.Context, CredentialLease) error
 	root        context.Context
 	cancel      context.CancelFunc
 	state       credentialState
@@ -68,6 +69,12 @@ func (r *RelayClient) CredentialBinding() CredentialBinding {
 // original subject/resource/pins have been verified. No binding is guessed from
 // transport URLs. It must precede starting the socket owner.
 func (r *RelayClient) ConfigureCredentialProvider(binding CredentialBinding, recovery CredentialRecovery) error {
+	return r.ConfigureCredentialProviderWithInstallation(binding, recovery, nil)
+}
+
+// The installation callback runs after durable CAS and outside every provider
+// mutex/file lock. A lost ACK retries this callback against the retained lease.
+func (r *RelayClient) ConfigureCredentialProviderWithInstallation(binding CredentialBinding, recovery CredentialRecovery, installed func(context.Context, CredentialLease) error) error {
 	if !filepath.IsAbs(r.enrollmentPath) || recovery == nil || binding.TLSCertificateSHA256 != c.Base64URL(c.SHA256([]byte(r.enrollment.TLSCertificatePEM))) || binding.DomainID != r.device.Identity.DomainID || binding.DeviceID != r.device.Identity.DeviceID || binding.ResourceBindingID == "" || binding.TargetServiceID == "" || binding.RelayPublicKey == "" || binding.IssuerPublicKey == "" || binding.TLSCertificateSHA256 == "" {
 		return errors.New("credential provider needs original verified binding and pins")
 	}
@@ -76,7 +83,7 @@ func (r *RelayClient) ConfigureCredentialProvider(binding CredentialBinding, rec
 		return e
 	}
 	root, cancel := context.WithCancel(context.Background())
-	p := &managedCredentialProvider{relay: r, binding: binding, recovery: recovery, root: root, cancel: cancel, key: key, path: r.enrollmentPath + ".credentials.v2", subscribers: map[chan CredentialEvent]struct{}{}, state: credentialState{Binding: binding}}
+	p := &managedCredentialProvider{relay: r, binding: binding, recovery: recovery, installed: installed, root: root, cancel: cancel, key: key, path: r.enrollmentPath + ".credentials.v2", subscribers: map[chan CredentialEvent]struct{}{}, state: credentialState{Binding: binding}}
 	unlock, e := lockCredentialFile(root, p.path+".lock")
 	if e != nil {
 		cancel()
@@ -195,6 +202,11 @@ func (p *managedCredentialProvider) EnsureAccess(ctx context.Context, binding Cr
 	if p.state.Lease != nil && !p.state.Invalidated && time.Now().Add(10*time.Second).Before(p.state.Lease.ExpiresAt) {
 		lease := copyCredentialLease(*p.state.Lease)
 		p.mu.Unlock()
+		if p.installed != nil {
+			if err := p.installed(ctx, lease); err != nil {
+				return CredentialLease{}, err
+			}
+		}
 		return lease, nil
 	}
 	f := p.flight
@@ -218,9 +230,16 @@ func (p *managedCredentialProvider) recover(f *credentialFlight, expected Creden
 	defer cancel()
 	lease, err := p.recovery(ctx, p.binding, expected)
 	p.mu.Lock()
-	defer p.mu.Unlock()
-	defer close(f.done)
-	defer func() { p.flight = nil }()
+	defer func() {
+		p.mu.Unlock()
+		if f.err == nil && p.installed != nil {
+			f.err = p.installed(ctx, copyCredentialLease(f.lease))
+		}
+		p.mu.Lock()
+		p.flight = nil
+		close(f.done)
+		p.mu.Unlock()
+	}()
 	if p.closed {
 		f.err = context.Canceled
 		return

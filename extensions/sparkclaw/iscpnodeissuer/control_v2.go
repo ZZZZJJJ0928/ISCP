@@ -164,7 +164,7 @@ func (i *Issuer) Execute(ctx context.Context, r control.Request, actor identity.
 			out.Status = &status
 			return e
 		}
-		if r.Intent == nil || r.Intent.Preconditions.CredentialGeneration != ledger.Generation || r.Intent.Preconditions.ResourceVersion != control.Number(s.Revision) {
+		if r.Intent == nil || r.Intent.Preconditions.ResourceVersion != control.Number(s.Revision) {
 			return controlFailure("generation_conflict")
 		}
 		if len(ledger.Records) >= 1024 {
@@ -172,6 +172,23 @@ func (i *Issuer) Execute(ctx context.Context, r control.Request, actor identity.
 		}
 		if e := control.CheckPredecessor(*r.Intent, ledger.Records); e != nil {
 			return e
+		}
+		expected, err := r.Intent.Preconditions.CredentialGeneration.Uint64()
+		if err != nil {
+			return controlFailure("invalid_request")
+		}
+		actual, _ := ledger.Generation.Uint64()
+		if expected > actual {
+			return controlFailure("generation_conflict")
+		}
+		if expected < actual {
+			result, err := control.NewResult(control.ResultPayload{Key: r.Key, SemanticDigest: r.SemanticDigest, ResultVersion: "1", State: "failed", CompletedAt: now, CredentialGeneration: r.Intent.Preconditions.CredentialGeneration, Body: control.ResultBody{Code: "generation_conflict"}}, i.cfg.Issuer)
+			if err != nil {
+				return err
+			}
+			ledger.Records[r.Key.StorageKey()] = &control.Record{Key: r.Key, Intent: *r.Intent, SemanticDigest: r.SemanticDigest, State: "failed", Version: "1", Generation: r.Intent.Preconditions.CredentialGeneration, Result: &result, CreatedAt: now}
+			out.Result = &result
+			return nil
 		}
 		for _, old := range ledger.Records {
 			if old.Intent.SubjectBinding == r.Intent.SubjectBinding && old.Disposition == nil {

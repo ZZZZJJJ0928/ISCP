@@ -10,6 +10,7 @@ import (
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/trust"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -119,6 +120,10 @@ func (cl *Client) UsesStandingAuthorization() bool { return true }
 func (cl *Client) HasPendingRenewal() bool {
 	cl.mu.Lock()
 	defer cl.mu.Unlock()
+	if cl.cfg.ControlV2 {
+		state, err := (clientControlStore{cl}).Load(context.Background())
+		return err == nil && state.Pending != nil
+	}
 	var p pendingLifecycle
 	return cl.read("lifecycle.pending", &p) == nil
 }
@@ -143,6 +148,14 @@ func (cl *Client) Renew(ctx context.Context, previous trust.Grant) (trust.Grant,
 		return trust.Grant{}, iscpnodeissuer.ErrDenied
 	}
 	cl.rememberPreviousGrantLocked(previous)
+	if cl.cfg.ControlV2 {
+		out, err := cl.controlLifecycleLocked(ctx, "renew")
+		if err != nil {
+			return trust.Grant{}, err
+		}
+		cl.completed = out.Grant
+		return *out.Grant, nil
+	}
 	out, e := cl.lifecycle(ctx, "renew", "renew-"+c.Base64URL(c.RandomBytes(24)), cl.cfg.Revision, true)
 	if e != nil {
 		return trust.Grant{}, e
@@ -217,6 +230,9 @@ func (cl *Client) CommitRenewal() error {
 	defer end()
 	cl.mu.Lock()
 	defer cl.mu.Unlock()
+	if cl.cfg.ControlV2 {
+		return cl.commitControlRenewalLocked()
+	}
 	var p pendingLifecycle
 	if e := cl.read("lifecycle.pending", &p); errors.Is(e, os.ErrNotExist) {
 		return nil
@@ -281,12 +297,25 @@ func (cl *Client) RecoverTransport(ctx context.Context) (iscpnodeissuer.Lifecycl
 	defer end()
 	cl.mu.Lock()
 	defer cl.mu.Unlock()
+	if cl.cfg.ControlV2 {
+		return cl.controlLifecycleLocked(ctx, "recover")
+	}
 	return cl.lifecycle(ctx, "recover", "recover-"+c.Base64URL(c.RandomBytes(24)), cl.cfg.Revision, true)
 }
 
 func (cl *Client) PendingLifecycleKind() (string, error) {
 	cl.mu.Lock()
 	defer cl.mu.Unlock()
+	if cl.cfg.ControlV2 {
+		state, err := (clientControlStore{cl}).Load(context.Background())
+		if err != nil {
+			return "", err
+		}
+		if state.Pending == nil {
+			return "", nil
+		}
+		return strings.TrimPrefix(state.Pending.Intent.Kind, "credential."), nil
+	}
 	var p pendingLifecycle
 	e := cl.read("lifecycle.pending", &p)
 	if errors.Is(e, os.ErrNotExist) {
@@ -302,6 +331,16 @@ func (cl *Client) ResolvePendingLifecycle(ctx context.Context) (iscpnodeissuer.L
 	defer end()
 	cl.mu.Lock()
 	defer cl.mu.Unlock()
+	if cl.cfg.ControlV2 {
+		state, err := (clientControlStore{cl}).Load(ctx)
+		if err != nil {
+			return iscpnodeissuer.LifecycleResult{}, err
+		}
+		if state.Pending == nil {
+			return iscpnodeissuer.LifecycleResult{}, iscpnodeissuer.ErrConflict
+		}
+		return cl.controlLifecycleLocked(ctx, strings.TrimPrefix(state.Pending.Intent.Kind, "credential."))
+	}
 	var p pendingLifecycle
 	if e := cl.read("lifecycle.pending", &p); e != nil {
 		return iscpnodeissuer.LifecycleResult{}, e
