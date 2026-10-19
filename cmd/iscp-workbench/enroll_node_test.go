@@ -160,11 +160,23 @@ func TestHelperNodeEnrollmentReplayExpiredResultAndPrivateActivation(t *testing.
 	registration := &helperRegistration{prepared: map[string]n.RegistrationPreparation{}, receipts: map[string]n.RegistrationReceipt{}}
 	controlRelay := &helperControlRelay{signer: relay, actor: device("issuer-service-actor"), registration: registration, records: map[string]*control.Record{}, generations: map[string]uint64{}}
 	var err error
-	issuer, err = n.New(n.Config{EnableControlV2: true, ControlRelay: controlRelay, Template: n.Credential{Origin: server.URL, TLSCertificatePEM: string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw})), DomainID: "domain", RelayID: "relay", RelaySignerIdentity: relay.Identity, IssuerIdentity: signer.Identity, InvitationSignerIdentity: inviter.Identity, IssuerRoute: "work2-node", ResponderIdentity: responder.Identity, DeploymentID: "deployment", OwnerID: "owner"}, Issuer: signer, InvitationSigner: inviter, GrantTTL: time.Second}, n.NewMemoryStore(), management, registration)
+	issuerConfig := n.Config{EnableControlV2: true, ControlRelay: controlRelay, Template: n.Credential{Origin: server.URL, TLSCertificatePEM: string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw})), DomainID: "domain", RelayID: "relay", RelaySignerIdentity: relay.Identity, IssuerIdentity: signer.Identity, InvitationSignerIdentity: inviter.Identity, IssuerRoute: "work2-node", ResponderIdentity: responder.Identity, DeploymentID: "deployment", OwnerID: "owner"}, Issuer: signer, InvitationSigner: inviter, GrantTTL: time.Second}
+	issuerStore := n.NewMemoryStore()
+	issuer, err = n.New(issuerConfig, issuerStore, management, registration)
 	if err != nil {
 		t.Fatal(err)
 	}
-	controlHandler = issuer.ControlHandler()
+	// Only the retained enrollment seed has a one-second Grant. Recovery
+	// exercises normal installation latency with a fresh Grant, rather than
+	// racing the control wire's whole-second timestamp boundary on every ACK.
+	// Both issuer instances share the exact state, identity and authorities.
+	controlConfig := issuerConfig
+	controlConfig.GrantTTL = time.Minute
+	controlIssuer, err := n.New(controlConfig, issuerStore, management, registration)
+	if err != nil {
+		t.Fatal(err)
+	}
+	controlHandler = controlIssuer.ControlHandler()
 	encoded, err := issuer.CreateInvitation(context.Background(), "SparkX", 15*time.Minute, []string{"workbench.read"}, "create-native-helper")
 	if err != nil {
 		t.Fatal(err)
