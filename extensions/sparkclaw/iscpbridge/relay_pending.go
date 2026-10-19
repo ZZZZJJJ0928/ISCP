@@ -181,7 +181,8 @@ func (c *RelayClient) journalBeforeWrite(sub RelaySubmission, uncertain bool) er
 		var oldest string
 		var deadline time.Time
 		for key, r := range j.state.Records {
-			if !r.Consumed || r.Uncertain || r.State == "unknown" || r.State == "pending" {
+			if !r.Consumed || r.State == "unknown" || r.State == "pending" ||
+				(r.Uncertain && time.Now().Before(duplex.Time(r.Submission.NotAfter).Add(duplex.QueryRecoverySeconds*time.Second))) {
 				continue
 			}
 			t := duplex.Time(r.Submission.NotAfter)

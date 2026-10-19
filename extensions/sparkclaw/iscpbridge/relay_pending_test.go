@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/crypto"
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/duplex"
 	"github.com/Infinimesh-ai/ISCP/pkg/iscp/identity"
@@ -139,5 +140,29 @@ func TestRelayJournalCancellationBetweenCheckpointAndFutureCompletion(t *testing
 		if got, err := f.Wait(ctx); err != nil || got != receipt {
 			t.Fatal("completed result became unknown", err)
 		}
+	}
+}
+
+func TestRelayJournalReclaimsConsumedTerminalAfterRecoveryWindow(t *testing.T) {
+	p := crypto.NewProvider()
+	id, _ := identity.NewDevice(p, "domain", "sender", time.Now())
+	c := &RelayClient{provider: p, device: id, enrollment: EnrollmentBundle{DomainID: "domain", DeviceID: "sender", RelayID: "relay"}}
+	if err := c.initRelayJournal(); err != nil {
+		t.Fatal(err)
+	}
+	sub := RelaySubmission{EnvelopeDigest: duplex.RandomID(), HistoryID: duplex.RandomID(), SessionID: "s", NotAfter: duplex.Timestamp(time.Now().Add(-8 * 24 * time.Hour)), Envelope: json.RawMessage(`{}`)}
+	for i := 0; i < 4096; i++ {
+		key := fmt.Sprint(i)
+		old := sub
+		old.MessageID = key
+		c.journal.state.Records[key] = relayPendingRecord{Submission: old, State: "accepted", Uncertain: true, Consumed: true}
+	}
+	sub.MessageID = "new"
+	sub.NotAfter = duplex.Timestamp(time.Now().Add(time.Minute))
+	if err := c.journalBeforeWrite(sub, false); err != nil {
+		t.Fatal("resolved history permanently exhausted journal", err)
+	}
+	if len(c.journal.state.Records) != 4096 {
+		t.Fatal("journal lost its bound")
 	}
 }
