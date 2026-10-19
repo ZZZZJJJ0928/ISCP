@@ -102,7 +102,27 @@ func (c *RelayClient) ensureAccess(ctx context.Context) error {
 func (c *RelayClient) refresh(ctx context.Context) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if time.Until(c.enrollment.Access.ExpiresAt) > time.Minute && !c.localEnrollmentRefreshDue(c.enrollment) && !c.hasNodeRefreshPending() {
+	return c.refreshLocked(ctx, false)
+}
+
+// refreshRejectedAccess is called only after the transport validates the pinned
+// Relay's authentication_failed closing frame for its current connection. A
+// stale socket cannot rotate a newer access credential. Managed authority uses
+// the provider's durable generation invalidation instead of this local seam.
+func (c *RelayClient) refreshRejectedAccess(ctx context.Context, observedAccessToken string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if !c.credentialOnly || c.profile != ProfileLocalLab || c.enrollment.Mode != BundleModeWorkbenchLocalLab || c.credentialProvider != nil || observedAccessToken == "" {
+		return errors.New("rejected access refresh requires the original local unmanaged credential")
+	}
+	if c.enrollment.Access.Token != observedAccessToken {
+		return nil
+	}
+	return c.refreshLocked(ctx, true)
+}
+
+func (c *RelayClient) refreshLocked(ctx context.Context, force bool) error {
+	if !force && time.Until(c.enrollment.Access.ExpiresAt) > time.Minute && !c.localEnrollmentRefreshDue(c.enrollment) && !c.hasNodeRefreshPending() {
 		return nil
 	}
 	// Local enrollment validity comes from signed discovery and rotating Relay
