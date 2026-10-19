@@ -83,7 +83,14 @@ func New(encoded string, device identity.Device, directory string) (*Client, err
 	return client, nil
 }
 func NewStored(cfg StoredConfig, device identity.Device, directory string, previous trust.Grant) (*Client, error) {
-	return newClient(cfg, device, directory, previous)
+	cl, err := newClient(cfg, device, directory, previous)
+	if err == nil && cfg.ControlV2 {
+		err = cl.noLegacyPending()
+	}
+	if err != nil {
+		return nil, err
+	}
+	return cl, nil
 }
 func newClient(cfg StoredConfig, device identity.Device, directory string, previous trust.Grant) (*Client, error) {
 	if iscpnodeissuer.ValidateOrigin(cfg.Origin, cfg.TLSCertificatePEM, time.Now().UTC(), true) != nil {
