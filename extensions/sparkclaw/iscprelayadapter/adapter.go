@@ -122,6 +122,9 @@ func newAdapter(ctx context.Context, pool *pgxpool.Pool, cfg Config, allowLegacy
 	return a, nil
 }
 func (a *Adapter) Metadata() map[string]string {
+	if a.controlEpoch != "" {
+		return map[string]string{"iscp_control": "v2"}
+	}
 	out := map[string]string{"sparkclaw_refresh_receipts": "v1"}
 	if len(a.cfg.ServicePeers) > 0 {
 		out["sparkclaw_service_peer_recovery"] = "v1"
@@ -152,7 +155,7 @@ func (a *Adapter) Handler() http.Handler {
 			return
 		}
 		v, e := a.Commit(r.Context(), p)
-		write(w, v, e)
+		a.writeRegistrationReceipt(w, r, v, e)
 	})
 	mux.HandleFunc("POST /v1/registrations/status", func(w http.ResponseWriter, r *http.Request) {
 		var p struct {
@@ -164,7 +167,7 @@ func (a *Adapter) Handler() http.Handler {
 			return
 		}
 		v, e := a.Status(r.Context(), p.OperationID, p.BindingDigest)
-		write(w, v, e)
+		a.writeRegistrationReceipt(w, r, v, e)
 	})
 	mux.HandleFunc("POST /v1/registrations/revoke", func(w http.ResponseWriter, r *http.Request) {
 		var p struct {
@@ -180,6 +183,10 @@ func (a *Adapter) Handler() http.Handler {
 		write(w, map[string]any{"state": "revoked", "operation_id": p.OperationID, "device_id": p.DeviceID, "revision": p.Revision}, e)
 	})
 	mux.HandleFunc("POST /v1/registrations/recover", func(w http.ResponseWriter, r *http.Request) {
+		if a.controlEpoch != "" {
+			write(w, nil, Error{"protocol_incompatible", http.StatusGone})
+			return
+		}
 		var p iscpnodeissuer.RegistrationRecovery
 		if read(r, &p) != nil {
 			write(w, nil, invalid("decode_failed"))
@@ -199,6 +206,37 @@ func (a *Adapter) Handler() http.Handler {
 	})
 	return a.bounded(mux)
 }
+
+// Registration remains a separate authenticated enrollment protocol. Its
+// sealed response is disclosed under the same current authority guard as v2.
+func (a *Adapter) writeRegistrationReceipt(w http.ResponseWriter, r *http.Request, receipt iscpnodeissuer.RegistrationReceipt, err error) {
+	if err != nil || a.controlEpoch == "" {
+		write(w, receipt, err)
+		return
+	}
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		write(w, nil, unavailable())
+		return
+	}
+	defer tx.Rollback(r.Context())
+	if err = a.lockLifecycle(r.Context(), tx, receipt.DeviceID, "", false, false); err == nil {
+		err = a.active(r.Context(), tx, receipt.DeviceID)
+	}
+	if err != nil {
+		write(w, nil, err)
+		return
+	}
+	controller := http.NewResponseController(w)
+	// Production net/http supports deadlines; recorder-only writers may not.
+	if err = controller.SetWriteDeadline(time.Now().Add(5 * time.Second)); err != nil && !errors.Is(err, http.ErrNotSupported) {
+		write(w, nil, unavailable())
+		return
+	}
+	write(w, receipt, nil)
+	_ = controller.Flush()
+}
+
 func read(r *http.Request, out any) error {
 	raw, e := io.ReadAll(io.LimitReader(r.Body, (128<<10)+1))
 	if e != nil {

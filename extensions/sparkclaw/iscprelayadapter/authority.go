@@ -50,8 +50,8 @@ func (a *Adapter) OperatorBind(ctx context.Context, id identity.DeviceIdentity) 
 		return unavailable()
 	}
 	defer tx.Rollback(ctx)
-	if e = lock(ctx, tx, "device:"+id.DomainID+":"+id.DeviceID); e != nil {
-		return unavailable()
+	if e = a.lockEnrollment(ctx, tx, id.DeviceID, "", "1"); e != nil {
+		return e
 	}
 	var status string
 	e = tx.QueryRow(ctx, "SELECT status FROM iscp_relay.devices WHERE domain_id=$1 AND device_id=$2", id.DomainID, id.DeviceID).Scan(&status)
@@ -71,7 +71,7 @@ func (a *Adapter) claim(ctx context.Context, tx pgx.Tx, id identity.DeviceIdenti
 	if node.ValidateIdentity(id) != nil || id.DomainID != a.cfg.DomainID {
 		return denied("identity_invalid")
 	}
-	if lock(ctx, tx, "device:"+id.DomainID+":"+id.DeviceID) != nil {
+	if a.controlEpoch == "" && lock(ctx, tx, "device:"+id.DomainID+":"+id.DeviceID) != nil {
 		return unavailable()
 	}
 	var owner, thumb string

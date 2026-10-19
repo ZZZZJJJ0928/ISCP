@@ -40,8 +40,8 @@ func (a *Adapter) VerifyServicePeer(ctx context.Context, p ServiceVerification) 
 		return unavailable()
 	}
 	defer tx.Rollback(ctx)
-	if lock(ctx, tx, "service-proof:"+p.Identity.DeviceID+":"+p.Proof.Nonce) != nil || lock(ctx, tx, "device:"+a.cfg.DomainID+":"+p.Identity.DeviceID) != nil {
-		return unavailable()
+	if e = a.lockLifecycle(ctx, tx, p.Identity.DeviceID, "service-proof:"+p.Proof.Nonce, true, false); e != nil {
+		return e
 	}
 	if e = a.claimService(ctx, tx, p.Identity); e != nil {
 		return e
@@ -82,6 +82,12 @@ type ServiceRecovery struct {
 // peers only. Their standing permission is the root-owned identity allowlist;
 // it grants no workbench access and can never enroll or revive a device.
 func (a *Adapter) ServiceRecover(r *http.Request) (json.RawMessage, error) {
+	if a.controlEpoch != "" {
+		return nil, Error{"protocol_incompatible", http.StatusGone}
+	}
+	return a.serviceRecover(r)
+}
+func (a *Adapter) serviceRecover(r *http.Request) (json.RawMessage, error) {
 	if r.Method != http.MethodPost {
 		return nil, Error{"method_not_allowed", 405}
 	}
@@ -99,8 +105,8 @@ func (a *Adapter) ServiceRecover(r *http.Request) (json.RawMessage, error) {
 		return nil, unavailable()
 	}
 	defer tx.Rollback(ctx)
-	if lock(ctx, tx, "operation:"+a.authority+":"+p.OperationID) != nil || lock(ctx, tx, "device:"+a.cfg.DomainID+":"+p.Identity.DeviceID) != nil {
-		return nil, unavailable()
+	if e = a.lockLifecycle(ctx, tx, p.Identity.DeviceID, p.OperationID, true, false); e != nil {
+		return nil, e
 	}
 	if e = a.claimService(ctx, tx, p.Identity); e != nil {
 		return nil, e
@@ -124,7 +130,7 @@ func (a *Adapter) ServiceRecover(r *http.Request) (json.RawMessage, error) {
 	if repo.RevokeDeviceCredentials(ctx, repository.DomainID(a.cfg.DomainID), p.Identity.DeviceID, a.now()) != nil {
 		return nil, unavailable()
 	}
-	tokens, e := a.issue(ctx, tx, p.Identity.DeviceID)
+	tokens, e := a.issueLifecycle(ctx, tx, p.Identity.DeviceID, true)
 	if e != nil {
 		return nil, e
 	}

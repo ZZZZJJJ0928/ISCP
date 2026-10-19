@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/Infinimesh-ai/ISCP/extensions/sparkclaw/iscpbridge"
@@ -80,8 +81,8 @@ func (a *Adapter) Prepare(ctx context.Context, p node.RegistrationPreparation) e
 		return unavailable()
 	}
 	defer tx.Rollback(ctx)
-	if lock(ctx, tx, "operation:"+a.authority+":"+p.OperationID) != nil {
-		return unavailable()
+	if e = a.lockEnrollment(ctx, tx, p.Identity.DeviceID, p.OperationID, ""); e != nil {
+		return e
 	}
 	if e = a.claim(ctx, tx, p.Identity, false); e != nil {
 		return e
@@ -130,21 +131,28 @@ func (a *Adapter) commit(ctx context.Context, r node.RegistrationCommit) (node.R
 		return zero, empty, false, unavailable()
 	}
 	defer tx.Rollback(ctx)
-	if lock(ctx, tx, "operation:"+a.authority+":"+r.OperationID) != nil {
-		return zero, empty, false, unavailable()
-	}
+	// Read immutable bindings to discover the device, acquire authority before
+	// the operation key, and reread under the lock. An existing receipt remains
+	// recoverable even after its enrollment ticket or proof expires.
 	prior, found, e := a.receipt(ctx, tx, r.OperationID, r.BindingDigest, "registration")
 	if e != nil {
 		return zero, empty, false, e
 	}
 	if found {
-		if a.active(ctx, tx, prior.DeviceID) != nil {
-			return zero, empty, false, denied("device_revoked")
+		if e = a.lockLifecycle(ctx, tx, prior.DeviceID, r.OperationID, true, false); e != nil {
+			return zero, empty, false, e
+		}
+		prior, found, e = a.receipt(ctx, tx, r.OperationID, r.BindingDigest, "registration")
+		if e != nil || !found {
+			return zero, empty, false, unavailable()
+		}
+		if e = a.active(ctx, tx, prior.DeviceID); e != nil {
+			return zero, empty, false, e
 		}
 		return prior, empty, false, nil
 	}
 	var raw []byte
-	e = tx.QueryRow(ctx, "SELECT preparation FROM iscp_relay.node_preparations WHERE operation_id=$1 AND authority_id=$2 FOR UPDATE", r.OperationID, a.authority).Scan(&raw)
+	e = tx.QueryRow(ctx, "SELECT preparation FROM iscp_relay.node_preparations WHERE operation_id=$1 AND authority_id=$2", r.OperationID, a.authority).Scan(&raw)
 	if e == pgx.ErrNoRows {
 		return zero, empty, false, denied("preparation_required")
 	}
@@ -161,8 +169,27 @@ func (a *Adapter) commit(ctx context.Context, r node.RegistrationCommit) (node.R
 	if e = a.validatePreparation(p); e != nil {
 		return zero, empty, false, e
 	}
-	if lock(ctx, tx, "device:"+a.cfg.DomainID+":"+p.Identity.DeviceID) != nil {
-		return zero, empty, false, unavailable()
+	if e = a.verifyProof(p.Identity, r.IdentityProof, p.TicketV3.TicketID, 5*time.Minute); e != nil {
+		return zero, empty, false, e
+	}
+	if e = a.lockEnrollment(ctx, tx, p.Identity.DeviceID, r.OperationID, strconv.FormatUint(p.Grant.RevocationEpoch, 10)); e != nil {
+		return zero, empty, false, e
+	}
+	if e = a.owned(ctx, tx, p.Identity.DeviceID); e != nil {
+		return zero, empty, false, e
+	}
+	prior, found, e = a.receipt(ctx, tx, r.OperationID, r.BindingDigest, "registration")
+	if e != nil {
+		return zero, empty, false, e
+	}
+	if found {
+		if prior.DeviceID != p.Identity.DeviceID {
+			return zero, empty, false, conflict("operation_binding_conflict")
+		}
+		if e = a.active(ctx, tx, prior.DeviceID); e != nil {
+			return zero, empty, false, e
+		}
+		return prior, empty, false, nil
 	}
 	if e = a.useProof(ctx, tx, p.Identity, r.IdentityProof, p.TicketV3.TicketID, 5*time.Minute); e != nil {
 		return zero, empty, false, e
@@ -180,7 +207,11 @@ func (a *Adapter) commit(ctx context.Context, r node.RegistrationCommit) (node.R
 	if cmd.RowsAffected() != 1 {
 		return zero, empty, false, conflict("ticket_already_consumed")
 	}
-	tokens, e := a.issue(ctx, tx, p.Identity.DeviceID)
+	var previouslyIssued bool
+	if e = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM iscp_relay.access_tokens WHERE domain_id=$1 AND device_id=$2)`, a.cfg.DomainID, p.Identity.DeviceID).Scan(&previouslyIssued); e != nil {
+		return zero, empty, false, unavailable()
+	}
+	tokens, e := a.issueLifecycle(ctx, tx, p.Identity.DeviceID, previouslyIssued)
 	if e != nil {
 		return zero, empty, false, unavailable()
 	}
@@ -210,6 +241,13 @@ func (a *Adapter) Status(ctx context.Context, op, digest string) (node.Registrat
 	}
 	if !found {
 		return z, Error{"operation_not_committed", http.StatusNotFound}
+	}
+	if e = a.lockLifecycle(ctx, tx, r.DeviceID, op, false, false); e != nil {
+		return z, e
+	}
+	r, found, e = a.receipt(ctx, tx, op, digest, "registration")
+	if e != nil || !found {
+		return z, unavailable()
 	}
 	if e = a.active(ctx, tx, r.DeviceID); e != nil {
 		return z, e
@@ -266,9 +304,15 @@ func (a *Adapter) active(ctx context.Context, tx pgx.Tx, dev string) error {
 	}
 	return nil
 }
-func (a *Adapter) useProof(ctx context.Context, tx pgx.Tx, id identity.DeviceIdentity, p identity.DeviceProof, challenge string, ttl time.Duration) error {
+func (a *Adapter) verifyProof(id identity.DeviceIdentity, p identity.DeviceProof, challenge string, ttl time.Duration) error {
 	if id.DomainID != a.cfg.DomainID || p.DomainID != id.DomainID || p.DeviceID != id.DeviceID || identity.VerifyProof(c.NewProvider(), id, p, a.cfg.RelayID, challenge, a.now(), ttl) != nil || p.Nonce == "" {
 		return Error{"device_proof_invalid", 401}
+	}
+	return nil
+}
+func (a *Adapter) useProof(ctx context.Context, tx pgx.Tx, id identity.DeviceIdentity, p identity.DeviceProof, challenge string, ttl time.Duration) error {
+	if e := a.verifyProof(id, p, challenge, ttl); e != nil {
+		return e
 	}
 	cmd, e := tx.Exec(ctx, "INSERT INTO iscp_relay.pop_replay_cache(domain_id,device_id,nonce,expires_at) VALUES($1,$2,$3,$4) ON CONFLICT(domain_id,device_id,nonce) DO UPDATE SET expires_at=EXCLUDED.expires_at WHERE iscp_relay.pop_replay_cache.expires_at<=$5", id.DomainID, id.DeviceID, p.Nonce, p.IssuedAt.Add(ttl), a.now())
 	if e != nil {
@@ -290,6 +334,9 @@ func (a *Adapter) storeGrant(ctx context.Context, tx pgx.Tx, id identity.DeviceI
 	}
 	if e == nil && old > g.RevocationEpoch {
 		return denied("stale_authorization_revision")
+	}
+	if e = a.syncGrantRevision(ctx, tx, id.DeviceID, g.RevocationEpoch); e != nil {
+		return e
 	}
 	raw, _ := json.Marshal(g)
 	_, e = tx.Exec(ctx, "INSERT INTO iscp_relay.node_grants(domain_id,device_id,revision,grant_raw,updated_at,authority_id) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(domain_id,device_id) DO UPDATE SET revision=EXCLUDED.revision,grant_raw=EXCLUDED.grant_raw,updated_at=EXCLUDED.updated_at WHERE iscp_relay.node_grants.revision<=EXCLUDED.revision AND iscp_relay.node_grants.authority_id=EXCLUDED.authority_id", a.cfg.DomainID, id.DeviceID, g.RevocationEpoch, raw, a.now(), a.authority)

@@ -42,8 +42,8 @@ func (a *Adapter) Recover(ctx context.Context, r node.RegistrationRecovery) (nod
 		return z, unavailable()
 	}
 	defer tx.Rollback(ctx)
-	if lock(ctx, tx, "operation:"+a.authority+":"+r.OperationID) != nil || lock(ctx, tx, "device:"+a.cfg.DomainID+":"+r.Identity.DeviceID) != nil {
-		return z, unavailable()
+	if e = a.lockLifecycle(ctx, tx, r.Identity.DeviceID, r.OperationID, true, false); e != nil {
+		return z, e
 	}
 	if e = a.checkStoredIdentity(ctx, tx, r.Identity); e != nil {
 		return z, e
@@ -65,7 +65,7 @@ func (a *Adapter) Recover(ctx context.Context, r node.RegistrationRecovery) (nod
 	if repo.RevokeDeviceCredentials(ctx, repository.DomainID(a.cfg.DomainID), r.Identity.DeviceID, a.now()) != nil {
 		return z, unavailable()
 	}
-	tokens, e := a.issue(ctx, tx, r.Identity.DeviceID)
+	tokens, e := a.issueLifecycle(ctx, tx, r.Identity.DeviceID, true)
 	if e != nil {
 		return z, e
 	}
@@ -114,8 +114,8 @@ func (a *Adapter) Revoke(ctx context.Context, op, dev string, revision uint64) e
 		return unavailable()
 	}
 	defer tx.Rollback(ctx)
-	if lock(ctx, tx, "operation:"+a.authority+":"+op) != nil || lock(ctx, tx, "device:"+a.cfg.DomainID+":"+dev) != nil {
-		return unavailable()
+	if e = a.lockLifecycle(ctx, tx, dev, op, true, true); e != nil {
+		return e
 	}
 	if e = a.owned(ctx, tx, dev); e != nil {
 		return e
@@ -148,6 +148,9 @@ func (a *Adapter) Revoke(ctx context.Context, op, dev string, revision uint64) e
 	if e == nil && revision <= prior {
 		return conflict("revocation_revision_conflict")
 	}
+	if e = a.revokeAuthority(ctx, tx, dev, revision); e != nil {
+		return e
+	}
 	_, e = tx.Exec(ctx, "INSERT INTO iscp_relay.node_revocations(domain_id,device_id,revision,operation_id,revoked_at,authority_id) VALUES($1,$2,$3,$4,$5,$6)", a.cfg.DomainID, dev, revision, op, a.now(), a.authority)
 	if e != nil {
 		return unavailable()
@@ -167,6 +170,12 @@ func (a *Adapter) Revoke(ctx context.Context, op, dev string, revision uint64) e
 // The explicit deployment extension returns only a sealed response, making exact
 // unknown-outcome replay safe without turning a captured old proof into a token.
 func (a *Adapter) Refresh(r *http.Request) (json.RawMessage, error) {
+	if a.controlEpoch != "" {
+		return nil, Error{"protocol_incompatible", http.StatusGone}
+	}
+	return a.refresh(r)
+}
+func (a *Adapter) refresh(r *http.Request) (json.RawMessage, error) {
 	if r.Method != http.MethodPost {
 		return nil, Error{"method_not_allowed", 405}
 	}
@@ -207,32 +216,63 @@ func (a *Adapter) Refresh(r *http.Request) (json.RawMessage, error) {
 		return nil, unavailable()
 	}
 	defer tx.Rollback(ctx)
-	if lock(ctx, tx, "operation:"+a.authority+":"+op) != nil {
-		return nil, unavailable()
-	}
+	// Resolve the immutable subject before acquiring the ordered authority locks,
+	// then reread the receipt/token under that guard. A used refresh token still
+	// identifies its original operation for unknown-outcome reconciliation.
+	var dev string
 	if managed {
-		prior, found, e := a.receipt(ctx, tx, op, digest, "refresh")
-		if e != nil {
-			return nil, e
+		prior, found, err := a.receipt(ctx, tx, op, digest, "refresh")
+		if err != nil {
+			return nil, err
 		}
 		if found {
-			if a.active(ctx, tx, prior.DeviceID) != nil {
-				return nil, denied("device_revoked")
+			dev = prior.DeviceID
+		}
+	}
+	if dev == "" {
+		e = tx.QueryRow(ctx, "SELECT device_id FROM iscp_relay.refresh_tokens WHERE domain_id=$1 AND refresh_hash=$2", a.cfg.DomainID, hash).Scan(&dev)
+		if e == pgx.ErrNoRows {
+			return nil, Error{"refresh_credential_invalid", 401}
+		}
+		if e != nil {
+			return nil, unavailable()
+		}
+	}
+	if e = a.lockLifecycle(ctx, tx, dev, op, true, false); e != nil {
+		return nil, e
+	}
+	if managed {
+		prior, found, err := a.receipt(ctx, tx, op, digest, "refresh")
+		if err != nil {
+			return nil, err
+		}
+		if found {
+			if prior.DeviceID != dev {
+				return nil, conflict("operation_binding_conflict")
+			}
+			if err = a.active(ctx, tx, dev); err != nil {
+				return nil, err
 			}
 			raw, _ := json.Marshal(prior)
 			return raw, nil
 		}
 	}
-	var dev string
-	e = tx.QueryRow(ctx, "SELECT device_id FROM iscp_relay.refresh_tokens WHERE domain_id=$1 AND refresh_hash=$2 AND revoked_at IS NULL AND expires_at>$3", a.cfg.DomainID, hash, a.now()).Scan(&dev)
+	var tokenGeneration *string
+	e = tx.QueryRow(ctx, "SELECT credential_generation::text FROM iscp_relay.refresh_tokens WHERE domain_id=$1 AND device_id=$2 AND refresh_hash=$3 AND revoked_at IS NULL AND expires_at>$4", a.cfg.DomainID, dev, hash, a.now()).Scan(&tokenGeneration)
 	if e == pgx.ErrNoRows {
 		return nil, Error{"refresh_credential_invalid", 401}
 	}
 	if e != nil {
 		return nil, unavailable()
 	}
-	if lock(ctx, tx, "device:"+a.cfg.DomainID+":"+dev) != nil {
-		return nil, unavailable()
+	if a.controlEpoch != "" {
+		var current string
+		if e = tx.QueryRow(ctx, `SELECT credential_generation::text FROM iscp_relay.device_authority WHERE scope_id=$1 AND domain_id=$2 AND device_id=$3`, a.cfg.RelayID, a.cfg.DomainID, dev).Scan(&current); e != nil {
+			return nil, unavailable()
+		}
+		if tokenGeneration == nil || *tokenGeneration != current {
+			return nil, Error{"refresh_credential_invalid", 401}
+		}
 	}
 	if e = a.active(ctx, tx, dev); e != nil {
 		return nil, e
@@ -255,7 +295,7 @@ func (a *Adapter) Refresh(r *http.Request) (json.RawMessage, error) {
 	if cmd.RowsAffected() != 1 {
 		return nil, Error{"refresh_credential_invalid", 401}
 	}
-	tokens, e := a.issue(ctx, tx, dev)
+	tokens, e := a.issueLifecycle(ctx, tx, dev, true)
 	if e != nil {
 		return nil, e
 	}
