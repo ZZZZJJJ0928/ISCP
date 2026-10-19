@@ -190,3 +190,28 @@ func ReadEpoch(ctx context.Context, tx pgx.Tx, scope string) (string, error) {
 	e := tx.QueryRow(ctx, `SELECT writer_epoch::text FROM iscp_relay.writer_scopes WHERE scope_id=$1`, scope).Scan(&epoch)
 	return epoch, e
 }
+
+// RegisterDevice creates the authority fence for an independently authenticated
+// enrollment transaction. The caller MUST verify the issuer/operator and the
+// immutable registered identity/ownership in the same transaction. This does
+// not activate history or replace existing authority/generations. The temporary
+// device-creation advisory lock is at the device layer, not an operation lock.
+// Ordinary authentication/admission uses Lock and cannot call this implicitly.
+func RegisterDevice(ctx context.Context, tx pgx.Tx, r Request, device, revision string) error {
+	if len(r.Devices) != 0 || len(r.Owners) != 0 || len(r.Keys) != 0 || !validID(device) || !validCounter(revision, false) {
+		return ErrUnavailable
+	}
+	r.RequireContinuousHistory = false
+	if _, err := Lock(ctx, tx, r); err != nil {
+		return err
+	}
+	key := fmt.Sprintf("iscp-authority-device-create-v1:%d:%s:%d:%s:%s", len(r.ScopeID), r.ScopeID, len(r.DomainID), r.DomainID, device)
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, key); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO iscp_relay.device_authority(scope_id,domain_id,device_id,credential_generation,authorization_revision,state_version,state) VALUES($1,$2,$3,1,$4,1,'active') ON CONFLICT(scope_id,domain_id,device_id) DO NOTHING`, r.ScopeID, r.DomainID, device, revision); err != nil {
+		return err
+	}
+	_, err := tx.Exec(ctx, `INSERT INTO iscp_relay.connection_owners(scope_id,domain_id,device_id) VALUES($1,$2,$3) ON CONFLICT(scope_id,domain_id,device_id) DO NOTHING`, r.ScopeID, r.DomainID, device)
+	return err
+}
