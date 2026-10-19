@@ -219,6 +219,37 @@ func TestDuplexPostgresBidirectionalAdmissionQueryAndFences(t *testing.T) {
 		t.Fatal(got)
 	}
 	assertOldBinaryCannotOverwrite(t, pool, a, ca.Token, first)
+	// Reauthentication refreshes authority on the same owner/socket without
+	// replacing encrypted-session lineage, and requires a new bound proof.
+	one.write(t, duplex.Frame{V: 1, Kind: "reauth.request", ConnectionID: one.ready.ConnectionID, OwnerGeneration: one.ready.OwnerGeneration, RequestID: "8"})
+	challenge := one.read(t)
+	challenge.Limits = one.challenge.Limits
+	challenge.HistoryID = one.challenge.HistoryID
+	challenge.RelayID = one.challenge.RelayID
+	authBytes, err := duplex.AuthChallenge(challenge, "reauthenticate", "8", one.ready.OwnerGeneration, ca.Token, a.Identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	proof, err := a.CreateProof(p, "relay-a", authBytes, crypto.Base64URL(crypto.RandomBytes(16)), time.Now().UTC().Truncate(time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	one.write(t, duplex.Frame{V: 1, Kind: "reauthenticate", ConnectionID: one.ready.ConnectionID, OwnerGeneration: one.ready.OwnerGeneration, RequestID: "8", ChallengeID: challenge.ChallengeID, AccessToken: ca.Token, Proof: &proof})
+	if got := one.read(t); got.Kind != "reauthenticated" || got.ConnectionID != one.ready.ConnectionID || got.OwnerGeneration != one.ready.OwnerGeneration {
+		t.Fatal("reauth replaced owner", got)
+	}
+	staleSocket, _, err := (&websocket.Dialer{Subprotocols: []string{duplex.Protocol}}).Dial("ws"+strings.TrimPrefix(h.URL, "http")+duplex.Path, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stale := &duplexTestPeer{ws: staleSocket}
+	fresh := stale.read(t)
+	// A valid signed proof from another purpose/connection cannot authenticate.
+	stale.write(t, duplex.Frame{V: 1, Kind: "authenticate", ConnectionID: fresh.ConnectionID, RequestID: "1", ChallengeID: fresh.ChallengeID, AccessToken: ca.Token, Proof: &proof})
+	if got := stale.read(t); got.Kind != "closing" || got.Code != "authentication_failed" {
+		t.Fatal("replayed proof accepted", got)
+	}
+	staleSocket.Close()
 	replacement := connectDuplexTest(t, h.URL, a, ca.Token)
 	if replacement.ready.OwnerGeneration == one.ready.OwnerGeneration {
 		t.Fatal("generation not advanced")
