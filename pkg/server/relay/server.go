@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -71,6 +72,7 @@ type Server struct {
 	cfg             Config
 	provider        crypto.Provider
 	signer          identity.Device
+	writerEpoch     string
 	mux             *http.ServeMux
 	replay          *replay.Cache
 	queue           *queue.Queue
@@ -139,7 +141,17 @@ func New(cfg Config) (*Server, error) {
 		r := repository.NewRelayRepository(cfg.DB)
 		repo = &r
 	}
+	writerEpoch := "1" // The only legal genesis epoch for an explicitly new scope.
+	if cfg.DB != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		err := cfg.DB.QueryRow(ctx, `SELECT writer_epoch::text FROM iscp_relay.writer_scopes WHERE scope_id=$1`, cfg.RelayID).Scan(&writerEpoch)
+		cancel()
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return nil, err
+		}
+	}
 	s := &Server{
+		writerEpoch: writerEpoch,
 		cfg:         cfg,
 		provider:    provider,
 		signer:      signer,

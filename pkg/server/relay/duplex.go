@@ -85,7 +85,7 @@ func (s *Server) duplexConnect(w http.ResponseWriter, r *http.Request) {
 	}
 	var epoch, history string
 	var enabled bool
-	if e := s.cfg.DB.QueryRow(r.Context(), `SELECT w.writer_epoch::text,w.writes_enabled,a.history_id FROM iscp_relay.writer_scopes w JOIN iscp_relay.domain_authority a ON a.scope_id=w.scope_id WHERE w.scope_id=$1 AND a.domain_id=$2`, s.cfg.RelayID, s.cfg.DomainID).Scan(&epoch, &enabled, &history); e != nil || !enabled || len(history) != 43 {
+	if e := s.cfg.DB.QueryRow(r.Context(), `SELECT w.writer_epoch::text,w.writes_enabled,a.history_id FROM iscp_relay.writer_scopes w JOIN iscp_relay.domain_authority a ON a.scope_id=w.scope_id WHERE w.scope_id=$1 AND a.domain_id=$2`, s.cfg.RelayID, s.cfg.DomainID).Scan(&epoch, &enabled, &history); e != nil || !enabled || epoch != s.writerEpoch || len(history) != 43 {
 		http.Error(w, "duplex maintenance", 503)
 		return
 	}

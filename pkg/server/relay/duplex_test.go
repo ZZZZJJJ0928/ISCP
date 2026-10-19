@@ -249,6 +249,23 @@ func TestDuplexPostgresBidirectionalAdmissionQueryAndFences(t *testing.T) {
 	if got := two.read(t); got.Kind != "closing" || got.Code != "authentication_failed" {
 		t.Fatal(got)
 	}
+	// A running process must never adopt a maintenance epoch on a new socket.
+	if _, e = pool.Exec(ctx, `UPDATE iscp_relay.writer_scopes SET writer_epoch=2 WHERE scope_id='relay-a'`); e != nil {
+		t.Fatal(e)
+	}
+	_, epoch := s.ControlAuthority()
+	if epoch != "1" {
+		t.Fatal("control adopted a new writer epoch", epoch)
+	}
+	dialer := websocket.Dialer{Subprotocols: []string{duplex.Protocol}}
+	unexpected, response, dialErr := dialer.Dial("ws"+strings.TrimPrefix(h.URL, "http")+duplex.Path, nil)
+	if unexpected != nil {
+		unexpected.Close()
+	}
+	if dialErr == nil || response == nil || response.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("old process adopted new epoch: response=%v err=%v", response, dialErr)
+	}
+
 }
 
 func TestDuplexPostgresClientCallbackMayWaitForReceipt(t *testing.T) {
