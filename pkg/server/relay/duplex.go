@@ -45,6 +45,32 @@ type duplexConnection struct {
 	pendingBytes                                  int
 	submitTail                                    chan struct{}
 	keys                                          map[string]chan struct{}
+	// deliveryWake is signalled when an admission names this device, so the
+	// delivery loop runs at once instead of waiting for its idle tick.
+	deliveryWake chan struct{}
+}
+
+const (
+	// duplexDeliveryIdle bounds the wait for messages no in-process admission
+	// signalled (other Relay processes, lease expiry, restarts).
+	duplexDeliveryIdle = 100 * time.Millisecond
+	// duplexDeliveryBatch bounds one drain so a busy recipient cannot starve
+	// the connection's expiry and cancellation checks.
+	duplexDeliveryBatch = 64
+)
+
+// wakeDelivery nudges the recipient's connection on this Relay, if any.
+func (s *Server) wakeDelivery(domain, device string) {
+	s.duplexMu.Lock()
+	owner := s.duplexOwners[receiveKey(domain, device)]
+	s.duplexMu.Unlock()
+	if owner == nil || owner.deliveryWake == nil {
+		return
+	}
+	select {
+	case owner.deliveryWake <- struct{}{}:
+	default:
+	}
 }
 
 func (s *Server) retiredTransport(w http.ResponseWriter, r *http.Request) {
@@ -97,7 +123,7 @@ func (s *Server) duplexConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx, cancel := context.WithCancel(r.Context())
-	c := &duplexConnection{s: s, ws: ws, ctx: ctx, cancel: cancel, connection: duplex.RandomID(), generation: "0", epoch: epoch, history: history, writes: make(chan duplexWrite, 64), controlWrites: make(chan duplexWrite, 16), changed: make(chan struct{}, 1), keys: map[string]chan struct{}{}}
+	c := &duplexConnection{s: s, ws: ws, ctx: ctx, cancel: cancel, connection: duplex.RandomID(), generation: "0", epoch: epoch, history: history, writes: make(chan duplexWrite, 64), controlWrites: make(chan duplexWrite, 16), changed: make(chan struct{}, 1), keys: map[string]chan struct{}{}, deliveryWake: make(chan struct{}, 1)}
 	s.duplexMu.Lock()
 	if s.duplexClosed {
 		s.duplexMu.Unlock()
@@ -623,6 +649,7 @@ func (c *duplexConnection) process(f duplex.Frame) {
 	} else if f.Kind == "submit" && result.Receipt != nil {
 		reply.Kind = "accepted"
 		reply.Receipt = result.Receipt
+		c.s.wakeDelivery(c.id.DomainID, result.Receipt.RecipientDeviceID)
 	} else {
 		reply.State = result.State
 		reply.Reason = result.Reason
@@ -646,19 +673,25 @@ func (c *duplexConnection) process(f duplex.Frame) {
 	_ = c.send(reply, true)
 }
 func (c *duplexConnection) delivery() {
-	ticker := time.NewTicker(25 * time.Millisecond)
+	idle := duplexDeliveryIdle
+	if c.s.deliveryIdle > 0 {
+		idle = c.s.deliveryIdle
+	}
+	ticker := time.NewTicker(idle)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-c.ctx.Done():
 			return
 		case <-ticker.C:
-			if !time.Now().Before(c.expiry()) {
-				continue
-			}
-			if e := c.deliverOne(); e != nil && c.ctx.Err() == nil {
+		case <-c.deliveryWake:
+		}
+		// Drain what is pending, one committed delivery at a time, then wait.
+		for drained := 0; drained < duplexDeliveryBatch && c.ctx.Err() == nil && time.Now().Before(c.expiry()); drained++ {
+			delivered, e := c.deliverOne()
+			if e != nil && c.ctx.Err() == nil {
 				if e.Error() == "auth_required" {
-					continue
+					break
 				}
 				if e.Error() == "authority_changed" {
 					c.close("authentication_failed", 1008)
@@ -672,25 +705,30 @@ func (c *duplexConnection) delivery() {
 				c.ws.Close()
 				return
 			}
+			if e != nil || !delivered {
+				break
+			}
 		}
 	}
 }
-func (c *duplexConnection) deliverOne() error {
+
+// deliverOne reports whether a message was delivered and committed.
+func (c *duplexConnection) deliverOne() (bool, error) {
 	ctx, cancel := context.WithTimeout(c.ctx, 5*time.Second)
 	defer cancel()
 	tx, e := c.s.cfg.DB.Begin(ctx)
 	if e != nil {
-		return e
+		return false, e
 	}
 	defer tx.Rollback(context.Background())
 	_, e = c.locked(ctx, tx, "delivery:"+c.id.DeviceID, false)
 	if e != nil {
-		return e
+		return false, e
 	}
 	repo := repository.NewRelayRepository(tx)
 	messages, e := repo.ClaimDuplexPendingMessage(ctx, repository.DomainID(c.id.DomainID), c.id.DeviceID, time.Now(), time.Minute)
 	if e != nil || len(messages) == 0 {
-		return e
+		return false, e
 	}
 	m := messages[0]
 	f := c.frame("delivery", "")
@@ -698,13 +736,16 @@ func (c *duplexConnection) deliverOne() error {
 	f.Envelope = json.RawMessage(m.EnvelopeRaw)
 	f.EnvelopeDigest, e = duplex.Digest(f.Envelope)
 	if e != nil {
-		return e
+		return false, e
 	}
 	if e = c.send(f, true); e != nil {
-		return e
+		return false, e
 	}
 	if e = repo.MarkMessageDelivered(ctx, repository.DomainID(c.id.DomainID), m.MessageID, time.Now()); e != nil {
-		return e
+		return false, e
 	}
-	return tx.Commit(ctx)
+	if e = tx.Commit(ctx); e != nil {
+		return false, e
+	}
+	return true, nil
 }

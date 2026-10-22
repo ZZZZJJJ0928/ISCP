@@ -69,6 +69,8 @@ type ManagedRegistrationDiscloser interface {
 }
 
 type Server struct {
+	// deliveryIdle overrides the duplex idle delivery tick (tests only).
+	deliveryIdle      time.Duration
 	duplexMu          sync.Mutex
 	duplexOwners      map[string]*duplexConnection
 	duplexAll         map[*duplexConnection]struct{}

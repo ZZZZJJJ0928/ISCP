@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -297,6 +298,49 @@ func TestDuplexPostgresBidirectionalAdmissionQueryAndFences(t *testing.T) {
 		t.Fatalf("old process adopted new epoch: response=%v err=%v", response, dialErr)
 	}
 
+}
+
+// With the idle tick effectively disabled, only admission wakes can deliver:
+// a back-to-back burst must still arrive completely, proving each wake drains.
+func TestDuplexPostgresAdmissionWakesAndDrainsRecipient(t *testing.T) {
+	pool := receiveDatabase(t)
+	s, e := New(Config{DomainID: "domain-a", RelayID: "relay-a", BaseURL: "http://relay.test", WebSocketURL: "ws://relay.test/v2/relay/duplex", AdminToken: "admin-test-token", ProfileGate: config.DefaultGate(config.ProfileProduction), AllowedOrigins: []string{"http://relay.test"}, DB: pool})
+	if e != nil {
+		t.Fatal(e)
+	}
+	s.deliveryIdle = time.Hour
+	h := httptest.NewServer(s.Handler())
+	t.Cleanup(func() { s.Close(); h.Close() })
+	p := crypto.NewProvider()
+	a, _ := identity.NewDevice(p, "domain-a", "sender-a", time.Now())
+	b, _ := identity.NewDevice(p, "domain-a", "recipient-a", time.Now())
+	ca := bindDeviceForTest(t, s.Handler(), p, a, "relay-a", randomToken())
+	cb := bindDeviceForTest(t, s.Handler(), p, b, "relay-a", randomToken())
+	_, e = pool.Exec(context.Background(), `INSERT INTO iscp_relay.writer_scopes(scope_id,writer_role,writes_enabled) VALUES('relay-a',current_user,true); INSERT INTO iscp_relay.domain_authority(scope_id,domain_id,history_id,history_state,history_evidence_sha256,activated_at) VALUES('relay-a','domain-a',repeat('A',43),'continuous',repeat('B',43),now()); INSERT INTO iscp_relay.device_authority SELECT 'relay-a',domain_id,device_id,1,1,1,'active' FROM iscp_relay.devices; INSERT INTO iscp_relay.connection_owners(scope_id,domain_id,device_id) SELECT scope_id,domain_id,device_id FROM iscp_relay.device_authority; UPDATE iscp_relay.access_tokens SET credential_generation=1; UPDATE iscp_relay.refresh_tokens SET credential_generation=1`)
+	if e != nil {
+		t.Fatal(e)
+	}
+	sender := connectDuplexTest(t, h.URL, a, ca.Token)
+	recipient := connectDuplexTest(t, h.URL, b, cb.Token)
+	const burst = 24
+	started := time.Now()
+	for i := 0; i < burst; i++ {
+		sender.submit(t, b.Identity.DeviceID, fmt.Sprintf("burst-%02d", i), strconv.Itoa(i+2))
+	}
+	for accepted := 0; accepted < burst; accepted++ {
+		if f := sender.read(t); f.Kind != "accepted" {
+			t.Fatal(f)
+		}
+	}
+	seen := map[string]bool{}
+	for len(seen) < burst {
+		f := recipient.read(t)
+		if f.Kind != "delivery" || seen[f.MessageID] {
+			t.Fatal(f.Kind, f.MessageID)
+		}
+		seen[f.MessageID] = true
+	}
+	t.Logf("%d admissions delivered in %s without an idle tick", burst, time.Since(started))
 }
 
 func TestDuplexPostgresClientCallbackMayWaitForReceipt(t *testing.T) {
